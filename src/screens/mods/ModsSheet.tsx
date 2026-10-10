@@ -203,49 +203,58 @@ export function ModsSheet() {
       onClose={() => openSheet(null)}
       width={720}
     >
-      <PillTabs tabs={tabs} active={tab} onChange={setTab} layoutId="mods-tab" />
+      <div className={styles.root}>
+        <PillTabs tabs={tabs} active={tab} onChange={setTab} layoutId="mods-tab" />
 
-      <AnimatePresence>
-        {changed && active && (
-          <motion.div
-            className={styles.restart}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={spring}
-          >
-            <span>Değişiklikler dünya yeniden açılınca geçerli olur.</span>
-            <Button size="sm" variant="primary" icon={RotateCcw} loading={busy === "restart"} onClick={restart}>
-              Şimdi yeniden başlat
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {error && <p className={styles.error}>{error}</p>}
-      {busy?.startsWith("install:") || busy?.startsWith("update") ? <InstallProgress /> : null}
+        <AnimatePresence>
+          {changed && active && (
+            <motion.div
+              className={styles.restart}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={spring}
+            >
+              <span>Değişiklikler dünya yeniden açılınca geçerli olur.</span>
+              <Button size="sm" variant="primary" icon={RotateCcw} loading={busy === "restart"} onClick={restart}>
+                Şimdi yeniden başlat
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {error && <p className={styles.error}>{error}</p>}
+        {busy?.startsWith("install:") || busy?.startsWith("update") ? <InstallProgress /> : null}
 
-      {tab === "browse" &&
-        (detail ? (
-          <DetailView
-            detail={detail}
-            plugin={plugin}
-            busy={busy}
-            onBack={() => setDetail(null)}
-            onInstall={() => install(detail.projectId)}
-          />
-        ) : (
-          <div className={styles.browse}>
-            <div className={styles.search}>
-              <Search size={17} aria-hidden />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={plugin ? "Eklenti ara (ör. ekonomi, harita, koruma)" : "Mod ara (ör. lithium, harita, teknoloji)"}
-                aria-label="Ara"
-              />
-            </div>
-            <div className={styles.filters}>
-              <div className={styles.chips}>
+        {tab === "browse" &&
+          (detail ? (
+            <DetailView
+              detail={detail}
+              plugin={plugin}
+              busy={busy}
+              onBack={() => setDetail(null)}
+              onInstall={() => install(detail.projectId)}
+            />
+          ) : (
+            <div className={styles.browse}>
+              <div className={styles.toolbar}>
+                <div className={styles.search}>
+                  <Search size={17} aria-hidden />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={plugin ? "Eklenti ara" : "Mod ara"}
+                    aria-label="Ara"
+                  />
+                </div>
+                <PillTabs tabs={SORTS} active={sort} onChange={setSort} layoutId="mods-sort" />
+              </div>
+              <div
+                className={styles.chips}
+                // Dikey tekerlek de yatay kaydırsın.
+                onWheel={(e) => {
+                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+                }}
+              >
                 <button
                   type="button"
                   className={[styles.chip, category === null && styles.chipOn].filter(Boolean).join(" ")}
@@ -264,118 +273,117 @@ export function ModsSheet() {
                   </button>
                 ))}
               </div>
-              <PillTabs tabs={SORTS} active={sort} onChange={setSort} layoutId="mods-sort" />
-            </div>
 
-            <div className={styles.list}>
-              {hits.map((h) => (
-                <div key={h.projectId} className={styles.row}>
-                  <button type="button" className={styles.rowMain} onClick={() => openDetail(h.projectId)}>
-                    <ModIcon icon={h.icon} plugin={plugin} />
-                    <span className={styles.text}>
-                      <span className={styles.title}>
-                        {h.title}
-                        {h.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+              <div className={styles.list}>
+                {hits.map((h) => (
+                  <div key={h.projectId} className={styles.row}>
+                    <button type="button" className={styles.rowMain} onClick={() => openDetail(h.projectId)}>
+                      <ModIcon icon={h.icon} plugin={plugin} />
+                      <span className={styles.text}>
+                        <span className={styles.title}>
+                          {h.title}
+                          {h.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+                        </span>
+                        <span className={styles.desc}>{h.description}</span>
+                        <span className={styles.meta}>{compactCount(h.downloads)} indirme</span>
                       </span>
-                      <span className={styles.desc}>{h.description}</span>
-                      <span className={styles.meta}>{compactCount(h.downloads)} indirme</span>
-                    </span>
-                  </button>
-                  {h.installed ? (
-                    <span className={styles.installed}>
-                      <Check size={15} aria-hidden /> Kurulu
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      icon={Download}
-                      loading={busy === `install:${h.projectId}` || detailLoading === h.projectId}
-                      disabled={busy !== null}
-                      onClick={() => install(h.projectId)}
-                    >
-                      Kur
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {!loading && hits.length === 0 && !error && (
-                <p className={styles.empty}>Bu sürüm için uygun {noun} bulunamadı.</p>
-              )}
-              {loading && <Progress value={null} />}
-              {!loading && hits.length < total && (
-                <Button variant="ghost" className={styles.more} onClick={() => search(hits.length)}>
-                  Daha fazla göster
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
-
-      {tab === "installed" && (
-        <div className={styles.list}>
-          {installed === null ? (
-            <Progress value={null} />
-          ) : installed.length === 0 ? (
-            <p className={styles.empty}>Henüz {noun} kurulu değil. Keşfet'ten bir tane seç.</p>
-          ) : (
-            <>
-              {updates > 0 && (
-                <div className={styles.updateBar}>
-                  <span>{updates} güncelleme var</span>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    icon={RefreshCw}
-                    loading={busy === "update-all"}
-                    disabled={busy !== null}
-                    onClick={() => run("update-all", () => api.modsUpdateAll(id!))}
-                  >
-                    Tümünü güncelle
-                  </Button>
-                </div>
-              )}
-              {installed.map((m) => (
-                <div key={m.file} className={styles.row}>
-                  <div className={styles.rowMain}>
-                    <ModIcon icon={m.icon} plugin={plugin} />
-                    <span className={styles.text}>
-                      <span className={styles.title}>
-                        {m.title}
-                        {m.dependency && <Badge>Bağımlılık</Badge>}
-                        {!m.known && <Badge>Elle eklenmiş</Badge>}
-                        {m.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+                    </button>
+                    {h.installed ? (
+                      <span className={styles.installed}>
+                        <Check size={15} aria-hidden /> Kurulu
                       </span>
-                      <span className={styles.meta}>
-                        {m.versionNumber ?? m.file}
-                        {m.update && <span className={styles.update}> → {m.update} hazır</span>}
-                      </span>
-                    </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        icon={Download}
+                        loading={busy === `install:${h.projectId}` || detailLoading === h.projectId}
+                        disabled={busy !== null}
+                        onClick={() => install(h.projectId)}
+                      >
+                        Kur
+                      </Button>
+                    )}
                   </div>
-                  {m.update && (
+                ))}
+                {!loading && hits.length === 0 && !error && (
+                  <p className={styles.empty}>Bu sürüm için uygun {noun} bulunamadı.</p>
+                )}
+                {loading && <Progress value={null} />}
+                {!loading && hits.length < total && (
+                  <Button variant="ghost" className={styles.more} onClick={() => search(hits.length)}>
+                    Daha fazla göster
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+
+        {tab === "installed" && (
+          <div className={styles.list}>
+            {installed === null ? (
+              <Progress value={null} />
+            ) : installed.length === 0 ? (
+              <p className={styles.empty}>Henüz {noun} kurulu değil. Keşfet'ten bir tane seç.</p>
+            ) : (
+              <>
+                {updates > 0 && (
+                  <div className={styles.updateBar}>
+                    <span>{updates} güncelleme var</span>
                     <Button
                       size="sm"
+                      variant="primary"
                       icon={RefreshCw}
-                      loading={busy === `update:${m.file}`}
+                      loading={busy === "update-all"}
                       disabled={busy !== null}
-                      onClick={() => run(`update:${m.file}`, () => api.modsUpdate(id!, m.file))}
+                      onClick={() => run("update-all", () => api.modsUpdateAll(id!))}
                     >
-                      Güncelle
+                      Tümünü güncelle
                     </Button>
-                  )}
-                  <IconButton
-                    icon={Trash2}
-                    size="sm"
-                    variant="ghost"
-                    label="Kaldır (Geri Dönüşüm Kutusu'na)"
-                    disabled={busy !== null}
-                    onClick={() => run(`remove:${m.file}`, () => api.modsRemove(id!, m.file))}
-                  />
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+                  </div>
+                )}
+                {installed.map((m) => (
+                  <div key={m.file} className={styles.row}>
+                    <div className={styles.rowMain}>
+                      <ModIcon icon={m.icon} plugin={plugin} />
+                      <span className={styles.text}>
+                        <span className={styles.title}>
+                          {m.title}
+                          {m.dependency && <Badge>Bağımlılık</Badge>}
+                          {!m.known && <Badge>Elle eklenmiş</Badge>}
+                          {m.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+                        </span>
+                        <span className={styles.meta}>
+                          {m.versionNumber ?? m.file}
+                          {m.update && <span className={styles.update}> → {m.update} hazır</span>}
+                        </span>
+                      </span>
+                    </div>
+                    {m.update && (
+                      <Button
+                        size="sm"
+                        icon={RefreshCw}
+                        loading={busy === `update:${m.file}`}
+                        disabled={busy !== null}
+                        onClick={() => run(`update:${m.file}`, () => api.modsUpdate(id!, m.file))}
+                      >
+                        Güncelle
+                      </Button>
+                    )}
+                    <IconButton
+                      icon={Trash2}
+                      size="sm"
+                      variant="ghost"
+                      label="Kaldır (Geri Dönüşüm Kutusu'na)"
+                      disabled={busy !== null}
+                      onClick={() => run(`remove:${m.file}`, () => api.modsRemove(id!, m.file))}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </Sheet>
   );
 }
