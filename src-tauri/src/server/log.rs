@@ -20,10 +20,27 @@ pub fn parse(line: &str) -> Option<LogEvent> {
     if let Some(rest) = msg.strip_prefix("Done (") {
         return rest.contains(")!").then_some(LogEvent::Done);
     }
-    if let Some(name) = msg.strip_suffix(" joined the game") {
+    // Sohbet satırı değil, sunucunun kendi kaydı; tüm sürümlerde aynı:
+    // "firatmio[/192.168.0.195:8969] logged in with entity id 1 at (-8.5, 66.0, 11.5)"
+    if msg.contains("] logged in with entity id ")
+        && let Some((name, _)) = msg.split_once('[')
+    {
         return is_player_name(name).then(|| LogEvent::Joined(name.to_string()));
     }
-    if let Some(name) = msg.strip_suffix(" left the game") {
+    // "Ali lost connection: Disconnected" (beyaz liste reddi ayrıca "Disconnecting …" ile gelir)
+    if let Some((name, reason)) = msg.split_once(" lost connection: ") {
+        let lower = reason.to_ascii_lowercase();
+        if lower.contains("white-listed") || lower.contains("whitelisted") {
+            return None;
+        }
+        return is_player_name(name).then(|| LogEvent::Left(name.to_string()));
+    }
+    // 26.x sistem mesajlarını "System chat: " önekiyle yazıyor.
+    let announce = msg.strip_prefix("System chat: ").unwrap_or(msg);
+    if let Some(name) = announce.strip_suffix(" joined the game") {
+        return is_player_name(name).then(|| LogEvent::Joined(name.to_string()));
+    }
+    if let Some(name) = announce.strip_suffix(" left the game") {
         return is_player_name(name).then(|| LogEvent::Left(name.to_string()));
     }
     // "Disconnecting Ali (/192.168.0.5:51234): You are not white-listed on this server!"
@@ -62,6 +79,34 @@ mod tests {
         assert_eq!(
             parse("[16:30:00 INFO]: Ali left the game"),
             Some(LogEvent::Left("Ali".into()))
+        );
+    }
+
+    /// 26.3'ün gerçek log satırları (kullanıcının sunucusundan).
+    #[test]
+    fn detects_26x_system_chat_and_login_lines() {
+        assert_eq!(
+            parse("[21:51:29] [Server thread/INFO]: System chat: firatmio joined the game"),
+            Some(LogEvent::Joined("firatmio".into()))
+        );
+        assert_eq!(
+            parse(
+                "[21:51:29] [Server thread/INFO]: firatmio[/192.168.0.195:8969] logged in with entity id 1 at (-8.5, 66.0, 11.5)"
+            ),
+            Some(LogEvent::Joined("firatmio".into()))
+        );
+        assert_eq!(
+            parse("[21:59:02] [Server thread/INFO]: System chat: firatmio left the game"),
+            Some(LogEvent::Left("firatmio".into()))
+        );
+        assert_eq!(
+            parse("[21:59:02] [Server thread/INFO]: firatmio lost connection: Disconnected"),
+            Some(LogEvent::Left("firatmio".into()))
+        );
+        // Oyuncu sohbetinde aynı metni yazmak giriş sayılmaz.
+        assert_eq!(
+            parse("[21:59:02] [Server thread/INFO]: <Ali> System chat: Veli joined the game"),
+            None
         );
     }
 
