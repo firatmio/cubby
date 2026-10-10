@@ -12,7 +12,7 @@ use crate::commands::AppState;
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
 use crate::loaders::LoaderKind;
-use crate::modrinth::{Modrinth, Side, Sort, Version, VersionType};
+use crate::modrinth::{ClientNeed, Modrinth, Sort, Version, VersionType, client_need};
 use crate::mods::{self, ModRecord, Source};
 use crate::paths;
 use crate::sessions::META_DIR;
@@ -89,7 +89,7 @@ pub struct HitView {
     description: String,
     downloads: u64,
     icon: Option<String>,
-    client_side: Side,
+    client_need: ClientNeed,
     installed: bool,
 }
 
@@ -132,6 +132,8 @@ pub async fn mods_search(
         hits: r
             .hits
             .into_iter()
+            // Yalnız oyuncuda çalışan modlar sunucuya kurulmaz.
+            .filter(|h| client_need(&h.environment, h.client_side) != ClientNeed::ClientOnly)
             .map(|h| HitView {
                 icon: icons.remember(&h.project_id, h.icon_url.as_ref()),
                 installed: installed.contains(&h.project_id),
@@ -140,7 +142,7 @@ pub async fn mods_search(
                 title: h.title,
                 description: h.description,
                 downloads: h.downloads,
-                client_side: h.client_side,
+                client_need: client_need(&h.environment, h.client_side),
             })
             .collect(),
     })
@@ -164,7 +166,7 @@ pub struct DetailView {
     license: Option<String>,
     url: String,
     icon: Option<String>,
-    client_side: Side,
+    client_need: ClientNeed,
     installed: bool,
     version_number: Option<String>,
     unstable: bool,
@@ -263,7 +265,7 @@ pub async fn mods_project(
         description: p.description,
         body,
         downloads: p.downloads,
-        client_side: p.client_side,
+        client_need: client_need(&p.environment, p.client_side),
         error,
     })
 }
@@ -353,7 +355,7 @@ pub struct InstalledView {
     project_id: Option<String>,
     version_number: Option<String>,
     icon: Option<String>,
-    client_side: Option<Side>,
+    client_need: Option<ClientNeed>,
     dependency: bool,
     /// Modrinth'te tanındı mı (değilse elle eklenmiş).
     known: bool,
@@ -426,7 +428,7 @@ async fn installed_view(
                     |p| p.title.clone(),
                 ),
                 icon: project.and_then(|p| icons.remember(&p.id, p.icon_url.as_ref())),
-                client_side: project.map(|p| p.client_side),
+                client_need: project.map(|p| client_need(&p.environment, p.client_side)),
                 project_id: rec.map(|r| r.project_id.clone()),
                 version_number: rec
                     .and_then(|r| versions.iter().find(|v| v.id == r.version_id))

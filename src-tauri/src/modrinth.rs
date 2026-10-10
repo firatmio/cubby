@@ -30,6 +30,40 @@ pub enum Side {
     Unknown,
 }
 
+/// Oyuncunun (istemcinin) bu moda ihtiyacı. Modrinth'in `environment` alanından.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ClientNeed {
+    /// Oyuncuda da kurulu olmalı, yoksa giremez (yeni blok/eşya ekleyen modlar).
+    Required,
+    /// Sunucuda tek başına çalışır ama bazı özellikleri (ekranlar, tuşlar) oyuncuda da kuruluysa görünür.
+    Recommended,
+    /// Yalnız sunucuda yeterli.
+    None,
+    /// Yalnız oyuncuda çalışır; sunucuya kurmak işe yaramaz.
+    ClientOnly,
+    Unknown,
+}
+
+pub fn client_need(environment: &[String], client_side: Side) -> ClientNeed {
+    let has = |v: &str| environment.iter().any(|e| e == v);
+    if has("client_and_server") || client_side == Side::Required && !has("client_only") {
+        ClientNeed::Required
+    } else if has("client_only") || has("client_only_server_optional") || has("singleplayer_only") {
+        ClientNeed::ClientOnly
+    } else if has("client_or_server_prefers_both") || has("server_only_client_optional") {
+        ClientNeed::Recommended
+    } else if has("server_only")
+        || has("dedicated_server_only")
+        || has("client_or_server")
+        || client_side == Side::Unsupported
+    {
+        ClientNeed::None
+    } else {
+        ClientNeed::Unknown
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Sort {
@@ -73,6 +107,8 @@ pub struct SearchHit {
     pub downloads: u64,
     pub icon_url: Option<String>,
     pub client_side: Side,
+    #[serde(default)]
+    pub environment: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -98,6 +134,8 @@ pub struct Project {
     pub downloads: u64,
     pub icon_url: Option<String>,
     pub client_side: Side,
+    #[serde(default)]
+    pub environment: Vec<String>,
     pub license: Option<License>,
 }
 
@@ -335,6 +373,34 @@ mod tests {
             serde_json::from_str(&facets(LoaderKind::Fabric, "1.21.11", None)).unwrap();
         assert_eq!(f.len(), 3);
         assert_eq!(f[0], vec!["categories:fabric"]);
+    }
+
+    #[test]
+    fn client_need_from_environment() {
+        let env = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        // Modrinth'teki gerçek değerler (2026-10-10).
+        assert_eq!(
+            client_need(&env(&["client_or_server_prefers_both"]), Side::Optional),
+            ClientNeed::Recommended
+        ); // JEI
+        assert_eq!(
+            client_need(&env(&["client_and_server"]), Side::Optional),
+            ClientNeed::Required
+        ); // Farmer's Delight
+        assert_eq!(
+            client_need(&env(&["server_only"]), Side::Optional),
+            ClientNeed::None
+        ); // Styled Chat
+        assert_eq!(
+            client_need(&env(&["client_or_server"]), Side::Optional),
+            ClientNeed::None
+        ); // FerriteCore
+        assert_eq!(
+            client_need(&env(&["client_only"]), Side::Required),
+            ClientNeed::ClientOnly
+        ); // Sodium
+        assert_eq!(client_need(&[], Side::Required), ClientNeed::Required);
+        assert_eq!(client_need(&[], Side::Optional), ClientNeed::Unknown);
     }
 
     #[test]

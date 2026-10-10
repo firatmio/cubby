@@ -256,19 +256,19 @@ type MockMod = {
   title: string;
   description: string;
   downloads: number;
-  clientSide: string;
+  clientNeed: string;
   deps?: string[];
   plugin?: boolean;
 };
 const MODS: MockMod[] = [
-  { projectId: "P7dR8mSH", slug: "fabric-api", title: "Fabric API", description: "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.", downloads: 272_714_633, clientSide: "optional" },
-  { projectId: "gvQqBUqZ", slug: "lithium", title: "Lithium", description: "No-compromises game logic optimization mod. Well suited for clients and servers of all kinds.", downloads: 61_200_000, clientSide: "optional" },
-  { projectId: "fALzjamp", slug: "chunky", title: "Chunky", description: "Pre-generates chunks, quickly and efficiently.", downloads: 9_800_000, clientSide: "optional", deps: ["P7dR8mSH"] },
-  { projectId: "Ha28R6CL", slug: "farmers-delight", title: "Farmer's Delight", description: "A gentle expansion to farming and cooking.", downloads: 38_400_000, clientSide: "required", deps: ["P7dR8mSH"] },
-  { projectId: "l6YH9Als", slug: "spark", title: "spark", description: "A performance profiler for Minecraft clients, servers and proxies.", downloads: 21_000_000, clientSide: "optional" },
-  { projectId: "9eGKb6K1", slug: "simple-voice-chat", title: "Simple Voice Chat", description: "A working voice chat in Minecraft!", downloads: 44_100_000, clientSide: "required" },
-  { projectId: "Vebnzrzj", slug: "luckperms", title: "LuckPerms", description: "A permissions plugin for Minecraft servers.", downloads: 5_400_000, clientSide: "unsupported", plugin: true },
-  { projectId: "UmLGoGij", slug: "essentialsx", title: "EssentialsX", description: "The essential plugin suite for Minecraft servers.", downloads: 3_100_000, clientSide: "unsupported", plugin: true },
+  { projectId: "P7dR8mSH", slug: "fabric-api", title: "Fabric API", description: "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.", downloads: 272_714_633, clientNeed: "recommended" },
+  { projectId: "gvQqBUqZ", slug: "lithium", title: "Lithium", description: "No-compromises game logic optimization mod. Well suited for clients and servers of all kinds.", downloads: 61_200_000, clientNeed: "recommended" },
+  { projectId: "fALzjamp", slug: "chunky", title: "Chunky", description: "Pre-generates chunks, quickly and efficiently.", downloads: 9_800_000, clientNeed: "recommended", deps: ["P7dR8mSH"] },
+  { projectId: "Ha28R6CL", slug: "farmers-delight", title: "Farmer's Delight", description: "A gentle expansion to farming and cooking.", downloads: 38_400_000, clientNeed: "required", deps: ["P7dR8mSH"] },
+  { projectId: "l6YH9Als", slug: "spark", title: "spark", description: "A performance profiler for Minecraft clients, servers and proxies.", downloads: 21_000_000, clientNeed: "recommended" },
+  { projectId: "9eGKb6K1", slug: "simple-voice-chat", title: "Simple Voice Chat", description: "A working voice chat in Minecraft!", downloads: 44_100_000, clientNeed: "required" },
+  { projectId: "Vebnzrzj", slug: "luckperms", title: "LuckPerms", description: "A permissions plugin for Minecraft servers.", downloads: 5_400_000, clientNeed: "none", plugin: true },
+  { projectId: "UmLGoGij", slug: "essentialsx", title: "EssentialsX", description: "The essential plugin suite for Minecraft servers.", downloads: 3_100_000, clientNeed: "none", plugin: true },
 ];
 const modsInstalled: Record<string, { file: string; projectId: string | null; dependency: boolean; update: string | null }[]> = {
   "mock-1": [
@@ -288,7 +288,7 @@ function installedView(id: string) {
       projectId: m.projectId,
       versionNumber: m.projectId ? m.file.replace(/^[a-z-]+-/, "").replace(/\.jar$/, "") : null,
       icon: m.projectId ? `modicon/${m.projectId}` : null,
-      clientSide: mod?.clientSide ?? null,
+      clientNeed: mod?.clientNeed ?? null,
       dependency: m.dependency,
       known: !!m.projectId,
       update: m.update,
@@ -572,7 +572,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           description: m.description,
           downloads: m.downloads,
           icon: `modicon/${m.projectId}`,
-          clientSide: m.clientSide,
+          clientNeed: m.clientNeed,
           installed: have.has(m.projectId),
         })),
       };
@@ -590,7 +590,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         license: "MIT License",
         url: `https://modrinth.com/project/${m.slug}`,
         icon: `modicon/${m.projectId}`,
-        clientSide: m.clientSide,
+        clientNeed: m.clientNeed,
         installed: have.has(m.projectId),
         versionNumber: "1.2.0+26.3",
         unstable: m.slug === "chunky",

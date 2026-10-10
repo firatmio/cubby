@@ -6,6 +6,7 @@ import {
   Check,
   Download,
   ExternalLink,
+  Info,
   Plug,
   Puzzle,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
   errorMessage,
   mediaUrl,
   openExternal,
+  type ClientNeed,
   type InstalledMod,
   type ModDetail,
   type ModHit,
@@ -42,6 +44,13 @@ const SORTS: { id: ModSort; label: string }[] = [
   { id: "relevance", label: "En uygun" },
   { id: "updated", label: "Güncel" },
 ];
+
+/** Oyuncunun da kurması gerekip gerekmediğini gösteren kısa rozet. */
+function NeedBadge({ need }: { need: ClientNeed | null }) {
+  if (need === "required") return <Badge tone="warning">Arkadaşın da kurmalı</Badge>;
+  if (need === "recommended") return <Badge>Oyuncuda da önerilir</Badge>;
+  return null;
+}
 
 function ModIcon({ icon, plugin }: { icon: string | null; plugin: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -282,7 +291,7 @@ export function ModsSheet() {
                       <span className={styles.text}>
                         <span className={styles.title}>
                           {h.title}
-                          {h.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+                          <NeedBadge need={h.clientNeed} />
                         </span>
                         <span className={styles.desc}>{h.description}</span>
                         <span className={styles.meta}>{compactCount(h.downloads)} indirme</span>
@@ -350,7 +359,7 @@ export function ModsSheet() {
                           {m.title}
                           {m.dependency && <Badge>Bağımlılık</Badge>}
                           {!m.known && <Badge>Elle eklenmiş</Badge>}
-                          {m.clientSide === "required" && <Badge tone="warning">Arkadaşın da kurmalı</Badge>}
+                          <NeedBadge need={m.clientNeed} />
                         </span>
                         <span className={styles.meta}>
                           {m.versionNumber ?? m.file}
@@ -442,10 +451,21 @@ function DetailView({
             Bununla birlikte kurulacak: <b>{detail.with.map((w) => w.title).join(", ")}</b>
           </li>
         )}
-        {detail.clientSide === "required" && (
+        {detail.clientNeed === "required" && (
           <li className={styles.warn}>
-            <AlertTriangle size={15} aria-hidden /> Oyuna yeni içerik ekliyor: arkadaşının da kendi Minecraft'ına kurması
-            gerekir.
+            <AlertTriangle size={15} aria-hidden /> Oyuna yeni içerik ekliyor: hem senin hem arkadaşının kendi
+            Minecraft'ına (Fabric ile) kurması gerekir, yoksa dünyaya girilemez.
+          </li>
+        )}
+        {detail.clientNeed === "recommended" && (
+          <li>
+            <Info size={15} aria-hidden /> Sunucuda tek başına çalışır, ama ekranlar, tuşlar ya da tarif listesi gibi
+            özellikleri yalnız oyuncunun kendi Minecraft'ında (Fabric ile) da kuruluysa görünür.
+          </li>
+        )}
+        {detail.clientNeed === "none" && (
+          <li>
+            <Check size={15} aria-hidden /> Yalnız sunucuda çalışır; oyuncuların bir şey kurmasına gerek yok.
           </li>
         )}
         {detail.missing.length > 0 && (

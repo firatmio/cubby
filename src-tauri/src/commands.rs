@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
+#[cfg(not(windows))]
 use tauri_plugin_opener::OpenerExt;
 
 use crate::consts::DEFAULT_PORT;
@@ -421,8 +422,28 @@ pub fn server_snapshot(state: State<'_, AppState>, id: String) -> ServerSnapshot
     state.servers.snapshot(&id)
 }
 
+/// Gezgin yalnız ters eğik çizgili ve `\\?\` öneksiz yolları anlar.
+#[cfg(windows)]
+fn dunce_path(dir: &Path) -> String {
+    let s = dir.to_string_lossy();
+    s.strip_prefix(r"\\?\").unwrap_or(&s).replace('/', "\\")
+}
+
 fn open_dir(app: &AppHandle, dir: &Path) -> AppResult<()> {
     std::fs::create_dir_all(dir)?;
+    // Windows'ta klasörü doğrudan Gezgin'e ver: genel "aç" (ShellExecute) yolu bazen var olan
+    // klasöre "Konum kullanılamıyor" diyebiliyor. explorer.exe başarıda da 1 döndürür; sonucu önemsiz.
+    #[cfg(windows)]
+    {
+        let _ = app;
+        let path = dunce_path(dir);
+        std::process::Command::new("explorer.exe")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| AppError::msg(format!("Klasör açılamadı: {e}")))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
         .map_err(|e| AppError::msg(format!("Klasör açılamadı: {e}")))

@@ -84,8 +84,12 @@ export interface AccessView {
   notice: string | null;
 }
 
-/** Modun oyuncu (istemci) tarafında gerekip gerekmediği. */
-export type ModSide = "required" | "optional" | "unsupported" | "unknown";
+/**
+ * Oyuncunun (istemcinin) bu moda ihtiyacı.
+ * required: oyuncuda da kurulu olmalı; recommended: sunucuda çalışır ama bazı özellikleri (ekranlar,
+ * tuşlar) oyuncuda da kuruluysa görünür; none: yalnız sunucuda yeterli; clientOnly: sunucuda işe yaramaz.
+ */
+export type ClientNeed = "required" | "recommended" | "none" | "clientOnly" | "unknown";
 export type ModSort = "relevance" | "downloads" | "updated";
 
 export interface ModHit {
@@ -96,7 +100,7 @@ export interface ModHit {
   downloads: number;
   /** `media` yolu (modicon/<id>) */
   icon: string | null;
-  clientSide: ModSide;
+  clientNeed: ClientNeed;
   installed: boolean;
 }
 
@@ -120,7 +124,7 @@ export interface ModDetail {
   license: string | null;
   url: string;
   icon: string | null;
-  clientSide: ModSide;
+  clientNeed: ClientNeed;
   installed: boolean;
   versionNumber: string | null;
   /** Kurulacak sürüm beta/alpha */
@@ -138,7 +142,7 @@ export interface InstalledMod {
   projectId: string | null;
   versionNumber: string | null;
   icon: string | null;
-  clientSide: ModSide | null;
+  clientNeed: ClientNeed | null;
   /** Başka bir mod istediği için kuruldu */
   dependency: boolean;
   /** Modrinth'te tanındı (değilse elle eklenmiş) */
