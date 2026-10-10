@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, FolderOpen, Plus, RotateCcw, X } from "lucide-react";
 import {
@@ -13,7 +13,7 @@ import {
   type SystemInfo,
 } from "../../lib/api";
 import { KIND_COLORS, KIND_LABELS, LOADER_LABELS, formatBytesMb, formatDate, formatRam } from "../../lib/format";
-import { rise, spring, stagger } from "../../lib/motion";
+import { crossfade, slide, spring } from "../../lib/motion";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
 import { useAppStore } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
@@ -58,7 +58,8 @@ export function SetupFlow() {
   const progress = useAppStore((s) => s.installProgress);
   const setInstallProgress = useAppStore((s) => s.setInstallProgress);
 
-  const [step, setStep] = useState<Step>("kind");
+  /** dir: son geçişin yönü (1 ileri, -1 geri); kayma animasyonu buna göre. */
+  const [{ step, dir }, setNav] = useState<{ step: Step; dir: 1 | -1 }>({ step: "kind", dir: 1 });
   const [kind, setKind] = useState<LoaderKind>("fabric");
 
   const [includeSnapshots, setIncludeSnapshots] = useState(false);
@@ -85,6 +86,7 @@ export function SetupFlow() {
   const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
+  const pageRef = useRef<HTMLElement>(null);
   const [installError, setInstallError] = useState<string | null>(null);
   const [created, setCreated] = useState<Instance | null>(null);
 
@@ -131,6 +133,10 @@ export function SetupFlow() {
     [useWhitelist],
   );
   const lastStep = questionSteps[questionSteps.length - 1];
+  const setStep = (to: Step) => {
+    const order = [...questionSteps, "install"];
+    setNav((cur) => ({ step: to, dir: order.indexOf(to) >= order.indexOf(cur.step) ? 1 : -1 }));
+  };
 
   const addPlayer = async (e: FormEvent) => {
     e.preventDefault();
@@ -317,7 +323,7 @@ export function SetupFlow() {
           maxLength={MAX_NAME_LEN}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && canNext && next()}
-          autoFocus
+          data-autofocus
           aria-label="Dünyanın adı"
         />
         <button type="button" className={styles.disclosure} onClick={() => setAdvancedOpen((v) => !v)}>
@@ -430,7 +436,7 @@ export function SetupFlow() {
               setPlayerInput(e.target.value);
               setLookupError(null);
             }}
-            autoFocus
+            data-autofocus
             aria-label="Oyuncu adı"
           />
           <Button type="submit" size="lg" icon={Plus} loading={lookupBusy} disabled={!playerInput.trim()}>
@@ -499,22 +505,36 @@ export function SetupFlow() {
         ))}
       </div>
 
-      <AnimatePresence mode="wait">
+      {/* Adım değişince sayfalar yatayda kayar; aynı adımda içerik değişirse (kurulum → hazır/hata) çapraz geçiş. */}
+      <AnimatePresence initial={false} custom={dir}>
         <motion.section
-          key={step + (created ? "-done" : "") + (installError ? "-error" : "")}
+          key={step}
           className={styles.content}
-          variants={stagger}
-          initial="hidden"
-          animate="show"
+          custom={dir}
+          variants={slide}
+          initial="enter"
+          animate="center"
           exit="exit"
+          // Odak kayma bitince: kayarken odaklamak tarayıcıya ekran dışındaki kutuyu göstermek için kaydırtır.
+          onAnimationComplete={(def) => {
+            if (def === "center") pageRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
+          }}
+          ref={pageRef}
         >
-          <motion.h1 className={styles.question} variants={rise}>
-            {question}
-          </motion.h1>
-          <motion.p className={[styles.sub, installError && styles.subError].filter(Boolean).join(" ")} variants={rise}>
-            {sub}
-          </motion.p>
-          {content && <motion.div variants={rise}>{content}</motion.div>}
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.div
+              key={(created ? "done" : "") + (installError ? "error" : "")}
+              className={styles.page}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: crossfade.ease }}
+            >
+              <h1 className={styles.question}>{question}</h1>
+              <p className={[styles.sub, installError && styles.subError].filter(Boolean).join(" ")}>{sub}</p>
+              {content}
+            </motion.div>
+          </AnimatePresence>
         </motion.section>
       </AnimatePresence>
 

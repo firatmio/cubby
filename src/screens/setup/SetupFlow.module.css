@@ -1,6 +1,8 @@
 .setup {
   position: absolute;
   inset: 0;
+  /* clip: odak gibi programatik kaydırmalar da engellenir (hidden kaydırılabilir kalır). */
+  overflow: clip;
   padding: var(--sp-6) var(--edge) var(--edge);
 }
 
@@ -23,6 +25,13 @@
   bottom: 120px;
   display: flex;
   flex-direction: column;
+}
+
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .question {

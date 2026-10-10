@@ -32,3 +32,13 @@ export const screen: Variants = {
 
 /** Basınca hafif küçülme. */
 export const press = { whileTap: { scale: 0.97 }, transition: snappy } as const;
+
+/**
+ * Kurulum adımları arasında yatay kayma: yeni sayfa bir yandan girerken eskisi öbür yandan çıkar.
+ * `custom` = yön (1 ileri, -1 geri). Pencere sabit olduğundan vw ile ekran dışına tam taşınır.
+ */
+export const slide: Variants = {
+  enter: (dir: number) => ({ x: `${dir * 100}vw` }),
+  center: { x: "0vw", transition: { type: "spring", stiffness: 220, damping: 30 } },
+  exit: (dir: number) => ({ x: `${-dir * 100}vw`, transition: { type: "spring", stiffness: 220, damping: 30 } }),
+};
