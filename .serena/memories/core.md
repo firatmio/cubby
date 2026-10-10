@@ -15,3 +15,6 @@ Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone liste
 - Her milestone sonunda tek commit, app çalışır halde.
 
 Stack/komutlar: `mem:tech_stack`, `mem:suggested_commands`, `mem:task_completion`, stil: `mem:conventions`.
+
+## Yol haritası (2026-10-10)
+M1–M5, M7a bitti. Sıra: **M8** (Modrinth mod/eklenti mağazası; CurseForge anahtar istediği için yok) → **M7b** (mod eşitleme M8 altyapısıyla, Fabric istemci kurulumu, web katılım sayfası) → **M6** (NeoForge/Forge/Quilt). Testler (iki bilgisayarlı uçtan uca, kurulum dosyası) en sona; kullanıcı yerelde test edebileceği şeyleri kendisi dener.
