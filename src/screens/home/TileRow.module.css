@@ -86,3 +86,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.friend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  padding: 5px;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.6);
+  color: var(--text);
+}

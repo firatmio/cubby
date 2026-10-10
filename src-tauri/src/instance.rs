@@ -55,6 +55,9 @@ pub struct Instance {
     /// İnternetten katılım açık mı (modemde port açılır).
     #[serde(default)]
     pub internet: bool,
+    /// Davet linklerinin anahtarı; yenilenince eski davetler geçersiz olur.
+    #[serde(default)]
+    pub invite_token: Option<String>,
 }
 
 impl Instance {

@@ -9,6 +9,7 @@ import {
   type ProcessStats,
   type ServerStatus,
   type ConnectionView,
+  type JoinStatus,
 } from "./api";
 
 type Unlisten = () => void;
@@ -32,6 +33,8 @@ const EVENT_REJECTED = "server://rejected";
 const EVENT_COVER_CHANGED = "cover://changed";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
 const EVENT_NET = "net://status";
+const EVENT_JOIN_STATUS = "join://status";
+const EVENT_INVITE = "join://invite";
 
 type WithId<T> = T & { id: string };
 
@@ -86,6 +89,16 @@ export async function bindBackendEvents(): Promise<() => void> {
     listen(EVENT_SHUTTING_DOWN, () => store().setShuttingDown(true)),
     listen<{ id: string; view: ConnectionView }>(EVENT_NET, ({ payload }) => {
       store().setConnection(payload.id, payload.view);
+    }),
+    listen<{ id: string; status: JoinStatus }>(EVENT_JOIN_STATUS, ({ payload }) => {
+      store().setJoinStatus(payload.id, payload.status);
+    }),
+    // Davet linkine tıklandı: bekleyen daveti al, Katıl penceresini aç.
+    listen(EVENT_INVITE, () => {
+      api
+        .takePendingInvite()
+        .then((code) => code && store().openJoin(code))
+        .catch(console.error);
     }),
   ]);
 

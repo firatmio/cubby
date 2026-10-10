@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 /// Davet linklerinin şeması (`mcsm://join?d=...`). Uygulama adı netleşince yalnızca burası değişir.
-#[allow(dead_code)] // M7: deep-link
 pub const URL_SCHEME: &str = "mcsm";
 
 pub const USER_AGENT: &str = concat!("mc-server-launcher/", env!("CARGO_PKG_VERSION"));

@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, LogIn, Plus } from "lucide-react";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -8,6 +8,7 @@ import styles from "./EmptyHome.module.css";
 /** Hiç dünya yokken: ortada tek büyük "+" ve sağ altta aynı eylem. */
 export function EmptyHome() {
   const setView = useAppStore((s) => s.setView);
+  const openJoin = useAppStore((s) => s.openJoin);
   return (
     <div className={styles.empty}>
       <motion.div className={styles.center} variants={stagger} initial="hidden" animate="show">
@@ -28,6 +29,9 @@ export function EmptyHome() {
         </motion.p>
       </motion.div>
       <div className={styles.action}>
+        <Button size="lg" icon={LogIn} onClick={() => openJoin("")}>
+          Arkadaşının dünyasına katıl
+        </Button>
         <Button variant="primary" size="lg" icon={ArrowRight} iconRight onClick={() => setView("setup")}>
           Başlayalım
         </Button>

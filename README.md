@@ -12,7 +12,8 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **M4** — Dünya ayarları (önemli alanlar + tüm `server.properties` tablosu), tek seferlik EULA, TLauncher (premium olmayan) modu, beyaz liste (kurulumda da), yetkililer, oyuncu atma, giremeyenlere tek tıkla izin, kapak = sunucu simgesi, MOTD = dünya adı
 - [x] **M5** — İnternetten katılım: dünya başına "İnternete aç", modemde otomatik port açma (UPnP) ve CGNAT tespiti; modem izin vermiyorsa neden ve çözüm sade dille gösterilir
 - [ ] M6 — NeoForge/Forge/Quilt
-- [ ] M7 — Davet linki ile katılma (istemci tarafı)
+- [x] **M7a** — Katıl modu: davet linki/kodu (`mcsm://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
+- [ ] M7b — Mod eşitleme, Fabric istemci kurulumu, web katılım sayfası
 
 ## Geliştirme
 

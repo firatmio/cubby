@@ -53,6 +53,7 @@ const instances: Instance[] = [
     createdAt: 1,
     cover: { kind: "auto", color: "#8fb7d8", version: 1 },
     internet: true,
+    inviteToken: null,
   },
   {
     id: "mock-2",
@@ -68,6 +69,7 @@ const instances: Instance[] = [
     createdAt: 2,
     cover: null,
     internet: true,
+    inviteToken: null,
   },
   {
     id: "mock-3",
@@ -83,6 +85,7 @@ const instances: Instance[] = [
     createdAt: 3,
     cover: { kind: "manual", color: "#d8a26a", version: 1 },
     internet: false,
+    inviteToken: null,
   },
 ];
 
@@ -226,6 +229,27 @@ async function netUp(id: string) {
 // Açılışta çalışan ve internete açık dünya için bağlantılar kurulmuş olsun.
 setTimeout(() => void netUp("mock-1"), 300);
 
+const ONLINE = { reachable: true, running: true, path: "direct", error: null };
+const joined: { world: Record<string, unknown> & { id: string; name: string; localPort: number }; status: typeof ONLINE | Record<string, unknown>; address: string }[] = [
+  {
+    world: {
+      id: "join-1",
+      name: "Ali'nin adası",
+      host: "f".repeat(64),
+      world: "remote-1",
+      loader: "vanilla",
+      mcVersion: "26.3",
+      loaderVersion: null,
+      localPort: 25600,
+      addedAt: 1,
+    },
+    status: ONLINE,
+    address: "127.0.0.1:25600",
+  },
+];
+const entries = new Set(["join-1"]);
+const SAMPLE_CODE = "eyJ2IjoxLCJuYW1lIjoiTWVobWV0In0";
+
 async function boot(id: string) {
   setStatus(id, "starting");
   logs[id] = [];
@@ -320,6 +344,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         createdAt: Date.now(),
         cover: null,
         internet: false,
+        inviteToken: null,
       };
       instances.push(inst);
       status[id] = "stopped";
@@ -420,6 +445,70 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       if (args.on && status[args.id] === "running") void netUp(args.id);
       return connectionView(args.id);
     }
+    case "create_invite":
+    case "reset_invite": {
+      const code = `${SAMPLE_CODE}${cmd === "reset_invite" ? Date.now().toString(36) : ""}`;
+      return { code, link: `mcsm://join?d=${code}` };
+    }
+    case "preview_invite":
+      if (!String(args.code).trim().startsWith("mcsm") && String(args.code).trim().length < 8)
+        throw "Davet kodu bozuk ya da eksik. Arkadaşından yeni bir davet iste.";
+      await sleep(700);
+      return {
+        name: "Mehmet'in modlu dünyası",
+        loader: "fabric",
+        mcVersion: "26.3",
+        loaderVersion: "0.19.5",
+        status: { reachable: true, running: true, path: "relay", error: null },
+        own: false,
+        alreadyJoined: false,
+        minecraftDir: "C:\\Users\\sen\\AppData\\Roaming\\.minecraft",
+        minecraftRunning: false,
+        requiredVersion: "fabric-loader-0.19.5-26.3",
+        versionInstalled: false,
+      };
+    case "join_world": {
+      const id = `join-${Date.now()}`;
+      const view = {
+        world: {
+          id,
+          name: "Mehmet'in modlu dünyası",
+          host: "e".repeat(64),
+          world: "remote-2",
+          loader: "fabric",
+          mcVersion: "26.3",
+          loaderVersion: "0.19.5",
+          localPort: 25600 + joined.length,
+          addedAt: Date.now(),
+        },
+        status: { reachable: null, running: false, path: null, error: null } as Record<string, unknown>,
+        address: `127.0.0.1:${25600 + joined.length}`,
+      };
+      joined.push(view);
+      entries.add(id);
+      setTimeout(() => {
+        view.status = { reachable: true, running: true, path: "relay", error: null };
+        emit("join://status", { id, status: view.status });
+      }, 1500);
+      return view;
+    }
+    case "list_joined":
+      return structuredClone(joined);
+    case "remove_joined": {
+      const i = joined.findIndex((j) => j.world.id === args.id);
+      if (i >= 0) joined.splice(i, 1);
+      entries.delete(args.id);
+      return null;
+    }
+    case "readd_server_entry":
+      entries.add(args.id);
+      return null;
+    case "server_entry_exists":
+      return entries.has(args.id);
+    case "refresh_joined":
+      return structuredClone(joined.find((j) => j.world.id === args.id));
+    case "take_pending_invite":
+      return null;
     case "kick_player":
       players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
       emit("server://players", { id: args.id, players: players[args.id] });

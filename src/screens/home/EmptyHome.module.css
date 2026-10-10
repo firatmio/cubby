@@ -50,4 +50,6 @@
   position: absolute;
   right: var(--edge);
   bottom: var(--edge);
+  display: flex;
+  gap: var(--sp-3);
 }

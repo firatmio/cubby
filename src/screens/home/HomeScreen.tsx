@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AnimatePresence } from "motion/react";
-import { useAppStore, useSelected } from "../../store/appStore";
+import { useAppStore, useSelected, useSelectedJoined } from "../../store/appStore";
+import { JoinedActions, JoinedCards, JoinedHero } from "../join/JoinedHome";
 import { ActionBar } from "./ActionBar";
 import { EmptyHome } from "./EmptyHome";
 import { Hero } from "./Hero";
@@ -11,7 +12,9 @@ import styles from "./HomeScreen.module.css";
 /** Ana ekran: üstte dünyalar, solda seçili dünyanın kimliği, sağ altta ana eylem. */
 export function HomeScreen() {
   const instances = useAppStore((s) => s.instances);
+  const joinedCount = useAppStore((s) => s.joined.length);
   const selected = useSelected();
+  const joined = useSelectedJoined();
 
   // ←/→ ile dünyalar arasında gezin (panel açıkken ya da yazı yazarken değil).
   useEffect(() => {
@@ -26,21 +29,33 @@ export function HomeScreen() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  if (instances.length === 0 || !selected) return <EmptyHome />;
+  if ((instances.length === 0 && joinedCount === 0) || (!selected && !joined)) return <EmptyHome />;
 
   return (
     <div className={styles.home}>
       <TileRow />
       <div className={styles.hero}>
         <AnimatePresence mode="wait">
-          <Hero key={selected.id} instance={selected} />
+          {selected ? (
+            <Hero key={selected.id} instance={selected} />
+          ) : (
+            joined && <JoinedHero key={joined.world.id} view={joined} />
+          )}
         </AnimatePresence>
       </div>
       <div className={styles.bottom}>
         <AnimatePresence mode="wait">
-          <InfoCards key={selected.id} instance={selected} />
+          {selected ? (
+            <InfoCards key={selected.id} instance={selected} />
+          ) : (
+            joined && <JoinedCards key={joined.world.id} view={joined} />
+          )}
         </AnimatePresence>
-        <ActionBar key={`a-${selected.id}`} instance={selected} />
+        {selected ? (
+          <ActionBar key={`a-${selected.id}`} instance={selected} />
+        ) : (
+          joined && <JoinedActions key={`a-${joined.world.id}`} view={joined} />
+        )}
       </div>
     </div>
   );

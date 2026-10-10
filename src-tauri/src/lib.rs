@@ -5,11 +5,15 @@ mod download;
 mod error;
 mod hash;
 mod instance;
+mod invite;
 mod java;
+mod join;
+mod join_cmds;
 mod loaders;
 mod media;
 mod net;
 mod net_cmds;
+mod p2p;
 mod paths;
 mod players;
 mod properties;
@@ -23,17 +27,25 @@ mod world_cmds;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 use commands::AppState;
 use java::JavaManager;
+use join::JoinManager;
+use join_cmds::PendingInvite;
 use loaders::Loaders;
 use net::NetManager;
+use p2p::P2p;
 use registry::Registry;
 use server::ServerManager;
 use settings::SettingsStore;
 
 pub const EVENT_SHUTTING_DOWN: &str = "app://shutting-down";
+/// Davet linki geldi; arayüz `take_pending_invite` ile alır.
+pub const EVENT_INVITE: &str = "join://invite";
 
 /// Kapanış başladıysa ikinci kez tetiklenmesin.
 static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
@@ -56,14 +68,66 @@ fn begin_shutdown(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let servers = app.state::<AppState>().servers.clone();
         servers.stop_all(&app).await;
-        // Modemde açılan portlar kapansın.
+        // Modemde açılan portlar kapansın, doğrudan bağlantılar düzgünce kapansın.
         app.state::<Arc<NetManager>>().shutdown().await;
+        app.state::<Arc<P2p>>().close().await;
         app.exit(0);
     });
 }
 
 fn needs_graceful_shutdown(app: &AppHandle) -> bool {
     !SHUTTING_DOWN.load(Ordering::SeqCst) && app.state::<AppState>().servers.any_active()
+}
+
+/// Pencere kapatılınca arka planda (tray) kalmalı mı: çalışan sunucu ya da katılınan dünya varsa.
+fn keep_in_background(app: &AppHandle) -> bool {
+    app.state::<AppState>().servers.any_active() || app.state::<Arc<JoinManager>>().any_now()
+}
+
+/// `mcsm://join?d=...` linki: sakla, pencereyi öne getir, arayüze haber ver.
+fn handle_invite_urls(app: &AppHandle, urls: impl IntoIterator<Item = String>) {
+    let Some(url) = urls
+        .into_iter()
+        .find(|u| u.starts_with(&format!("{}://", consts::URL_SCHEME)))
+    else {
+        return;
+    };
+    *app.state::<PendingInvite>()
+        .0
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = Some(url);
+    focus_main(app);
+    let _ = app.emit(EVENT_INVITE, ());
+}
+
+fn build_tray(app: &tauri::App) -> tauri::Result<()> {
+    let open = MenuItem::with_id(app, "open", "Aç", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Tamamen kapat", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &quit])?;
+    let mut tray = TrayIconBuilder::with_id("main")
+        .tooltip("MC Sunucu Yöneticisi")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, e| match e.id().as_ref() {
+            "open" => focus_main(app),
+            "quit" => begin_shutdown(app),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, e| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = e
+            {
+                focus_main(tray.app_handle());
+            }
+        });
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -74,10 +138,11 @@ pub fn run() {
         .expect("HTTP istemcisi oluşturulamadı");
 
     let app = tauri::Builder::default()
-        // İkinci kopya açılırsa mevcut pencere öne gelir (M7: deep-link de buradan gelecek).
+        // İkinci kopya açılırsa mevcut pencere öne gelir; `deep-link` özelliği linki buraya iletir.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             focus_main(app)
         }))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup({
@@ -91,6 +156,30 @@ pub fn run() {
                 net::install(app.handle(), net.clone());
                 app.manage(net);
                 sessions::install(app.handle());
+
+                // Uygulamalar arası doğrudan bağlantı: host olarak dinle, katılınan dünyaları aç.
+                let p2p = tauri::async_runtime::block_on(P2p::bind(&data))?;
+                p2p.serve(join_cmds::host_decider(app.handle().clone()));
+                let joins = JoinManager::load(&data, p2p.clone());
+                joins.start(app.handle());
+                app.manage(p2p);
+                app.manage(joins);
+
+                app.manage(PendingInvite::default());
+                // Kurulumda NSIS kaydeder; geliştirirken ve taşınabilir kullanımda burada kaydedilir.
+                #[cfg(any(windows, target_os = "linux"))]
+                if let Err(e) = app.deep_link().register_all() {
+                    eprintln!("Davet linki şeması kaydedilemedi: {e}");
+                }
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    handle_invite_urls(&handle, event.urls().into_iter().map(|u| u.to_string()));
+                });
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    handle_invite_urls(app.handle(), urls.into_iter().map(|u| u.to_string()));
+                }
+
+                build_tray(app)?;
                 Ok(())
             }
         })
@@ -110,9 +199,12 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
-                if SHUTTING_DOWN.load(Ordering::SeqCst) || needs_graceful_shutdown(app) {
+                if SHUTTING_DOWN.load(Ordering::SeqCst) {
                     api.prevent_close();
-                    begin_shutdown(app);
+                } else if keep_in_background(app) {
+                    // Sunucu ya da arkadaşın dünyasına bağlantı sürsün; tray'den açılır/kapatılır.
+                    api.prevent_close();
+                    let _ = window.hide();
                 }
             }
         })
@@ -155,6 +247,16 @@ pub fn run() {
             world_cmds::kick_player,
             net_cmds::connection_status,
             net_cmds::set_internet,
+            join_cmds::create_invite,
+            join_cmds::reset_invite,
+            join_cmds::preview_invite,
+            join_cmds::join_world,
+            join_cmds::list_joined,
+            join_cmds::remove_joined,
+            join_cmds::readd_server_entry,
+            join_cmds::server_entry_exists,
+            join_cmds::refresh_joined,
+            join_cmds::take_pending_invite,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

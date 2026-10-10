@@ -35,6 +35,7 @@ export interface Instance {
   cover: Cover | null;
   /** İnternetten katılım açık mı */
   internet: boolean;
+  inviteToken: string | null;
 }
 
 export interface Cover {
@@ -81,6 +82,58 @@ export interface AccessView {
   known: string[];
   /** Değişiklik yeniden başlatınca geçerliyse açıklama */
   notice: string | null;
+}
+
+export interface InviteLinks {
+  code: string;
+  link: string;
+}
+
+/** Bağlantı hangi yoldan gidiyor: doğrudan ya da aracı sunucu üzerinden. */
+export type PathKind = "direct" | "relay" | "unknown";
+
+export interface JoinStatus {
+  /** null: henüz denenmedi */
+  reachable: boolean | null;
+  /** Arkadaşının dünyası şu an çalışıyor mu */
+  running: boolean;
+  path: PathKind | null;
+  error: string | null;
+}
+
+/** Arkadaşının, davetle katılınan dünyası. */
+export interface JoinedWorld {
+  id: string;
+  name: string;
+  host: string;
+  world: string;
+  loader: LoaderKind;
+  mcVersion: string;
+  loaderVersion: string | null;
+  localPort: number;
+  addedAt: number;
+}
+
+export interface JoinedView {
+  world: JoinedWorld;
+  status: JoinStatus;
+  /** Minecraft'ın sunucu listesindeki adres (127.0.0.1:port) */
+  address: string;
+}
+
+export interface InvitePreview {
+  name: string;
+  loader: LoaderKind;
+  mcVersion: string;
+  loaderVersion: string | null;
+  status: JoinStatus;
+  /** Bu bilgisayarın kendi dünyası */
+  own: boolean;
+  alreadyJoined: boolean;
+  minecraftDir: string | null;
+  minecraftRunning: boolean;
+  requiredVersion: string;
+  versionInstalled: boolean;
 }
 
 /** off: dünya kapalı ya da internete açık değil. */
@@ -264,6 +317,17 @@ export const api = {
   kickPlayer: (id: string, name: string) => invoke<void>("kick_player", { id, name }),
   connectionStatus: (id: string) => invoke<ConnectionView>("connection_status", { id }),
   setInternet: (id: string, on: boolean) => invoke<ConnectionView>("set_internet", { id, on }),
+  createInvite: (id: string) => invoke<InviteLinks>("create_invite", { id }),
+  /** Yeni anahtar; eski linkler ve kodlar geçersiz olur. */
+  resetInvite: (id: string) => invoke<InviteLinks>("reset_invite", { id }),
+  previewInvite: (code: string) => invoke<InvitePreview>("preview_invite", { code }),
+  joinWorld: (code: string, force: boolean) => invoke<JoinedView>("join_world", { code, force }),
+  listJoined: () => invoke<JoinedView[]>("list_joined"),
+  removeJoined: (id: string) => invoke<void>("remove_joined", { id }),
+  readdServerEntry: (id: string, force: boolean) => invoke<void>("readd_server_entry", { id, force }),
+  serverEntryExists: (id: string) => invoke<boolean>("server_entry_exists", { id }),
+  refreshJoined: (id: string) => invoke<JoinedView>("refresh_joined", { id }),
+  takePendingInvite: () => invoke<string | null>("take_pending_invite"),
 };
 
 /**

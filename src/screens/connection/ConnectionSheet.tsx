@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Check, Copy, Globe, Home, Loader2, Router } from "lucide-react";
-import { api, errorMessage, type AccessView, type Route } from "../../lib/api";
+import { AlertTriangle, Check, Copy, Globe, Home, Link2, Loader2, RotateCcw, Router, Send } from "lucide-react";
+import { api, errorMessage, type AccessView, type InviteLinks, type Route } from "../../lib/api";
 import { rise } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
+import { Button } from "../../ui/Button";
+import { Dialog } from "../../ui/Dialog";
 import { IconButton } from "../../ui/IconButton";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
@@ -66,12 +68,87 @@ function DirectRoute({ route }: { route: Route }) {
               başlatırsan bu yol çalışır.
             </li>
             <li>
-              Yakında: arkadaşın da bu uygulamayı kurarsa modem ayarına gerek kalmadan doğrudan bağlanabileceksiniz.
+              Ya da arkadaşın da bu uygulamayı kursun: yukarıdaki davet linkiyle modem ayarına gerek kalmadan girer.
             </li>
           </ul>
         </>
       )}
     </div>
+  );
+}
+
+/** Uygulamadan uygulamaya davet: arkadaşın linke tıklar, modem ayarı gerekmez. */
+function InviteSection({ id }: { id: string }) {
+  const [links, setLinks] = useState<InviteLinks | null>(null);
+  const [copied, setCopied] = useState<"link" | "code" | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLinks(null);
+    api.createInvite(id).then(setLinks).catch((e) => setError(errorMessage(e)));
+  }, [id]);
+
+  const copy = async (what: "link" | "code") => {
+    if (!links) return;
+    await navigator.clipboard.writeText(what === "link" ? links.link : links.code);
+    setCopied(what);
+    setTimeout(() => setCopied(null), 1600);
+  };
+
+  const reset = async () => {
+    setError(null);
+    try {
+      setLinks(await api.resetInvite(id));
+      setConfirmReset(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  return (
+    <section className={styles.section}>
+      <h3>
+        <Send size={17} aria-hidden /> Uygulamayla davet et
+        <span className={styles.recommended}>Önerilen</span>
+      </h3>
+      <p className={styles.hint}>
+        Arkadaşın bu uygulamayı kurup linke tıklar; modem ayarı gerekmez ve dünyan Minecraft'taki sunucu listesine
+        kendiliğinden eklenir. Bağlantı mümkünse doğrudan kurulur.
+      </p>
+      <div className={styles.buttons}>
+        <Button size="sm" variant="primary" icon={copied === "link" ? Check : Link2} disabled={!links} onClick={() => copy("link")}>
+          {copied === "link" ? "Kopyalandı" : "Linki kopyala"}
+        </Button>
+        <Button size="sm" icon={copied === "code" ? Check : Copy} disabled={!links} onClick={() => copy("code")}>
+          {copied === "code" ? "Kopyalandı" : "Kodu kopyala"}
+        </Button>
+        <Button size="sm" variant="ghost" icon={RotateCcw} disabled={!links} onClick={() => setConfirmReset(true)}>
+          Daveti yenile
+        </Button>
+      </div>
+      {error && <p className={styles.error}>{error}</p>}
+      {confirmReset && (
+        <Dialog
+          title="Daveti yenile"
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmReset(false)}>
+                Vazgeç
+              </Button>
+              <Button variant="danger" onClick={reset}>
+                Yenile
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Daha önce gönderdiğin linkler ve kodlar çalışmaz olur; bu dünyaya katılmış olanlar da giremez. Girmesini
+            istediklerine yeni linki göndermen gerekir.
+          </p>
+        </Dialog>
+      )}
+    </section>
   );
 }
 
@@ -114,6 +191,8 @@ export function ConnectionSheet() {
     <Sheet open={open && !!instance} title="Bağlantı" subtitle={instance?.name} onClose={() => openSheet(null)}>
       {view && (
         <div className={styles.scroll}>
+          {id && <InviteSection id={id} />}
+
           <section className={styles.section}>
             <h3>
               <Home size={17} aria-hidden /> Aynı evdeyseniz

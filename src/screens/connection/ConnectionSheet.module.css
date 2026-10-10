@@ -137,3 +137,19 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.recommended {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: var(--ok-soft, rgba(108, 192, 74, 0.16));
+  color: var(--ok);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}

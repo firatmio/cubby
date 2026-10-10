@@ -16,3 +16,11 @@ o dünyanın klasöründe (`.mcsm/cover.jpg`) saklanır. Hiçbir görsel bilgisa
 Görsel yoksa arka plan, dünya türünün renginde CSS ile çizilen bir parlamadır.
 
 Fontlar uygulamayla birlikte paketlenir; çalışırken internetten indirilmez.
+
+## Ağ hizmetleri
+
+Arkadaşınla doğrudan bağlantı kurulamadığında (iki taraf da katı NAT arkasındaysa) trafik
+[iroh](https://iroh.computer)'un (n0) ücretsiz aracı sunucularından geçer; ayrıca bağlantı kurulurken
+cihaz adresleri n0'ın DNS keşif hizmetine yayınlanır. Bu sunucular bağlantı meta verilerini (IP adresleri,
+veri miktarı) görebilir, oyun içeriği uçtan uca şifrelidir. İnternete açma (UPnP) için dış IP
+`api.ipify.org` / `icanhazip.com`'dan öğrenilir.

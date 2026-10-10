@@ -3,6 +3,8 @@ import {
   api,
   type ConnectionView,
   type InstallProgress,
+  type JoinedView,
+  type JoinStatus,
   type Instance,
   type JavaProgress,
   type LogLine,
@@ -70,6 +72,16 @@ interface AppStore {
   shuttingDown: boolean;
   setShuttingDown: (v: boolean) => void;
 
+  /** Davetle katılınan arkadaş dünyaları; seçim kimliği `join:<id>`. */
+  joined: JoinedView[];
+  loadJoined: () => Promise<void>;
+  upsertJoined: (view: JoinedView) => void;
+  removeJoinedLocal: (id: string) => void;
+  setJoinStatus: (id: string, status: JoinStatus) => void;
+  /** Katıl penceresi: null kapalı, "" boş, dolu ise davet kodu/linki. */
+  joinDialog: string | null;
+  openJoin: (code: string | null) => void;
+
   /** Dünya başına bağlantı durumu (LAN, modem). */
   connections: Record<string, ConnectionView>;
   setConnection: (id: string, view: ConnectionView) => void;
@@ -93,21 +105,17 @@ export const useAppStore = create<AppStore>((set, get) => {
     selectedId: null,
     select: (selectedId) => set({ selectedId }),
     selectStep: (delta) => {
-      const { instances, selectedId } = get();
-      if (instances.length === 0) return;
-      const i = Math.max(0, instances.findIndex((x) => x.id === selectedId));
-      const next = Math.min(instances.length - 1, Math.max(0, i + delta));
-      set({ selectedId: instances[next].id });
+      const ids = allIds(get());
+      if (ids.length === 0) return;
+      const i = Math.max(0, ids.indexOf(get().selectedId ?? ""));
+      set({ selectedId: ids[Math.min(ids.length - 1, Math.max(0, i + delta))] });
     },
     loadInstances: async () => {
       const instances = await api.listInstances();
-      set((st) => ({
-        instances,
-        selectedId:
-          st.selectedId && instances.some((i) => i.id === st.selectedId)
-            ? st.selectedId
-            : (instances[0]?.id ?? null),
-      }));
+      set((st) => {
+        const ids = allIds({ instances, joined: st.joined });
+        return { instances, selectedId: st.selectedId && ids.includes(st.selectedId) ? st.selectedId : (ids[0] ?? null) };
+      });
       // Sayfa yenilense de durum, konsol ve oyuncular Rust'taki kayıttan gelsin.
       for (const i of instances) {
         api
@@ -172,10 +180,52 @@ export const useAppStore = create<AppStore>((set, get) => {
     shuttingDown: false,
     setShuttingDown: (shuttingDown) => set({ shuttingDown }),
 
+    joined: [],
+    loadJoined: async () => {
+      const joined = await api.listJoined();
+      set((st) => {
+        const ids = allIds({ instances: st.instances, joined });
+        return { joined, selectedId: st.selectedId && ids.includes(st.selectedId) ? st.selectedId : (ids[0] ?? null) };
+      });
+    },
+    upsertJoined: (view) =>
+      set((st) => {
+        const exists = st.joined.some((j) => j.world.id === view.world.id);
+        return {
+          joined: exists ? st.joined.map((j) => (j.world.id === view.world.id ? view : j)) : [...st.joined, view],
+          selectedId: joinKey(view.world.id),
+        };
+      }),
+    removeJoinedLocal: (id) =>
+      set((st) => {
+        const index = allIds(st).indexOf(joinKey(id));
+        const joined = st.joined.filter((j) => j.world.id !== id);
+        const rest = allIds({ instances: st.instances, joined });
+        return {
+          joined,
+          selectedId: st.selectedId === joinKey(id) ? (rest[Math.min(index, rest.length - 1)] ?? null) : st.selectedId,
+        };
+      }),
+    setJoinStatus: (id, status) =>
+      set((st) => ({ joined: st.joined.map((j) => (j.world.id === id ? { ...j, status } : j)) })),
+    joinDialog: null,
+    openJoin: (joinDialog) => set({ joinDialog, sheet: null }),
+
     connections: {},
     setConnection: (id, view) => set((st) => ({ connections: { ...st.connections, [id]: view } })),
   };
 });
+
+/** Katılınan dünyaların seçim kimliği; kendi dünyalarının kimlikleriyle karışmaz. */
+export const joinKey = (id: string) => `join:${id}`;
+
+function allIds(st: { instances: Instance[]; joined: JoinedView[] }): string[] {
+  return [...st.instances.map((i) => i.id), ...st.joined.map((j) => joinKey(j.world.id))];
+}
+
+export function useSelectedJoined(): JoinedView | undefined {
+  return useAppStore((s) => s.joined.find((j) => joinKey(j.world.id) === s.selectedId));
+}
 
 export function useServer(id: string | null): ServerRuntime {
   return useAppStore((s) => (id && s.servers[id]) || EMPTY_RUNTIME);
