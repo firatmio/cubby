@@ -1,12 +1,13 @@
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store/appStore";
-import type { InstallProgress, LogLine, ProcessStats, ServerStatus } from "./api";
+import type { InstallProgress, JavaProgress, LogLine, ProcessStats, ServerStatus } from "./api";
 
 // Rust'taki event adlarıyla aynı olmalı (server/mod.rs, commands.rs, lib.rs).
 const EVENT_LOG = "server://log";
 const EVENT_STATUS = "server://status";
 const EVENT_STATS = "server://stats";
 const EVENT_INSTALL_PROGRESS = "install://progress";
+const EVENT_JAVA_PROGRESS = "java://progress";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
 
 type WithId<T> = T & { id: string };
@@ -45,6 +46,9 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<InstallProgress>(EVENT_INSTALL_PROGRESS, ({ payload }) => {
       store().setInstallProgress(payload);
+    }),
+    listen<JavaProgress>(EVENT_JAVA_PROGRESS, ({ payload }) => {
+      store().setJavaProgress(payload);
     }),
     listen(EVENT_SHUTTING_DOWN, () => store().setShuttingDown(true)),
   ]);

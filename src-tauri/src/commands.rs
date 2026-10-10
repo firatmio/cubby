@@ -8,7 +8,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::consts::DEFAULT_PORT;
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
-use crate::java::{self, JavaInfo};
+use crate::java::{JavaInfo, JavaManager, JavaStage};
 use crate::loaders::{
     GameVersionList, InstallRequest, InstallStage, LoaderKind, LoaderVersionList, Loaders,
 };
@@ -18,6 +18,7 @@ use crate::server::{LaunchSpec, ServerManager, ServerSnapshot, stats};
 use crate::util::now_ms;
 
 pub const EVENT_INSTALL_PROGRESS: &str = "install://progress";
+pub const EVENT_JAVA_PROGRESS: &str = "java://progress";
 
 const MIN_RAM_MB: u32 = 512;
 const MAX_NAME_LEN: usize = 48;
@@ -34,12 +35,13 @@ pub struct SystemInfo {
     java: Option<JavaInfo>,
 }
 
+/// `java`: bulunan en yeni Java (sihirbaz özeti için).
 #[tauri::command]
-pub async fn system_info() -> SystemInfo {
-    SystemInfo {
+pub async fn system_info(java: State<'_, JavaManager>) -> Result<SystemInfo, ()> {
+    Ok(SystemInfo {
         total_mem_mb: stats::total_memory_mb(),
-        java: java::detect().await,
-    }
+        java: java.list(false).await.into_iter().next(),
+    })
 }
 
 #[tauri::command]
@@ -108,7 +110,7 @@ pub struct CreateInstanceRequest {
 struct InstallProgress<'a> {
     id: &'a str,
     stage: &'static str,
-    /// "server" | "fabric" | "paper" (yalnız `download` aşamasında)
+    /// "server" | "fabric" | "paper" | "java" (`download` / `extract` aşamasında)
     file: Option<&'static str>,
     downloaded: u64,
     total: Option<u64>,
@@ -121,6 +123,7 @@ pub async fn create_instance(
     app: AppHandle,
     state: State<'_, AppState>,
     registry: State<'_, Registry>,
+    java: State<'_, JavaManager>,
     req: CreateInstanceRequest,
 ) -> AppResult<Instance> {
     let name = validate_name(&req.name)?;
@@ -163,14 +166,32 @@ pub async fn create_instance(
         )
         .await;
 
-    let result = installed.and_then(|installed| {
+    let result: AppResult<Instance> = async {
+        let installed = installed?;
+        // Uygun Java yoksa indirilip sunucuya bağlanır. Başarısız olursa kurulum yine biter;
+        // başlatırken arayüz Java'yı tekrar önerir.
+        let java_path = match java
+            .ensure(installed.java_major, |stage| match stage {
+                JavaStage::Download { downloaded, total } => {
+                    emit("download", Some("java"), downloaded, total)
+                }
+                JavaStage::Extract => emit("extract", Some("java"), 0, None),
+            })
+            .await
+        {
+            Ok(downloaded) => downloaded.map(|j| j.path),
+            Err(e) => {
+                eprintln!("Java indirilemedi: {e}");
+                None
+            }
+        };
         let inst = Instance {
             id: id.clone(),
             name,
             loader: req.loader,
             mc_version: req.mc_version.clone(),
             loader_version: installed.loader_version,
-            java_path: None,
+            java_path,
             java_major: installed.java_major,
             ram_min_mb: req.ram_min_mb,
             ram_max_mb: req.ram_max_mb,
@@ -180,7 +201,8 @@ pub async fn create_instance(
         inst.save(&dir)?;
         registry.insert(&id, dir.clone())?;
         Ok(inst)
-    });
+    }
+    .await;
 
     match result {
         Ok(inst) => {
@@ -271,30 +293,27 @@ pub fn accept_eula(app: AppHandle, id: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub async fn start_server(app: AppHandle, state: State<'_, AppState>, id: String) -> AppResult<()> {
+pub async fn start_server(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    java: State<'_, JavaManager>,
+    id: String,
+) -> AppResult<()> {
     let inst = instance::get(&app, &id)?;
     let server_dir = paths::server_dir(&app, &id)?;
     if !eula_accepted(&server_dir) {
         return Err(AppError::msg("EULA onaylanmadan sunucu başlatılamaz"));
     }
 
-    let java = match &inst.java_path {
-        Some(p) => java::probe(p)
-            .await
-            .ok_or_else(|| AppError::msg(format!("Seçili Java çalıştırılamadı: {p}")))?,
-        None => java::detect().await.ok_or_else(|| {
+    let java = java
+        .resolve(inst.java_path.as_deref(), inst.java_major)
+        .await?
+        .ok_or_else(|| {
             AppError::msg(format!(
-                "Java bulunamadı. Bu sürüm için Java {}+ gerekli.",
-                inst.java_major
+                "Minecraft {} için Java {}+ bulunamadı. Ayarlar > Java'dan indirebilirsin.",
+                inst.mc_version, inst.java_major
             ))
-        })?,
-    };
-    if java.major < inst.java_major {
-        return Err(AppError::msg(format!(
-            "Minecraft {} için Java {}+ gerekli, bulunan Java {} ({}).",
-            inst.mc_version, inst.java_major, java.major, java.path
-        )));
-    }
+        })?;
 
     let mut args = vec![
         format!("-Xms{}M", inst.ram_min_mb),
@@ -359,4 +378,95 @@ pub fn open_content_dir(app: AppHandle, state: State<'_, AppState>, id: String) 
         .content_dir(inst.loader)
         .ok_or_else(|| AppError::msg("Bu sunucu türünde mod/plugin klasörü yok"))?;
     open_dir(&app, &paths::server_dir(&app, &id)?.join(sub))
+}
+
+#[tauri::command]
+pub async fn list_java(java: State<'_, JavaManager>, refresh: bool) -> Result<Vec<JavaInfo>, ()> {
+    Ok(java.list(refresh).await)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceJava {
+    required: u32,
+    /// Kullanıcının sabitlediği yol; `None` = otomatik.
+    pinned: Option<String>,
+    /// Başlatınca kullanılacak Java; yoksa indirilmesi gerekir.
+    selected: Option<JavaInfo>,
+    /// Sabitlenmiş Java bozuksa/eskiyse açıklama.
+    error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn instance_java(
+    app: AppHandle,
+    java: State<'_, JavaManager>,
+    id: String,
+) -> AppResult<InstanceJava> {
+    let inst = instance::get(&app, &id)?;
+    let (selected, error) = match java
+        .resolve(inst.java_path.as_deref(), inst.java_major)
+        .await
+    {
+        Ok(sel) => (sel, None),
+        Err(e) => (None, Some(e.to_string())),
+    };
+    Ok(InstanceJava {
+        required: inst.java_major,
+        pinned: inst.java_path,
+        selected,
+        error,
+    })
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct JavaProgress {
+    major: u32,
+    stage: &'static str,
+    downloaded: u64,
+    total: Option<u64>,
+}
+
+/// Adoptium'dan `major` (veya uygun üstü) JRE indirir.
+#[tauri::command]
+pub async fn install_java(
+    app: AppHandle,
+    java: State<'_, JavaManager>,
+    major: u32,
+) -> AppResult<JavaInfo> {
+    let emit = |stage: &'static str, downloaded: u64, total: Option<u64>| {
+        let _ = app.emit(
+            EVENT_JAVA_PROGRESS,
+            JavaProgress {
+                major,
+                stage,
+                downloaded,
+                total,
+            },
+        );
+    };
+    java.install(major, |stage| match stage {
+        JavaStage::Download { downloaded, total } => emit("download", downloaded, total),
+        JavaStage::Extract => emit("extract", 0, None),
+    })
+    .await
+}
+
+/// `path`: sabitlenecek java; `None` otomatik seçime döner.
+#[tauri::command]
+pub async fn set_instance_java(
+    app: AppHandle,
+    java: State<'_, JavaManager>,
+    id: String,
+    path: Option<String>,
+) -> AppResult<Instance> {
+    let dir = paths::instance_dir(&app, &id)?;
+    let mut inst = Instance::load(&dir)?;
+    if let Some(p) = &path {
+        java.resolve(Some(p), inst.java_major).await?;
+    }
+    inst.java_path = path;
+    inst.save(&dir)?;
+    Ok(inst)
 }

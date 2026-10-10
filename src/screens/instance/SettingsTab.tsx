@@ -7,6 +7,7 @@ import { api, errorMessage, type Instance, type ServerStatus } from "../../lib/a
 import { formatRam } from "../../lib/format";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
 import { useAppStore } from "../../store/appStore";
+import { JavaSection } from "./JavaSection";
 import styles from "./SettingsTab.module.css";
 
 const MAX_NAME_LEN = 48;
@@ -107,6 +108,8 @@ export function SettingsTab({ instance, status }: Props) {
           {notice && <span className={notice.ok ? styles.ok : styles.error}>{notice.text}</span>}
         </div>
       </section>
+
+      <JavaSection instance={instance} />
 
       <section className={styles.section}>
         <h3>server.properties</h3>

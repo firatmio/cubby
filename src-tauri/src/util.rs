@@ -17,3 +17,12 @@ pub fn hide_console(cmd: &mut tokio::process::Command) {
     #[cfg(not(windows))]
     let _ = cmd;
 }
+
+/// Canlı (`#[ignore]`) testlerin indirme klasörü: `MCSM_TEST_DIR` yoksa temp.
+#[cfg(test)]
+pub fn live_test_dir(name: &str) -> std::path::PathBuf {
+    std::env::var_os("MCSM_TEST_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("mcsm-live-install"))
+        .join(name)
+}

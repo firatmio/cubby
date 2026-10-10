@@ -53,3 +53,46 @@
   font-size: var(--fs-sm);
   user-select: text;
 }
+
+.choiceList {
+  max-height: 240px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.4);
+  border: var(--px) solid #555;
+}
+
+.choiceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+  width: 100%;
+  padding: var(--gap-1) var(--gap-3);
+  background: transparent;
+  border: var(--px) solid transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choiceRow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.choiceRow:disabled {
+  color: var(--text-dim);
+  text-shadow: none;
+  cursor: default;
+}
+
+.selected,
+.selected:hover:not(:disabled) {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rowNote {
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

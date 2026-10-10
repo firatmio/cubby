@@ -8,7 +8,7 @@
   - Fabric: meta v2; launcher jar'ında hash yok → `ensure_jar` (PK başlığı). Vanilla jar'ı `.fabric/server/<mc>-server.jar`'a konur (launcher 1.1.x önbellek yolu; kökteki `server.jar` KULLANILMAZ). İlk açılışta kütüphaneleri kendisi indirir.
   - Paper: Fill v3 (`fill.papermc.io/v3`; eski v2 410). Build öneri: STABLE ?? BETA, ALPHA asla. sha256 doğrulama. Başlatma `--nogui`. Java minimumu Fill'den, yoksa Mojang.
 - `server/` — `ServerManager` (id → `ServerHandle`). Durum: stopped→starting→running("]: Done (" satırı; vanilla/Fabric/Paper aynı)→stopping→stopped/crashed. stop = stdin `stop` → 30 sn → kill. Durum geçişleri `transition()` ile atomik. Son 1000 satır `server_snapshot` ile.
-- `java.rs` — M1: JAVA_HOME + PATH; `probe()` `java -version` parse. M3 genişletir.
+- `java/` — `JavaManager` (managed state, `app_data/java`): `scan.rs` (JAVA_HOME, PATH, kayıt defteri, vendor dizinleri, Minecraft Launcher runtime'ları, kendi indirdiklerimiz), `pick()` = tam major, yoksa gerekenden büyüklerin en küçüğü. `adoptium.rs` Temurin JRE: önce ≥gereken en küçük LTS (16→17; 16 JRE'si yok), sha256, zip/tar.gz açma (zip-slip korumalı). `create_instance` uygun Java yoksa indirir ve `java_path`'e bağlar (hata olursa kurulumu bozmaz). Başlatmada UI `instance_java` ile kontrol edip indirme modalı açar. Event: `java://progress`.
 - Hata tipi `AppError` frontend'e düz Türkçe string olarak serialize edilir.
 
 ## Gotchas

@@ -3,6 +3,7 @@ import {
   api,
   type InstallProgress,
   type Instance,
+  type JavaProgress,
   type LogLine,
   type ProcessStats,
   type ServerSnapshot,
@@ -40,6 +41,9 @@ interface AppStore {
 
   installProgress: InstallProgress | null;
   setInstallProgress: (p: InstallProgress | null) => void;
+
+  javaProgress: JavaProgress | null;
+  setJavaProgress: (p: JavaProgress | null) => void;
 
   shuttingDown: boolean;
   setShuttingDown: (v: boolean) => void;
@@ -85,6 +89,9 @@ export const useAppStore = create<AppStore>((set) => {
 
     installProgress: null,
     setInstallProgress: (installProgress) => set({ installProgress }),
+
+    javaProgress: null,
+    setJavaProgress: (javaProgress) => set({ javaProgress }),
 
     shuttingDown: false,
     setShuttingDown: (shuttingDown) => set({ shuttingDown }),

@@ -17,6 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
 use commands::AppState;
+use java::JavaManager;
 use loaders::Loaders;
 use registry::Registry;
 use server::ServerManager;
@@ -66,9 +67,14 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            app.manage(Registry::load(&app.path().app_data_dir()?));
-            Ok(())
+        .setup({
+            let http = http.clone();
+            move |app| {
+                let data = app.path().app_data_dir()?;
+                app.manage(Registry::load(&data));
+                app.manage(JavaManager::new(data.join("java"), http));
+                Ok(())
+            }
         })
         .manage(AppState {
             loaders: Loaders::new(http),
@@ -100,6 +106,10 @@ pub fn run() {
             commands::server_snapshot,
             commands::open_instance_dir,
             commands::open_content_dir,
+            commands::list_java,
+            commands::instance_java,
+            commands::install_java,
+            commands::set_instance_java,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

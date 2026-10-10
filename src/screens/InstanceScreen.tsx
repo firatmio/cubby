@@ -10,6 +10,7 @@ import { describeInstance } from "../lib/format";
 import { useAppStore, useServer } from "../store/appStore";
 import { ConsoleTab } from "./instance/ConsoleTab";
 import { FilesTab } from "./instance/FilesTab";
+import { JavaDownloadProgress } from "./instance/JavaDownloadProgress";
 import { PlaceholderTab } from "./instance/PlaceholderTab";
 import { SettingsTab } from "./instance/SettingsTab";
 import styles from "./InstanceScreen.module.css";
@@ -35,6 +36,9 @@ export function InstanceScreen({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [eulaOpen, setEulaOpen] = useState(false);
+  /** Uygun Java yoksa indirme önerisi: gereken major. */
+  const [javaPrompt, setJavaPrompt] = useState<number | null>(null);
+  const [javaInstalling, setJavaInstalling] = useState(false);
 
   // Sayfa yenilenirse (geliştirme sırasında) konsolu Rust'taki kayıttan geri yükle.
   useEffect(() => {
@@ -62,6 +66,15 @@ export function InstanceScreen({ id }: { id: string }) {
         setEulaOpen(true);
         return;
       }
+      const java = await api.instanceJava(id);
+      if (java.error) {
+        setError(`${java.error} Ayarlar sekmesinden Java seçimini değiştirebilirsin.`);
+        return;
+      }
+      if (!java.selected) {
+        setJavaPrompt(java.required);
+        return;
+      }
       await api.startServer(id);
     } catch (e) {
       setError(errorMessage(e));
@@ -77,6 +90,21 @@ export function InstanceScreen({ id }: { id: string }) {
       await start();
     } catch (e) {
       setError(errorMessage(e));
+    }
+  };
+
+  const installJavaAndStart = async (major: number) => {
+    setJavaInstalling(true);
+    useAppStore.getState().setJavaProgress(null);
+    try {
+      await api.installJava(major);
+      setJavaPrompt(null);
+      await start();
+    } catch (e) {
+      setJavaPrompt(null);
+      setError(errorMessage(e));
+    } finally {
+      setJavaInstalling(false);
     }
   };
 
@@ -142,6 +170,34 @@ export function InstanceScreen({ id }: { id: string }) {
         )}
         {tab === "files" && <FilesTab instance={instance} />}
       </div>
+
+      {javaPrompt !== null && (
+        <McModal
+          title="Java gerekli"
+          actions={
+            javaInstalling ? undefined : (
+              <>
+                <McButton onClick={() => setJavaPrompt(null)}>Vazgeç</McButton>
+                <McButton variant="green" onClick={() => installJavaAndStart(javaPrompt)}>
+                  İndir ve Başlat
+                </McButton>
+              </>
+            )
+          }
+        >
+          {javaInstalling ? (
+            <JavaDownloadProgress />
+          ) : (
+            <>
+              <p>Bu sunucu Java {javaPrompt} istiyor ama bilgisayarında uygun bir Java bulunamadı.</p>
+              <p>
+                Açık kaynak Eclipse Temurin'i (yaklaşık 50 MB) uygulamanın kendi klasörüne indirebilirim;
+                sistemine kurulmaz, başka programları etkilemez.
+              </p>
+            </>
+          )}
+        </McModal>
+      )}
 
       {eulaOpen && (
         <McModal

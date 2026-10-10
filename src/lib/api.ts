@@ -64,6 +64,24 @@ export interface JavaInfo {
   path: string;
   major: number;
   version: string;
+  /** Uygulamanın indirdiği JRE */
+  managed: boolean;
+}
+
+export interface InstanceJava {
+  required: number;
+  /** Sabitlenmiş java yolu; null = otomatik */
+  pinned: string | null;
+  /** Başlatınca kullanılacak Java; null ise indirilmesi gerekir */
+  selected: JavaInfo | null;
+  error: string | null;
+}
+
+export interface JavaProgress {
+  major: number;
+  stage: "download" | "extract";
+  downloaded: number;
+  total: number | null;
 }
 
 export interface SystemInfo {
@@ -90,9 +108,9 @@ export interface UpdateInstanceRequest {
 
 export interface InstallProgress {
   id: string;
-  stage: "meta" | "download" | "done";
-  /** download aşamasında hangi dosya */
-  file: "server" | "fabric" | "paper" | null;
+  stage: "meta" | "download" | "extract" | "done";
+  /** download/extract aşamasında hangi dosya */
+  file: "server" | "fabric" | "paper" | "java" | null;
   downloaded: number;
   total: number | null;
 }
@@ -117,6 +135,11 @@ export const api = {
   serverSnapshot: (id: string) => invoke<ServerSnapshot>("server_snapshot", { id }),
   openInstanceDir: (id: string) => invoke<void>("open_instance_dir", { id }),
   openContentDir: (id: string) => invoke<void>("open_content_dir", { id }),
+  listJava: (refresh: boolean) => invoke<JavaInfo[]>("list_java", { refresh }),
+  instanceJava: (id: string) => invoke<InstanceJava>("instance_java", { id }),
+  installJava: (major: number) => invoke<JavaInfo>("install_java", { major }),
+  setInstanceJava: (id: string, path: string | null) =>
+    invoke<Instance>("set_instance_java", { id, path }),
 };
 
 /** Rust hataları string olarak gelir. */

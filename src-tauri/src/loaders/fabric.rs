@@ -228,7 +228,7 @@ mod tests {
             .unwrap();
         let loader = FabricLoader::new(http.clone(), Arc::new(MojangApi::new(http)));
         let list = loader.list_game_versions(false).await.unwrap();
-        let dir = super::super::tests::live_dir("fabric");
+        let dir = crate::util::live_test_dir("fabric");
         let installed = loader
             .install(
                 &InstallRequest {

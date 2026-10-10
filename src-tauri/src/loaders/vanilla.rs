@@ -65,7 +65,7 @@ mod tests {
     async fn live_install_vanilla() {
         let loader = VanillaLoader::new(Arc::new(MojangApi::new(reqwest::Client::new())));
         let list = loader.list_game_versions(false).await.unwrap();
-        let dir = super::super::tests::live_dir("vanilla");
+        let dir = crate::util::live_test_dir("vanilla");
         let mut downloaded = 0;
         let installed = loader
             .install(

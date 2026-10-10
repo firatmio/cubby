@@ -222,13 +222,6 @@ async fn ensure_jar(path: &Path) -> AppResult<()> {
 mod tests {
     use super::*;
 
-    pub fn live_dir(name: &str) -> std::path::PathBuf {
-        std::env::var_os("MCSM_TEST_DIR")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::env::temp_dir().join("mcsm-live-install"))
-            .join(name)
-    }
-
     fn gv(id: &str, kind: &str) -> GameVersion {
         GameVersion {
             id: id.into(),

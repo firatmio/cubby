@@ -7,7 +7,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 
 - [x] **M1** — Pixel UI temeli, Vanilla sunucu indirme (sha1 doğrulamalı), başlat/durdur, canlı konsol, CPU/RAM
 - [x] **M2** — Loader mimarisi, Fabric + Paper (Fill v3), loader sürümü seçimi, yeniden adlandırma / RAM / silme (Geri Dönüşüm Kutusu), sunucu başına konum
-- [ ] M3 — Java tespiti + Adoptium'dan otomatik indirme
+- [x] **M3** — Java tespiti (PATH, JAVA_HOME, kayıt defteri, yaygın dizinler, Minecraft Launcher runtime'ları) + Adoptium'dan taşınabilir JRE, sunucu başına Java seçimi
 - [ ] M4 — server.properties, EULA, TLauncher desteği, whitelist, oyuncular
 - [ ] M5 — Bağlantı: LAN, playit.gg, UPnP
 - [ ] M6 — NeoForge/Forge/Quilt
@@ -16,7 +16,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 ## Geliştirme
 
 Gerekenler: [bun](https://bun.sh), Rust (stable), Windows'ta WebView2. Sunucuyu çalıştırmak için
-Java (M1'de `JAVA_HOME` veya `PATH`'ten bulunur; MC 26.x için Java 25+).
+Java gerekmez: uygun sürüm bulunamazsa uygulama Eclipse Temurin JRE'yi kendi klasörüne indirir.
 
 ```bash
 bun install
@@ -30,7 +30,7 @@ cd src-tauri && cargo test && cargo clippy --all-targets
 bun run build
 ```
 
-Canlı indirme testleri (Mojang, Fabric, Paper): `cargo test -- --ignored live_install`
+Canlı testler (Mojang, Fabric, Paper, Adoptium JRE): `cargo test -- --ignored live_install`; bu makinedeki Java'ları listelemek için `cargo test -- --ignored live_scan --nocapture`
 
 ## Veri konumu
 

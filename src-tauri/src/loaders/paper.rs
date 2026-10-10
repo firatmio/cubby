@@ -269,7 +269,7 @@ mod tests {
             .unwrap();
         let loader = PaperLoader::new(http.clone(), Arc::new(MojangApi::new(http)));
         let list = loader.list_game_versions(false).await.unwrap();
-        let dir = super::super::tests::live_dir("paper");
+        let dir = crate::util::live_test_dir("paper");
         let installed = loader
             .install(
                 &InstallRequest {

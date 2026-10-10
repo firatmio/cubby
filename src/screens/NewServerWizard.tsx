@@ -44,11 +44,13 @@ const DOWNLOAD_LABELS: Record<NonNullable<InstallProgress["file"]>, string> = {
   server: "Minecraft sunucusu indiriliyor",
   fabric: "Fabric başlatıcısı indiriliyor",
   paper: "Paper indiriliyor",
+  java: "Java indiriliyor",
 };
 
 const MAX_NAME_LEN = 48;
 
 function progressText(p: InstallProgress | null): string {
+  if (p?.stage === "extract") return "Java açılıyor…";
   if (p?.stage !== "download" || !p.file) return "Sürüm bilgisi alınıyor…";
   const total = p.total ? ` / ${formatBytesMb(p.total)}` : "";
   return `${DOWNLOAD_LABELS[p.file]}… ${formatBytesMb(p.downloaded)}${total} MB`;
@@ -364,7 +366,10 @@ export function NewServerWizard() {
                 {formatRam(ramMin)} – {formatRam(ramMax)}
               </dd>
               <dt>Java</dt>
-              <dd>{sys?.java ? `Java ${sys.java.major}` : <span className={styles.warn}>Bulunamadı</span>}</dd>
+              <dd>
+                {sys?.java ? `Java ${sys.java.major} bulundu` : "Bulunamadı"}
+                <span className={styles.hint}> — uygun Java yoksa kurulumda otomatik indirilir</span>
+              </dd>
             </dl>
           </div>
         )}
