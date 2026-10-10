@@ -1,77 +1,6 @@
-@font-face {
-  font-family: "Monocraft";
-  src: url("../assets/fonts/Monocraft.otf") format("opentype");
-  font-weight: 400;
-  font-display: block;
-}
-
-@font-face {
-  font-family: "Monocraft";
-  src: url("../assets/fonts/Monocraft-Bold.otf") format("opentype");
-  font-weight: 700;
-  font-display: block;
-}
-
-:root {
-  /* Ölçüler: hepsi 2/4'ün katı */
-  --px: 2px;
-  --gap-1: 4px;
-  --gap-2: 8px;
-  --gap-3: 12px;
-  --gap-4: 16px;
-  --gap-6: 24px;
-  --gap-8: 32px;
-
-  --font: "Monocraft", ui-monospace, monospace;
-  --fs-sm: 12px;
-  --fs-md: 16px;
-  --fs-lg: 20px;
-  --fs-xl: 32px;
-
-  /* Yazı */
-  --text: #ffffff;
-  --text-shadow-color: #3f3f3f;
-  --text-dim: #a0a0a0;
-  --text-dark: #3f3f3f;
-  --text-yellow: #ffff55;
-  --text-red: #ff5555;
-  --text-gold: #ffaa00;
-  --text-green: #55ff55;
-  --text-aqua: #55ffff;
-
-  /* Envanter paneli */
-  --panel-bg: #c6c6c6;
-  --panel-light: #ffffff;
-  --panel-dark: #555555;
-  --slot-bg: #8b8b8b;
-  --slot-dark: #373737;
-  --outline: #000000;
-
-  /* Butonlar */
-  --btn-bg: #6f6f6f;
-  --btn-light: #a8a8a8;
-  --btn-dark: #4a4a4a;
-  --btn-hover-bg: #7c86b8;
-  --btn-hover-light: #bcc4ef;
-  --btn-hover-dark: #545e93;
-  --btn-disabled-bg: #3a3a3a;
-
-  --green: #3c8527;
-  --green-light: #6cc349;
-  --green-dark: #1d4d13;
-  --red: #b3312c;
-  --red-light: #e0605a;
-  --red-dark: #6b1512;
-
-  --overlay: rgba(0, 0, 0, 0.55);
-  --console-bg: rgba(0, 0, 0, 0.78);
-
-  --dirt: url("../assets/textures/dirt.png");
-  --stone: url("../assets/textures/stone.png");
-  --tile: 64px; /* 16px doku x4 */
-
-  color-scheme: dark;
-}
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+@import "./tokens.css";
 
 *,
 *::before,
@@ -87,23 +16,31 @@ body,
 }
 
 body {
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--text);
-  text-shadow: var(--px) var(--px) 0 var(--text-shadow-color);
-  background-color: #2b1d12;
-  background-image: linear-gradient(var(--overlay), var(--overlay)), var(--dirt);
-  background-size: auto, var(--tile) var(--tile);
-  image-rendering: pixelated;
-  -webkit-font-smoothing: none;
-  font-smooth: never;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
   user-select: none;
   overflow: hidden;
 }
 
-img {
-  image-rendering: pixelated;
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 button,
@@ -115,30 +52,40 @@ textarea {
 }
 
 a {
-  color: var(--text-aqua);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 ::selection {
-  background: #3f6fd0;
-}
-
-/* Minecraft tarzı kaydırma çubuğu */
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.4);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--btn-bg);
-  box-shadow:
-    inset var(--px) var(--px) 0 var(--btn-light),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--btn-dark);
-  border: var(--px) solid var(--outline);
+  background: var(--accent-soft);
 }
 
 :focus-visible {
-  outline: var(--px) solid var(--text);
-  outline-offset: var(--px);
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+  background-clip: padding-box;
 }

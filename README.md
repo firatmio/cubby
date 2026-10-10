@@ -8,6 +8,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **M1** — Pixel UI temeli, Vanilla sunucu indirme (sha1 doğrulamalı), başlat/durdur, canlı konsol, CPU/RAM
 - [x] **M2** — Loader mimarisi, Fabric + Paper (Fill v3), loader sürümü seçimi, yeniden adlandırma / RAM / silme (Geri Dönüşüm Kutusu), sunucu başına konum
 - [x] **M3** — Java tespiti (PATH, JAVA_HOME, kayıt defteri, yaygın dizinler, Minecraft Launcher runtime'ları) + Adoptium'dan taşınabilir JRE, sunucu başına Java seçimi
+- [x] **Arayüz yenileme** — modern, nötr gri tonlar, otomatik açık/koyu tema, sol listede sunucular
 - [ ] M4 — server.properties, EULA, TLauncher desteği, whitelist, oyuncular
 - [ ] M5 — Bağlantı: LAN, playit.gg, UPnP
 - [ ] M6 — NeoForge/Forge/Quilt
@@ -22,6 +23,9 @@ Java gerekmez: uygun sürüm bulunamazsa uygulama Eclipse Temurin JRE'yi kendi k
 bun install
 bun run tauri dev
 ```
+
+Arayüzü Tauri olmadan, sahte verilerle görmek için `bun run dev` çalıştırıp tarayıcıda
+`http://localhost:1420` açılabilir (yalnız geliştirme modunda; `src/lib/mock.ts`).
 
 Testler ve kontroller:
 

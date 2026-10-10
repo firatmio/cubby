@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { McButton } from "../../components/McButton";
-import { McInput } from "../../components/McInput";
+import { ChevronRight, SendHorizontal } from "lucide-react";
 import { api, errorMessage, type LogLine, type ServerStatus } from "../../lib/api";
+import { Button } from "../../ui/Button";
 import styles from "./ConsoleTab.module.css";
 
 type Props = {
@@ -78,7 +78,7 @@ export function ConsoleTab({ id, status, logs }: Props) {
       <div ref={logRef} className={styles.log} onScroll={onScroll}>
         {logs.length === 0 ? (
           <p className={styles.empty}>
-            {status === "stopped" ? "Sunucu kapalı. Başlat'a bas, loglar burada akacak." : "Bekleniyor…"}
+            {status === "stopped" ? "Sunucu kapalı. Başlat'a bastığında kayıtlar burada akacak." : "Bekleniyor…"}
           </p>
         ) : (
           logs.map((l, i) => (
@@ -90,18 +90,20 @@ export function ConsoleTab({ id, status, logs }: Props) {
       </div>
       {error && <div className={styles.sendError}>{error}</div>}
       <form className={styles.inputRow} onSubmit={submit}>
-        <McInput
+        <ChevronRight size={16} className={styles.prompt} aria-hidden />
+        <input
+          className={styles.input}
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={!canSend}
           spellCheck={false}
           autoComplete="off"
-          placeholder={canSend ? "Komut yaz… (ör. say merhaba, list, op <oyuncu>)" : "Sunucu kapalıyken komut gönderilemez"}
+          placeholder={canSend ? "Komut yaz (say merhaba, list, op <oyuncu>)" : "Sunucu kapalıyken komut gönderilemez"}
         />
-        <McButton type="submit" disabled={!canSend || !command.trim()}>
+        <Button type="submit" variant="ghost" size="sm" icon={SendHorizontal} disabled={!canSend || !command.trim()}>
           Gönder
-        </McButton>
+        </Button>
       </form>
     </div>
   );

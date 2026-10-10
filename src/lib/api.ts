@@ -1,4 +1,20 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
+
+/**
+ * Geliştirirken uygulama düz tarayıcıda açıldıysa (Tauri yok) sahte verilerle çalış.
+ * `import.meta.env.DEV` prod'da `false` olduğundan mock kodu pakete girmez.
+ */
+export const IS_MOCK = import.meta.env.DEV && !("__TAURI_INTERNALS__" in window);
+
+async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (import.meta.env.DEV && IS_MOCK) {
+    const { mockInvoke } = await import("./mock");
+    return (await mockInvoke(cmd, args)) as T;
+  }
+  return tauriInvoke<T>(cmd, args);
+}
 
 // Rust tarafındaki serde tiplerinin aynası (camelCase).
 
@@ -141,6 +157,22 @@ export const api = {
   setInstanceJava: (id: string, path: string | null) =>
     invoke<Instance>("set_instance_java", { id, path }),
 };
+
+/** Klasör seçme penceresi; iptal edilirse null. */
+export async function pickFolder(title: string): Promise<string | null> {
+  if (import.meta.env.DEV && IS_MOCK) return "D:\\Oyunlar\\Sunucular";
+  const picked = await openDialog({ directory: true, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** Varsayılan tarayıcıda açar. */
+export function openExternal(url: string) {
+  if (import.meta.env.DEV && IS_MOCK) {
+    window.open(url, "_blank");
+    return;
+  }
+  openUrl(url).catch(console.error);
+}
 
 /** Rust hataları string olarak gelir. */
 export function errorMessage(e: unknown): string {

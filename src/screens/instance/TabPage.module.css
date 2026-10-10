@@ -1,36 +1,18 @@
 .page {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--gap-3);
-  height: 100%;
-  padding: var(--gap-6);
-  text-align: center;
+  gap: var(--sp-4);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-8) var(--sp-8);
 }
 
-.page p {
-  margin: 0;
-}
-
-.soon {
-  color: var(--text-yellow);
-  font-size: var(--fs-lg);
-}
-
-.dim {
-  max-width: 480px;
-  color: var(--text-dim);
+.page > * {
+  max-width: 720px;
 }
 
 .error {
-  color: var(--text-red);
+  color: var(--danger-text);
+  font-size: var(--fs-sm);
   user-select: text;
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--gap-2);
 }

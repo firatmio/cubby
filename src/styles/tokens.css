@@ -1,0 +1,120 @@
+/*
+ * Tasarım token'ları. Griler nötr (R=G=B); renk yalnızca vurgu ve durumlar için.
+ * Tema Windows/macOS açık-koyu ayarını takip eder (prefers-color-scheme).
+ */
+:root {
+  color-scheme: light dark;
+
+  --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "Cascadia Mono", ui-monospace, monospace;
+
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --radius-full: 999px;
+
+  --h-sm: 28px;
+  --h-md: 34px;
+  --h-lg: 42px;
+
+  --sidebar-w: 260px;
+  --dur: 120ms;
+
+  /* Açık tema */
+  --bg: #ffffff;
+  --surface-1: #fafafa;
+  --surface-2: #f4f4f4;
+  --surface-3: #e5e5e5;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --text: #171717;
+  --text-2: #525252;
+  --text-3: #8a8a8a;
+  --hover: rgba(0, 0, 0, 0.04);
+  --active: rgba(0, 0, 0, 0.07);
+  --overlay: rgba(0, 0, 0, 0.35);
+
+  --accent: #2f7d1f;
+  --accent-hover: #276a1a;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(47, 125, 31, 0.1);
+  --accent-text: #2f7d1f;
+
+  --danger: #c62828;
+  --danger-hover: #ad2222;
+  --on-danger: #ffffff;
+  --danger-soft: rgba(198, 40, 40, 0.1);
+  --danger-text: #b42323;
+
+  --warning-soft: rgba(196, 128, 0, 0.12);
+  --warning-text: #9a6500;
+
+  --status-running: #2f9e1f;
+  --status-busy: #d4930c;
+  --status-crashed: #d32f2f;
+  --status-stopped: #a3a3a3;
+
+  --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --surface-1: #141414;
+    --surface-2: #1c1c1c;
+    --surface-3: #262626;
+    --border: #262626;
+    --border-strong: #333333;
+    --text: #f5f5f5;
+    --text-2: #a3a3a3;
+    --text-3: #737373;
+    --hover: rgba(255, 255, 255, 0.05);
+    --active: rgba(255, 255, 255, 0.08);
+    --overlay: rgba(0, 0, 0, 0.6);
+
+    --accent: #5cb83a;
+    --accent-hover: #6cc84a;
+    --on-accent: #0a0a0a;
+    --accent-soft: rgba(92, 184, 58, 0.14);
+    --accent-text: #7fd35e;
+
+    --danger: #e5484d;
+    --danger-hover: #ee5d61;
+    --on-danger: #ffffff;
+    --danger-soft: rgba(229, 72, 77, 0.14);
+    --danger-text: #ff6b6f;
+
+    --warning-soft: rgba(245, 166, 35, 0.14);
+    --warning-text: #f5b84a;
+
+    --status-running: #5cb83a;
+    --status-busy: #f5a623;
+    --status-crashed: #e5484d;
+    --status-stopped: #525252;
+
+    --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Dar pencerede (min 900px) içerik alanına yer aç. */
+@media (max-width: 1000px) {
+  :root {
+    --sidebar-w: 224px;
+  }
+}

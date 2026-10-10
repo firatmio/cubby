@@ -1,15 +1,15 @@
 # frontend/core (src)
 
-- Router yok: `store/appStore.ts` (zustand) içindeki `view` (`home | wizard | instance{id}`) `App.tsx`'te ekran seçer.
-- `lib/api.ts` — typed invoke wrapper'ları + Rust tiplerinin aynası; `errorMessage()` Rust string hatalarını açar.
+- Düzen: `App.tsx` iki sütun — `screens/Sidebar.tsx` (sunucu listesi + "Yeni sunucu") ve sağ panel. Router yok: zustand `view` = `empty | wizard | instance{id}`; açılışta ilk sunucu seçilir, silinince başkasına geçilir.
+- `lib/api.ts` — typed invoke wrapper'ları + Rust tiplerinin aynası; `errorMessage()`, `pickFolder()`, `openExternal()`.
 - `lib/events.ts` — Rust event'lerini store'a bağlar; log satırları rAF ile toplu eklenir; `starting` durumu logları sıfırlar.
-- `components/Mc*` — pixel UI kit (McButton/McPanel/McInput/McSlider/McProgress/McModal/McTabs/StatusLamp), CSS Modules.
-- `screens/` — HomeScreen, NewServerWizard (tür→sürüm→loader sürümü [vanilla'da yok]→RAM→isim+konum→kur; varsayılan Fabric + son release), InstanceScreen (+ `instance/` sekmeleri: Console, Settings [isim/RAM/sil], Files [sunucu + mods/plugins klasörü], Placeholder).
-- `lib/format.ts` — `LOADER_LABELS`, `CONTENT_DIR_LABEL`, `describeInstance`; `lib/ram.ts` — RAM sınırları (sihirbaz + ayarlar ortak).
-- Klasör seçimi `@tauri-apps/plugin-dialog` (`dialog:default` capability).
+- `lib/mock.ts` — YALNIZ dev: Tauri yokken (`IS_MOCK`) api/event'ler sahte veriyle çalışır; `bun run dev` + tarayıcıda `localhost:1420` ile arayüz Tauri'siz denenebilir. Prod pakete girmemesi için her kullanım `import.meta.env.DEV && IS_MOCK` koşulu + dinamik import ile.
+- `ui/` — UI kiti: Button (primary/secondary/ghost/danger, `icon`, `loading`), Input+Field, Slider, Progress, Dialog (body'ye portal), Tabs, Badge/StatusBadge/StatusDot, SelectList (tek seçimli liste), Card+EmptyState, ServerAvatar (pixel çim bloğu — tek pixel-art öğe).
+- `screens/` — NewServerWizard (tür→sürüm→loader [vanilla'da yok]→bellek→isim+konum→kur), InstanceScreen (başlık şeridi + sekmeler), `instance/` (Console, Settings, JavaSection, Files, Placeholder, JavaDownloadProgress).
+- `lib/format.ts` (`LOADER_LABELS`, `describeInstance`...), `lib/ram.ts` (RAM sınırları).
 
-## Style invariants
-- Stil: CSS Modules + `styles/global.css` değişkenleri; Tailwind yok.
-- Tüm ölçüler 2/4'ün katı; `--px: 2px` "piksel" birimi; `image-rendering: pixelated`.
-- Font Monocraft (OFL); Türkçe glifler var, ama `■ ✓ „` gibi bazı semboller yok — kullanmadan önce kontrol et.
-- tsconfig lib ES2020: `Array.prototype.at` vb. yok.
+## Stil
+- CSS Modules + `styles/tokens.css` (tüm renkler/ölçüler). Griler NÖTR (R=G=B) — kullanıcı isteği; renk yalnız vurgu (çim yeşili `--accent`) ve durumlar için.
+- Tema otomatik: `prefers-color-scheme`; yeni renk eklerken iki temaya da token yaz.
+- Fontlar Inter + JetBrains Mono (`@fontsource-variable`, offline), ikonlar `lucide-react`.
+- Dialog'lar portal ile çizilir: sayfa kapsayıcılarının `max-width`/overflow kuralları modalı bozmasın.

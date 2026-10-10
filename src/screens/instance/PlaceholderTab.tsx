@@ -1,10 +1,14 @@
-import styles from "./TabPage.module.css";
+import type { LucideIcon } from "lucide-react";
+import { Badge } from "../../ui/Badge";
+import { EmptyState } from "../../ui/Card";
 
-export function PlaceholderTab({ text }: { text: string }) {
+export function PlaceholderTab({ icon, text }: { icon: LucideIcon; text: string }) {
   return (
-    <div className={styles.page}>
-      <p className={styles.soon}>Yakında</p>
-      <p className={styles.dim}>{text}</p>
-    </div>
+    <EmptyState
+      icon={icon}
+      title="Yakında"
+      description={text}
+      action={<Badge tone="neutral">Sonraki sürümde</Badge>}
+    />
   );
 }

@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { McButton } from "../../components/McButton";
+import { FolderOpen, Package } from "lucide-react";
 import { api, errorMessage, type Instance } from "../../lib/api";
 import { CONTENT_DIR_LABEL } from "../../lib/format";
+import { Button } from "../../ui/Button";
+import { Card } from "../../ui/Card";
 import styles from "./TabPage.module.css";
 
 export function FilesTab({ instance }: { instance: Instance }) {
@@ -15,23 +17,31 @@ export function FilesTab({ instance }: { instance: Instance }) {
 
   return (
     <div className={styles.page}>
-      <p>Dünya, ayar ve log dosyaları sunucu klasöründe.</p>
-      <div className={styles.buttons}>
-        <McButton onClick={() => run(() => api.openInstanceDir(instance.id))}>Sunucu Klasörünü Aç</McButton>
-        {contentLabel && (
-          <McButton onClick={() => run(() => api.openContentDir(instance.id))}>
-            {contentLabel} Klasörünü Aç
-          </McButton>
-        )}
-      </div>
-      {error && <p className={styles.error}>{error}</p>}
+      <Card
+        title="Sunucu klasörü"
+        description="Dünya, ayar ve kayıt (log) dosyaları burada."
+        actions={
+          <Button icon={FolderOpen} onClick={() => run(() => api.openInstanceDir(instance.id))}>
+            Aç
+          </Button>
+        }
+      />
       {contentLabel && (
-        <p className={styles.dim}>
-          {instance.loader === "fabric"
-            ? "Mod .jar dosyalarını mods klasörüne at, sunucuyu yeniden başlat. Oyuna yeni içerik ekleyen modları kardeşinin de kurması gerekir."
-            : "Plugin .jar dosyalarını plugins klasörüne at, sunucuyu yeniden başlat."}
-        </p>
+        <Card
+          title={`${contentLabel} klasörü`}
+          description={
+            instance.loader === "fabric"
+              ? "Mod .jar dosyalarını buraya at, sunucuyu yeniden başlat. Oyuna yeni içerik ekleyen modları kardeşinin de kurması gerekir."
+              : "Plugin .jar dosyalarını buraya at, sunucuyu yeniden başlat."
+          }
+          actions={
+            <Button icon={Package} onClick={() => run(() => api.openContentDir(instance.id))}>
+              Aç
+            </Button>
+          }
+        />
       )}
+      {error && <p className={styles.error}>{error}</p>}
     </div>
   );
 }

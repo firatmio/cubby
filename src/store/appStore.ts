@@ -13,7 +13,8 @@ import {
 /** Konsolda tutulan en fazla satır. */
 const MAX_LOG_LINES = 5000;
 
-export type View = { name: "home" } | { name: "wizard" } | { name: "instance"; id: string };
+/** Sağ panelde ne gösterildiği. "empty": hiç sunucu yok / seçim yok. */
+export type View = { name: "empty" } | { name: "wizard" } | { name: "instance"; id: string };
 
 export interface ServerRuntime {
   status: ServerStatus;
@@ -54,18 +55,33 @@ export const useAppStore = create<AppStore>((set) => {
     set((st) => ({ servers: { ...st.servers, [id]: fn(st.servers[id] ?? EMPTY_RUNTIME) } }));
 
   return {
-    view: { name: "home" },
+    view: { name: "empty" },
     navigate: (view) => set({ view }),
 
     instances: [],
-    loadInstances: async () => set({ instances: await api.listInstances() }),
+    loadInstances: async () => {
+      const instances = await api.listInstances();
+      // Açılışta ilk sunucu seçili gelsin.
+      set((st) =>
+        st.view.name === "empty" && instances.length > 0
+          ? { instances, view: { name: "instance", id: instances[0].id } }
+          : { instances },
+      );
+    },
     addInstance: (instance) => set((st) => ({ instances: [...st.instances, instance] })),
     replaceInstance: (instance) =>
       set((st) => ({ instances: st.instances.map((i) => (i.id === instance.id ? instance : i)) })),
     removeInstance: (id) =>
       set((st) => {
         const { [id]: _removed, ...servers } = st.servers;
-        return { instances: st.instances.filter((i) => i.id !== id), servers };
+        const instances = st.instances.filter((i) => i.id !== id);
+        const viewingRemoved = st.view.name === "instance" && st.view.id === id;
+        const view: View = !viewingRemoved
+          ? st.view
+          : instances.length > 0
+            ? { name: "instance", id: instances[0].id }
+            : { name: "empty" };
+        return { instances, servers, view };
       }),
 
     servers: {},

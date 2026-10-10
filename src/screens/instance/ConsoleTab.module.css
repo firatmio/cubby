@@ -1,18 +1,24 @@
 .console {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  margin: var(--sp-4) var(--sp-8) var(--sp-6);
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
 .log {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: var(--gap-2) var(--gap-3);
-  background: var(--console-bg);
-  font-size: 14px;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   line-height: 20px;
-  text-shadow: none;
+  color: var(--text-2);
   user-select: text;
 }
 
@@ -24,29 +30,58 @@
 }
 
 .system {
-  color: var(--text-yellow);
+  color: var(--accent-text);
 }
 
 .warn {
-  color: var(--text-gold);
+  color: var(--warning-text);
 }
 
 .error {
-  color: var(--text-red);
+  color: var(--danger-text);
 }
 
 .empty {
-  color: var(--text-dim);
+  color: var(--text-3);
+  font-family: var(--font-sans);
 }
 
 .sendError {
-  padding: var(--gap-1) var(--gap-3);
-  color: var(--text-red);
+  padding: var(--sp-1) var(--sp-4);
+  color: var(--danger-text);
   font-size: var(--fs-sm);
 }
 
 .inputRow {
   display: flex;
-  gap: var(--gap-2);
-  padding: var(--gap-2);
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.prompt {
+  color: var(--accent-text);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  height: var(--h-sm);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  user-select: text;
+}
+
+.input::placeholder {
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+
+.input:disabled {
+  cursor: not-allowed;
 }

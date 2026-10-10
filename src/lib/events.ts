@@ -1,6 +1,23 @@
-import { listen } from "@tauri-apps/api/event";
+import { listen as tauriListen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store/appStore";
-import type { InstallProgress, JavaProgress, LogLine, ProcessStats, ServerStatus } from "./api";
+import {
+  IS_MOCK,
+  type InstallProgress,
+  type JavaProgress,
+  type LogLine,
+  type ProcessStats,
+  type ServerStatus,
+} from "./api";
+
+type Unlisten = () => void;
+
+async function listen<T>(event: string, handler: (e: { payload: T }) => void): Promise<Unlisten> {
+  if (import.meta.env.DEV && IS_MOCK) {
+    const { mockListen } = await import("./mock");
+    return mockListen(event, handler as (e: { payload: unknown }) => void);
+  }
+  return tauriListen<T>(event, handler);
+}
 
 // Rust'taki event adlarıyla aynı olmalı (server/mod.rs, commands.rs, lib.rs).
 const EVENT_LOG = "server://log";

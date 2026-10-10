@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { McButton } from "../../components/McButton";
+import { Download, RefreshCw } from "lucide-react";
 import { api, errorMessage, type Instance, type InstanceJava, type JavaInfo } from "../../lib/api";
 import { useAppStore } from "../../store/appStore";
+import { Badge } from "../../ui/Badge";
+import { Button } from "../../ui/Button";
+import { Card } from "../../ui/Card";
+import { SelectList } from "../../ui/SelectList";
 import { JavaDownloadProgress } from "./JavaDownloadProgress";
 import styles from "./SettingsTab.module.css";
 
 type Busy = "scan" | "install" | "save" | null;
+
+const AUTO = "__auto__";
 
 function javaLabel(j: JavaInfo): string {
   return `Java ${j.major}${j.managed ? " (uygulamanın indirdiği)" : ""}`;
@@ -46,9 +52,9 @@ export function JavaSection({ instance }: { instance: Instance }) {
     }
   };
 
-  const choose = (path: string | null) =>
+  const choose = (key: string) =>
     run("save", async () => {
-      replaceInstance(await api.setInstanceJava(instance.id, path));
+      replaceInstance(await api.setInstanceJava(instance.id, key === AUTO ? null : key));
       await load(false);
     });
 
@@ -60,66 +66,63 @@ export function JavaSection({ instance }: { instance: Instance }) {
     });
 
   if (!info || !list) {
-    return (
-      <section className={styles.section}>
-        <h3>Java</h3>
-        <p className={styles.dim}>{error ?? "Java'lar aranıyor…"}</p>
-      </section>
-    );
+    return <Card title="Java" description={error ?? "Java'lar aranıyor…"} />;
   }
 
   const hasExact = list.some((j) => j.major === info.required);
   const selected = info.selected;
 
   return (
-    <section className={styles.section}>
-      <h3>Java</h3>
-      <p className={styles.dim}>
-        Bu sürüm Java {info.required}+ istiyor.{" "}
-        {selected ? `Başlatınca ${javaLabel(selected)} kullanılacak.` : "Uygun Java bulunamadı, indirmen gerekiyor."}
-      </p>
+    <Card
+      title="Java"
+      description={
+        <>
+          Bu sürüm Java {info.required}+ istiyor.{" "}
+          {selected ? `Başlatınca ${javaLabel(selected)} kullanılacak.` : "Uygun Java bulunamadı, indirmen gerekiyor."}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={RefreshCw}
+            loading={busy === "scan"}
+            disabled={busy !== null}
+            onClick={() => run("scan", () => load(true))}
+          >
+            Yeniden tara
+          </Button>
+          {!hasExact && (
+            <Button size="sm" icon={Download} disabled={busy !== null} onClick={download}>
+              Java {info.required} indir
+            </Button>
+          )}
+        </>
+      }
+    >
       {info.error && <p className={styles.error}>{info.error}</p>}
-
-      <div className={styles.choiceList}>
-        <button
-          type="button"
-          className={[styles.choiceRow, info.pinned === null && styles.selected].filter(Boolean).join(" ")}
-          disabled={busy !== null}
-          onClick={() => choose(null)}
-        >
-          <span>Otomatik</span>
-          <span className={styles.rowNote}>en uygun olanı her açılışta seç</span>
-        </button>
-        {list.map((j) => {
-          const tooOld = j.major < info.required;
-          return (
-            <button
-              key={j.path}
-              type="button"
-              title={j.path}
-              className={[styles.choiceRow, info.pinned === j.path && styles.selected].filter(Boolean).join(" ")}
-              disabled={busy !== null || tooOld}
-              onClick={() => choose(j.path)}
-            >
-              <span>{javaLabel(j)}</span>
-              <span className={styles.rowNote}>{tooOld ? "bu sürüm için eski" : j.path}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={styles.row}>
-        <McButton disabled={busy !== null} onClick={() => run("scan", () => load(true))}>
-          {busy === "scan" ? "Taranıyor…" : "Yeniden Tara"}
-        </McButton>
-        {!hasExact && (
-          <McButton disabled={busy !== null} onClick={download}>
-            Java {info.required} İndir
-          </McButton>
-        )}
-      </div>
+      <SelectList
+        maxHeight={220}
+        value={info.pinned ?? AUTO}
+        onSelect={(key) => busy === null && choose(key)}
+        items={[
+          { key: AUTO, label: "Otomatik", meta: "her açılışta en uygununu seç" },
+          ...list.map((j) => {
+            const tooOld = j.major < info.required;
+            return {
+              key: j.path,
+              title: j.path,
+              disabled: tooOld,
+              label: javaLabel(j),
+              badges: tooOld ? <Badge tone="neutral">Eski</Badge> : undefined,
+              meta: j.path,
+            };
+          }),
+        ]}
+      />
       {busy === "install" && <JavaDownloadProgress />}
       {error && <p className={styles.error}>{error}</p>}
-    </section>
+    </Card>
   );
 }

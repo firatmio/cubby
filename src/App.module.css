@@ -1,5 +1,13 @@
 .app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  height: 100%;
+}
+
+.main {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
 }

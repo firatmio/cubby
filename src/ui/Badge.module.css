@@ -1,0 +1,92 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.neutral {
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+
+.accent {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.warning {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.danger {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.stopped {
+  background: var(--status-stopped);
+}
+
+.running {
+  background: var(--status-running);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.starting,
+.stopping {
+  background: var(--status-busy);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.crashed {
+  background: var(--status-crashed);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 26px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.s_running {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.s_starting,
+.s_stopping {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.s_crashed {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}

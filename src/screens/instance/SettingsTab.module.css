@@ -1,98 +1,21 @@
-.page {
-  height: 100%;
-  overflow-y: auto;
-  padding: var(--gap-4) max(var(--gap-4), calc((100% - 640px) / 2));
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-2);
-  padding: var(--gap-4) 0;
-  border-bottom: var(--px) solid rgba(255, 255, 255, 0.1);
-}
-
-.section h3 {
-  margin: 0 0 var(--gap-1);
-  font-size: var(--fs-md);
-  color: var(--text-yellow);
-}
-
-.danger h3 {
-  color: var(--text-red);
-}
-
-.danger {
-  border-bottom: none;
-}
-
-.label {
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-}
-
 .row {
   display: flex;
   align-items: center;
-  gap: var(--gap-3);
-}
-
-.dim {
-  margin: 0;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
+  gap: var(--sp-3);
 }
 
 .ok {
-  color: var(--text-green);
+  color: var(--accent-text);
   font-size: var(--fs-sm);
 }
 
 .error {
-  color: var(--text-red);
+  color: var(--danger-text);
   font-size: var(--fs-sm);
   user-select: text;
 }
 
-.choiceList {
-  max-height: 240px;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.4);
-  border: var(--px) solid #555;
-}
-
-.choiceRow {
-  display: flex;
-  align-items: baseline;
-  gap: var(--gap-3);
-  width: 100%;
-  padding: var(--gap-1) var(--gap-3);
-  background: transparent;
-  border: var(--px) solid transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.choiceRow:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.choiceRow:disabled {
-  color: var(--text-dim);
-  text-shadow: none;
-  cursor: default;
-}
-
-.selected,
-.selected:hover:not(:disabled) {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.rowNote {
-  overflow: hidden;
-  color: var(--text-dim);
+.dim {
+  color: var(--text-2);
   font-size: var(--fs-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

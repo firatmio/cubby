@@ -1,4 +1,4 @@
-// Projeye ait 16x16 piksel dokuları üretir (Mojang dosyası kullanılmaz).
+// Sunucu avatarı olan 16x16 pixel çim bloğunu üretir (Mojang dosyası kullanılmaz).
 // Çalıştırma: bun scripts/gen-textures.mjs
 import { writeFileSync, mkdirSync } from "node:fs";
 import { deflateSync } from "node:zlib";
@@ -94,13 +94,6 @@ const DIRT = [
   ["#b9855c", 1],
 ];
 
-const STONE = [
-  ["#7f7f7f", 6],
-  ["#747474", 4],
-  ["#8a8a8a", 3],
-  ["#686868", 2],
-  ["#9a9a9a", 1],
-];
 
 const GRASS = [
   ["#5f9f35", 5],
@@ -113,9 +106,6 @@ function dirt(seed) {
   return grid(picker(DIRT, mulberry32(seed)));
 }
 
-function stone(seed) {
-  return grid(picker(STONE, mulberry32(seed)));
-}
 
 /** Yan çim bloğu: üstte çim, aşağı doğru düzensiz sarkan uçlar, altı toprak. */
 function grassSide(seed) {
@@ -127,7 +117,7 @@ function grassSide(seed) {
 }
 
 mkdirSync(OUT, { recursive: true });
-const textures = { "dirt.png": dirt(7), "stone.png": stone(11), "grass_side.png": grassSide(23) };
+const textures = { "grass_side.png": grassSide(23) };
 for (const [name, pixels] of Object.entries(textures)) {
   writeFileSync(join(OUT, name), png(pixels));
   console.log("yazıldı:", name);

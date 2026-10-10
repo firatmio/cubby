@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { McButton } from "../../components/McButton";
-import { McInput } from "../../components/McInput";
-import { McModal } from "../../components/McModal";
-import { McSlider } from "../../components/McSlider";
+import { Trash2 } from "lucide-react";
 import { api, errorMessage, type Instance, type ServerStatus } from "../../lib/api";
 import { formatRam } from "../../lib/format";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
 import { useAppStore } from "../../store/appStore";
+import { Button } from "../../ui/Button";
+import { Card } from "../../ui/Card";
+import { Dialog } from "../../ui/Dialog";
+import { Field, Input } from "../../ui/Input";
+import { Slider } from "../../ui/Slider";
 import { JavaSection } from "./JavaSection";
+import page from "./TabPage.module.css";
 import styles from "./SettingsTab.module.css";
 
 const MAX_NAME_LEN = 48;
@@ -20,7 +23,6 @@ type Props = {
 export function SettingsTab({ instance, status }: Props) {
   const replaceInstance = useAppStore((s) => s.replaceInstance);
   const removeInstance = useAppStore((s) => s.removeInstance);
-  const navigate = useAppStore((s) => s.navigate);
 
   const [name, setName] = useState(instance.name);
   const [ramMax, setRamMax] = useState(instance.ramMaxMb);
@@ -56,7 +58,7 @@ export function SettingsTab({ instance, status }: Props) {
       const ramChanged = ramMax !== instance.ramMaxMb;
       setNotice({
         ok: true,
-        text: active && ramChanged ? "Kaydedildi. RAM ayarı bir sonraki başlatmada geçerli olur." : "Kaydedildi.",
+        text: active && ramChanged ? "Kaydedildi. Bellek ayarı bir sonraki başlatmada geçerli olur." : "Kaydedildi.",
       });
     } catch (e) {
       setNotice({ ok: false, text: errorMessage(e) });
@@ -70,31 +72,22 @@ export function SettingsTab({ instance, status }: Props) {
     try {
       await api.deleteInstance(instance.id);
       removeInstance(instance.id);
-      navigate({ name: "home" });
     } catch (e) {
       setConfirmDelete(false);
       setNotice({ ok: false, text: errorMessage(e) });
-    } finally {
       setDeleting(false);
     }
   };
 
   return (
-    <div className={styles.page}>
-      <section className={styles.section}>
-        <h3>Genel</h3>
-        <label className={styles.label} htmlFor="settings-name">
-          Sunucu adı
-        </label>
-        <McInput
-          id="settings-name"
-          value={name}
-          maxLength={MAX_NAME_LEN}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <span className={styles.label}>RAM</span>
-        <McSlider
-          label={`Maksimum RAM: ${formatRam(ramMax)}`}
+    <div className={page.page}>
+      <Card title="Genel">
+        <Field label="Sunucu adı" htmlFor="settings-name">
+          <Input id="settings-name" value={name} maxLength={MAX_NAME_LEN} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Slider
+          label="En fazla RAM"
+          valueLabel={formatRam(ramMax)}
           value={ramMax}
           min={RAM_MIN}
           max={ramLimit}
@@ -102,51 +95,54 @@ export function SettingsTab({ instance, status }: Props) {
           onChange={setRamMax}
         />
         <div className={styles.row}>
-          <McButton variant="green" disabled={!dirty || !nameValid || saving} onClick={save}>
+          <Button variant="primary" disabled={!dirty || !nameValid} loading={saving} onClick={save}>
             Kaydet
-          </McButton>
+          </Button>
           {notice && <span className={notice.ok ? styles.ok : styles.error}>{notice.text}</span>}
         </div>
-      </section>
+      </Card>
 
       <JavaSection instance={instance} />
 
-      <section className={styles.section}>
-        <h3>server.properties</h3>
-        <p className={styles.dim}>Port, zorluk, oyun modu, whitelist ve TLauncher desteği yakında burada.</p>
-      </section>
+      <Card
+        title="Sunucu özellikleri"
+        description="Zorluk, oyun modu, port, beyaz liste ve TLauncher desteği yakında burada."
+      />
 
-      <section className={[styles.section, styles.danger].join(" ")}>
-        <h3>Tehlikeli Bölge</h3>
-        <div className={styles.row}>
-          <McButton variant="red" disabled={active} onClick={() => setConfirmDelete(true)}>
-            Sunucuyu Sil
-          </McButton>
-          <span className={styles.dim}>
-            {active ? "Silmeden önce sunucuyu durdur." : "Klasör Geri Dönüşüm Kutusu'na taşınır."}
-          </span>
-        </div>
-      </section>
+      <Card
+        tone="danger"
+        title="Sunucuyu sil"
+        description={
+          active
+            ? "Silmeden önce sunucuyu durdur."
+            : "Dünya dahil tüm dosyalar Geri Dönüşüm Kutusu'na taşınır."
+        }
+        actions={
+          <Button variant="danger" icon={Trash2} disabled={active} onClick={() => setConfirmDelete(true)}>
+            Sil
+          </Button>
+        }
+      />
 
       {confirmDelete && (
-        <McModal
+        <Dialog
           title="Sunucu silinsin mi?"
           actions={
             <>
-              <McButton disabled={deleting} onClick={() => setConfirmDelete(false)}>
+              <Button variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(false)}>
                 Vazgeç
-              </McButton>
-              <McButton variant="red" disabled={deleting} onClick={remove}>
-                {deleting ? "Siliniyor…" : "Sil"}
-              </McButton>
+              </Button>
+              <Button variant="danger" loading={deleting} onClick={remove}>
+                Sil
+              </Button>
             </>
           }
         >
           <p>
-            "{instance.name}" ve dünyası dahil tüm dosyaları Geri Dönüşüm Kutusu'na taşınacak. Pişman olursan
-            oradan geri alabilirsin.
+            "{instance.name}" ve dünyası dahil tüm dosyaları Geri Dönüşüm Kutusu'na taşınacak. Pişman olursan oradan
+            geri alabilirsin.
           </p>
-        </McModal>
+        </Dialog>
       )}
     </div>
   );

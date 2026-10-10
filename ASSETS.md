@@ -2,10 +2,12 @@
 
 Repoda Mojang/Microsoft'a ait hiçbir dosya (doku, font, ses, logo) bulunmaz.
 
-| Dosya | Kaynak | Lisans |
+| Asset | Kaynak | Lisans |
 |---|---|---|
-| `src/assets/fonts/Monocraft.otf`, `Monocraft-Bold.otf` | [Monocraft v4.2.1](https://github.com/IdreesInc/Monocraft) — Idrees Hassan | SIL Open Font License 1.1 (`src/assets/fonts/OFL.txt`) |
-| `src/assets/textures/dirt.png`, `stone.png`, `grass_side.png` | Bu projede `scripts/gen-textures.mjs` ile üretildi (kendi paletimiz, deterministik gürültü) | Proje lisansı |
-| Buton, panel, slot, progress bar görünümleri | Saf CSS (`src/components/*.module.css`) | Proje lisansı |
+| Inter (arayüz yazı tipi) | [rsms/inter](https://github.com/rsms/inter), `@fontsource-variable/inter` paketiyle | SIL Open Font License 1.1 |
+| JetBrains Mono (konsol yazı tipi) | [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono), `@fontsource-variable/jetbrains-mono` paketiyle | SIL Open Font License 1.1 |
+| İkonlar | [Lucide](https://lucide.dev), `lucide-react` paketiyle | ISC |
+| `src/assets/textures/grass_side.png` (sunucu simgesi) | Bu projede `scripts/gen-textures.mjs` ile üretildi (kendi paletimiz, deterministik gürültü) | Proje lisansı |
 
-Dokuları yeniden üretmek için: `bun scripts/gen-textures.mjs`
+Fontlar uygulamayla birlikte paketlenir; çalışırken internetten indirilmez.
+Simgeyi yeniden üretmek için: `bun scripts/gen-textures.mjs`

@@ -7,77 +7,91 @@
 .header {
   display: flex;
   align-items: center;
-  gap: var(--gap-4);
-  padding: var(--gap-4);
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.icon {
-  width: 48px;
-  height: 48px;
+  gap: var(--sp-4);
+  padding: var(--sp-6) var(--sp-8) var(--sp-4);
 }
 
 .title {
-  display: flex;
   flex: 1;
-  flex-direction: column;
   min-width: 0;
 }
 
-.title h2 {
-  margin: 0;
+.title h1 {
   overflow: hidden;
-  font-size: var(--fs-lg);
+  font-size: var(--fs-2xl);
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .meta {
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
+  margin-top: 2px;
+  color: var(--text-2);
 }
 
 .state {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--gap-1);
+  gap: var(--sp-1);
 }
 
 .stats {
-  min-height: 16px;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-  white-space: pre;
+  display: flex;
+  gap: var(--sp-3);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.power {
+  min-width: 132px;
 }
 
 .banner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-4);
-  margin: var(--gap-2) var(--gap-4) 0;
-  padding: var(--gap-2) var(--gap-3);
-  background: rgba(80, 0, 0, 0.75);
-  border: var(--px) solid var(--text-red);
-  color: #ffd0d0;
+  gap: var(--sp-2);
+  margin: 0 var(--sp-8) var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: var(--fs-sm);
   user-select: text;
+}
+
+.banner > span {
+  flex: 1;
+}
+
+.bannerClose {
+  display: inline-flex;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+}
+
+.bannerClose:hover {
+  background: var(--danger-soft);
+}
+
+.tabs {
+  padding: 0 var(--sp-8);
 }
 
 .tabBody {
   flex: 1;
   min-height: 0;
-  margin: 0 var(--gap-4) var(--gap-4);
-  background: rgba(0, 0, 0, 0.5);
-  border: var(--px) solid var(--outline);
-  box-shadow: inset 0 var(--px) 0 var(--btn-light);
-}
-
-.missing {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-4);
-  align-items: center;
-  justify-content: center;
-  height: 100%;
 }

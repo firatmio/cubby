@@ -1,6 +1,6 @@
-import { McProgress } from "../../components/McProgress";
 import { formatBytesMb } from "../../lib/format";
 import { useAppStore } from "../../store/appStore";
+import { Progress } from "../../ui/Progress";
 
 /** `install_java` sırasında gelen `java://progress` olaylarını gösterir. */
 export function JavaDownloadProgress() {
@@ -13,8 +13,8 @@ export function JavaDownloadProgress() {
       : `Java ${p.major} indiriliyor… ${formatBytesMb(p.downloaded)}${p.total ? ` / ${formatBytesMb(p.total)}` : ""} MB`;
   return (
     <>
-      <McProgress value={value} />
-      <p>{text}</p>
+      <Progress value={value} />
+      <p style={{ fontSize: "var(--fs-sm)" }}>{text}</p>
     </>
   );
 }

@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { McModal } from "./components/McModal";
-import { McProgress } from "./components/McProgress";
 import { bindBackendEvents } from "./lib/events";
-import { HomeScreen } from "./screens/HomeScreen";
+import { EmptyScreen } from "./screens/EmptyScreen";
 import { InstanceScreen } from "./screens/InstanceScreen";
 import { NewServerWizard } from "./screens/NewServerWizard";
+import { Sidebar } from "./screens/Sidebar";
 import { useAppStore } from "./store/appStore";
+import { Dialog } from "./ui/Dialog";
+import { Progress } from "./ui/Progress";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -28,15 +29,18 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      {view.name === "home" && <HomeScreen />}
-      {view.name === "wizard" && <NewServerWizard />}
-      {view.name === "instance" && <InstanceScreen key={view.id} id={view.id} />}
+      <Sidebar />
+      <main className={styles.main}>
+        {view.name === "empty" && <EmptyScreen />}
+        {view.name === "wizard" && <NewServerWizard />}
+        {view.name === "instance" && <InstanceScreen key={view.id} id={view.id} />}
+      </main>
 
       {shuttingDown && (
-        <McModal title="Kapatılıyor">
-          <p>Sunucu durduruluyor, dünya kaydediliyor…</p>
-          <McProgress value={null} />
-        </McModal>
+        <Dialog title="Kapatılıyor">
+          <p>Sunucu durduruluyor ve dünya kaydediliyor…</p>
+          <Progress value={null} />
+        </Dialog>
       )}
     </div>
   );
