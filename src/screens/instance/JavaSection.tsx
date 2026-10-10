@@ -7,7 +7,7 @@ import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { SelectList } from "../../ui/SelectList";
 import { JavaDownloadProgress } from "./JavaDownloadProgress";
-import styles from "./SettingsTab.module.css";
+import styles from "./sections.module.css";
 
 type Busy = "scan" | "install" | "save" | null;
 

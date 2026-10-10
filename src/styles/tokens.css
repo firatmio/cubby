@@ -1,19 +1,28 @@
 /*
- * Tasarım token'ları. Griler nötr (R=G=B); renk yalnızca vurgu ve durumlar için.
- * Tema Windows/macOS açık-koyu ayarını takip eder (prefers-color-scheme).
+ * Tasarım token'ları — yalnız koyu tema. Griler nötr; renk yalnız vurgu (dünyanın kapak rengi)
+ * ve durumlar için. Tuval sabit 1200×720.
  */
+
+/* Vurgu rengi dünya değişince yumuşakça geçsin diye kayıtlı özellik. */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #6cc04a;
+}
+
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
   --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", "Cascadia Mono", ui-monospace, monospace;
 
   --fs-xs: 12px;
   --fs-sm: 13px;
-  --fs-md: 14px;
-  --fs-lg: 16px;
-  --fs-xl: 20px;
-  --fs-2xl: 24px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 24px;
+  --fs-2xl: 32px;
+  --fs-display: 44px;
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -22,99 +31,50 @@
   --sp-5: 20px;
   --sp-6: 24px;
   --sp-8: 32px;
+  --edge: 48px;
 
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-card: 24px;
+  --radius-tile: 28px;
   --radius-full: 999px;
 
-  --h-sm: 28px;
-  --h-md: 34px;
-  --h-lg: 42px;
+  --h-sm: 32px;
+  --h-md: 40px;
+  --h-lg: 48px;
+  --titlebar-h: 36px;
 
-  --sidebar-w: 260px;
-  --dur: 120ms;
+  --bg: #202020;
+  --surface: #2b2b2b;
+  --surface-2: #333333;
+  --surface-3: #3d3d3d;
+  --glass: rgba(36, 36, 36, 0.62);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --hover: rgba(255, 255, 255, 0.06);
+  --overlay: rgba(10, 10, 10, 0.55);
 
-  /* Açık tema */
-  --bg: #ffffff;
-  --surface-1: #fafafa;
-  --surface-2: #f4f4f4;
-  --surface-3: #e5e5e5;
-  --border: #e5e5e5;
-  --border-strong: #d4d4d4;
-  --text: #171717;
-  --text-2: #525252;
-  --text-3: #8a8a8a;
-  --hover: rgba(0, 0, 0, 0.04);
-  --active: rgba(0, 0, 0, 0.07);
-  --overlay: rgba(0, 0, 0, 0.35);
+  --text: #f2f2f2;
+  --text-2: #a0a0a0;
+  --text-3: #6b6b6b;
 
-  --accent: #2f7d1f;
-  --accent-hover: #276a1a;
-  --on-accent: #ffffff;
-  --accent-soft: rgba(47, 125, 31, 0.1);
-  --accent-text: #2f7d1f;
+  --primary: #ffffff;
+  --on-primary: #151515;
 
-  --danger: #c62828;
-  --danger-hover: #ad2222;
-  --on-danger: #ffffff;
-  --danger-soft: rgba(198, 40, 40, 0.1);
-  --danger-text: #b42323;
+  --accent: #6cc04a;
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
 
-  --warning-soft: rgba(196, 128, 0, 0.12);
-  --warning-text: #9a6500;
+  --ok: #6cc04a;
+  --busy: #f0b44c;
+  --danger: #ff6b6b;
+  --danger-fill: #e5484d;
+  --danger-soft: rgba(255, 107, 107, 0.14);
+  --warning: #f0b44c;
+  --warning-soft: rgba(240, 180, 76, 0.14);
 
-  --status-running: #2f9e1f;
-  --status-busy: #d4930c;
-  --status-crashed: #d32f2f;
-  --status-stopped: #a3a3a3;
+  --shadow-tile: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 24px 64px rgba(0, 0, 0, 0.5);
+  --blur: blur(18px) saturate(1.2);
 
-  --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a0a0a;
-    --surface-1: #141414;
-    --surface-2: #1c1c1c;
-    --surface-3: #262626;
-    --border: #262626;
-    --border-strong: #333333;
-    --text: #f5f5f5;
-    --text-2: #a3a3a3;
-    --text-3: #737373;
-    --hover: rgba(255, 255, 255, 0.05);
-    --active: rgba(255, 255, 255, 0.08);
-    --overlay: rgba(0, 0, 0, 0.6);
-
-    --accent: #5cb83a;
-    --accent-hover: #6cc84a;
-    --on-accent: #0a0a0a;
-    --accent-soft: rgba(92, 184, 58, 0.14);
-    --accent-text: #7fd35e;
-
-    --danger: #e5484d;
-    --danger-hover: #ee5d61;
-    --on-danger: #ffffff;
-    --danger-soft: rgba(229, 72, 77, 0.14);
-    --danger-text: #ff6b6f;
-
-    --warning-soft: rgba(245, 166, 35, 0.14);
-    --warning-text: #f5b84a;
-
-    --status-running: #5cb83a;
-    --status-busy: #f5a623;
-    --status-crashed: #e5484d;
-    --status-stopped: #525252;
-
-    --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* Dar pencerede (min 900px) içerik alanına yer aç. */
-@media (max-width: 1000px) {
-  :root {
-    --sidebar-w: 224px;
-  }
+  transition: --accent 700ms ease;
 }

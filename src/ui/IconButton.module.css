@@ -1,0 +1,85 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    color 160ms;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.solid {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  color: var(--text);
+}
+.solid:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-2);
+}
+.ghost:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+}
+.md {
+  width: 40px;
+  height: 40px;
+}
+.lg {
+  width: 48px;
+  height: 48px;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 150ms,
+    transform 150ms;
+  z-index: 10;
+}
+
+.below {
+  top: calc(100% + 8px);
+  bottom: auto;
+  transform: translate(-50%, -4px);
+}
+
+.button:hover .tip,
+.button:focus-visible .tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.button:disabled .tip {
+  display: none;
+}

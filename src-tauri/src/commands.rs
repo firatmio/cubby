@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::consts::DEFAULT_PORT;
+use crate::covers::{self, CoverSource, ShotList};
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
 use crate::java::{JavaInfo, JavaManager, JavaStage};
@@ -15,6 +16,8 @@ use crate::loaders::{
 use crate::paths;
 use crate::registry::Registry;
 use crate::server::{LaunchSpec, ServerManager, ServerSnapshot, stats};
+use crate::sessions::{self, PlayStats};
+use crate::settings::{AppSettings, SettingsStore};
 use crate::util::now_ms;
 
 pub const EVENT_INSTALL_PROGRESS: &str = "install://progress";
@@ -197,6 +200,7 @@ pub async fn create_instance(
             ram_max_mb: req.ram_max_mb,
             port: DEFAULT_PORT,
             created_at: now_ms(),
+            cover: None,
         };
         inst.save(&dir)?;
         registry.insert(&id, dir.clone())?;
@@ -232,17 +236,17 @@ pub fn update_instance(
     changes: UpdateInstanceRequest,
 ) -> AppResult<Instance> {
     let dir = paths::instance_dir(&app, &id)?;
-    let mut inst = Instance::load(&dir)?;
-    if let Some(name) = &changes.name {
-        inst.name = validate_name(name)?;
-    }
-    let min = changes.ram_min_mb.unwrap_or(inst.ram_min_mb);
-    let max = changes.ram_max_mb.unwrap_or(inst.ram_max_mb);
-    validate_ram(min, max)?;
-    inst.ram_min_mb = min;
-    inst.ram_max_mb = max;
-    inst.save(&dir)?;
-    Ok(inst)
+    instance::modify(&dir, |inst| {
+        if let Some(name) = &changes.name {
+            inst.name = validate_name(name)?;
+        }
+        let min = changes.ram_min_mb.unwrap_or(inst.ram_min_mb);
+        let max = changes.ram_max_mb.unwrap_or(inst.ram_max_mb);
+        validate_ram(min, max)?;
+        inst.ram_min_mb = min;
+        inst.ram_max_mb = max;
+        Ok(())
+    })
 }
 
 /// Klasörü Geri Dönüşüm Kutusu'na taşır ve kayıttan çıkarır.
@@ -462,11 +466,81 @@ pub async fn set_instance_java(
     path: Option<String>,
 ) -> AppResult<Instance> {
     let dir = paths::instance_dir(&app, &id)?;
-    let mut inst = Instance::load(&dir)?;
     if let Some(p) = &path {
-        java.resolve(Some(p), inst.java_major).await?;
+        let required = Instance::load(&dir)?.java_major;
+        java.resolve(Some(p), required).await?;
     }
-    inst.java_path = path;
-    inst.save(&dir)?;
-    Ok(inst)
+    instance::modify(&dir, |inst| {
+        inst.java_path = path;
+        Ok(())
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsView {
+    settings: AppSettings,
+    /// Ayarda klasör yoksa kullanılan varsayılan.
+    minecraft_dir: Option<String>,
+    screenshots_found: bool,
+}
+
+#[tauri::command]
+pub fn get_settings(store: State<'_, SettingsStore>) -> SettingsView {
+    let shots = store.screenshots_dir();
+    SettingsView {
+        settings: store.get(),
+        minecraft_dir: store
+            .minecraft_dir()
+            .map(|d| d.to_string_lossy().into_owned()),
+        screenshots_found: shots.is_some_and(|d| d.is_dir()),
+    }
+}
+
+#[tauri::command]
+pub fn update_settings(
+    store: State<'_, SettingsStore>,
+    settings: AppSettings,
+) -> AppResult<SettingsView> {
+    store.set(settings)?;
+    Ok(get_settings(store))
+}
+
+#[tauri::command]
+pub fn list_screenshots(app: AppHandle, id: String) -> AppResult<ShotList> {
+    covers::list_for(&app, &id)
+}
+
+#[tauri::command]
+pub async fn set_cover(app: AppHandle, id: String, source: CoverSource) -> AppResult<Instance> {
+    covers::set_cover(&app, &id, source).await
+}
+
+#[tauri::command]
+pub fn play_stats(app: AppHandle, id: String) -> AppResult<PlayStats> {
+    Ok(sessions::stats(&sessions::load(&paths::instance_dir(
+        &app, &id,
+    )?)))
+}
+
+/// Gerçek port `server.properties`'ten; dosya yoksa (ilk açılıştan önce) kayıtlı port.
+fn server_port(server_dir: &Path, fallback: u16) -> u16 {
+    std::fs::read_to_string(server_dir.join("server.properties"))
+        .ok()
+        .and_then(|t| {
+            t.lines()
+                .find_map(|l| l.trim().strip_prefix("server-port=").map(str::to_string))
+        })
+        .and_then(|p| p.trim().parse().ok())
+        .unwrap_or(fallback)
+}
+
+/// Aynı ağdaki oyuncuların bağlanacağı adres (ör. `192.168.1.20:25565`).
+#[tauri::command]
+pub fn lan_address(app: AppHandle, id: String) -> AppResult<String> {
+    let inst = instance::get(&app, &id)?;
+    let port = server_port(&paths::server_dir(&app, &id)?, inst.port);
+    let ip =
+        local_ip_address::local_ip().map_err(|_| AppError::msg("Yerel ağ adresi bulunamadı"))?;
+    Ok(format!("{ip}:{port}"))
 }

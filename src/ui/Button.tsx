@@ -1,39 +1,43 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ReactNode } from "react";
+import { motion, type HTMLMotionProps } from "motion/react";
 import { Loader2, type LucideIcon } from "lucide-react";
+import { press } from "../lib/motion";
 import styles from "./Button.module.css";
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+type Props = Omit<HTMLMotionProps<"button">, "children"> & {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   icon?: LucideIcon;
-  /** İşlem sürerken ikon yerine dönen gösterge; buton pasifleşir. */
+  /** İkon yazının sağında (ör. "Devam →"). */
+  iconRight?: boolean;
   loading?: boolean;
-  full?: boolean;
+  children?: ReactNode;
 };
 
+/** Hap buton. Ana eylem `primary` (beyaz), diğerleri sakin. */
 export function Button({
   variant = "secondary",
   size = "md",
   icon: Icon,
+  iconRight,
   loading,
-  full,
   className,
   children,
   disabled,
   ...rest
 }: Props) {
-  const cls = [styles.button, styles[variant], styles[size], full && styles.full, className]
-    .filter(Boolean)
-    .join(" ");
-  const iconSize = size === "lg" ? 18 : size === "sm" ? 14 : 16;
+  const cls = [styles.button, styles[variant], styles[size], className].filter(Boolean).join(" ");
+  const iconSize = size === "lg" ? 20 : size === "sm" ? 15 : 17;
+  const icon = loading ? (
+    <Loader2 size={iconSize} className={styles.spin} aria-hidden />
+  ) : (
+    Icon && <Icon size={iconSize} aria-hidden />
+  );
   return (
-    <button type="button" className={cls} disabled={disabled || loading} {...rest}>
-      {loading ? (
-        <Loader2 size={iconSize} className={styles.spin} aria-hidden />
-      ) : (
-        Icon && <Icon size={iconSize} aria-hidden />
-      )}
+    <motion.button type="button" className={cls} disabled={disabled || loading} {...press} {...rest}>
+      {!iconRight && icon}
       {children}
-    </button>
+      {iconRight && icon}
+    </motion.button>
   );
 }

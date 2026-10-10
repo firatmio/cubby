@@ -1,14 +1,18 @@
 mod commands;
 mod consts;
+mod covers;
 mod download;
 mod error;
 mod hash;
 mod instance;
 mod java;
 mod loaders;
+mod media;
 mod paths;
 mod registry;
 mod server;
+mod sessions;
+mod settings;
 mod util;
 
 use std::sync::Arc;
@@ -21,6 +25,7 @@ use java::JavaManager;
 use loaders::Loaders;
 use registry::Registry;
 use server::ServerManager;
+use settings::SettingsStore;
 
 pub const EVENT_SHUTTING_DOWN: &str = "app://shutting-down";
 
@@ -72,9 +77,19 @@ pub fn run() {
             move |app| {
                 let data = app.path().app_data_dir()?;
                 app.manage(Registry::load(&data));
+                app.manage(SettingsStore::load(&data));
                 app.manage(JavaManager::new(data.join("java"), http));
+                sessions::install(app.handle());
                 Ok(())
             }
+        })
+        // Kapak ve ekran görüntüsü önizlemeleri (dosya okuma + küçültme, blocking).
+        .register_asynchronous_uri_scheme_protocol(media::SCHEME, |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            let path = request.uri().path().to_string();
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(media::respond(&app, &path));
+            });
         })
         .manage(AppState {
             loaders: Loaders::new(http),
@@ -110,6 +125,12 @@ pub fn run() {
             commands::instance_java,
             commands::install_java,
             commands::set_instance_java,
+            commands::get_settings,
+            commands::update_settings,
+            commands::list_screenshots,
+            commands::set_cover,
+            commands::play_stats,
+            commands::lan_address,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

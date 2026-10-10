@@ -92,6 +92,7 @@ pub(super) async fn spawn(
                 code.map_or_else(|| "?".to_string(), |c| c.to_string())
             ),
         );
+        h.update_players(&app, None);
         let status = if stop_requested || code == Some(0) {
             ServerStatus::Stopped
         } else {
@@ -122,10 +123,17 @@ async fn read_lines(
         let line = String::from_utf8_lossy(&buf)
             .trim_end_matches(['\r', '\n'])
             .to_string();
-        let done = matches!(stream, LogStream::Stdout) && parse(&line) == Some(LogEvent::Done);
+        let event = matches!(stream, LogStream::Stdout)
+            .then(|| parse(&line))
+            .flatten();
         h.push_log(&app, stream, line);
-        if done {
-            h.transition(&app, ServerStatus::Starting, ServerStatus::Running);
+        match event {
+            Some(LogEvent::Done) => {
+                h.transition(&app, ServerStatus::Starting, ServerStatus::Running);
+            }
+            Some(LogEvent::Joined(name)) => h.update_players(&app, Some((&name, true))),
+            Some(LogEvent::Left(name)) => h.update_players(&app, Some((&name, false))),
+            None => {}
         }
     }
 }

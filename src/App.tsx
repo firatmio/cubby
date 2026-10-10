@@ -1,17 +1,26 @@
 import { useEffect } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { mediaUrl } from "./lib/api";
 import { bindBackendEvents } from "./lib/events";
-import { EmptyScreen } from "./screens/EmptyScreen";
-import { InstanceScreen } from "./screens/InstanceScreen";
-import { NewServerWizard } from "./screens/NewServerWizard";
-import { Sidebar } from "./screens/Sidebar";
-import { useAppStore } from "./store/appStore";
+import { accentOf } from "./lib/format";
+import { screen } from "./lib/motion";
+import { AdvancedSheet } from "./screens/advanced/AdvancedSheet";
+import { CoverSheet } from "./screens/cover/CoverSheet";
+import { HomeScreen } from "./screens/home/HomeScreen";
+import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
+import { SetupFlow } from "./screens/setup/SetupFlow";
+import { Background } from "./shell/Background";
+import { TitleBar } from "./shell/TitleBar";
+import { useAppStore, useSelected } from "./store/appStore";
 import { Dialog } from "./ui/Dialog";
 import { Progress } from "./ui/Progress";
 import styles from "./App.module.css";
 
 export default function App() {
   const view = useAppStore((s) => s.view);
+  const setupColor = useAppStore((s) => s.setupColor);
   const shuttingDown = useAppStore((s) => s.shuttingDown);
+  const selected = useSelected();
 
   useEffect(() => {
     let cancelled = false;
@@ -27,18 +36,40 @@ export default function App() {
     };
   }, []);
 
+  const inSetup = view === "setup";
+  const accent = inSetup ? setupColor : accentOf(selected);
+  const image =
+    !inSetup && selected?.cover ? mediaUrl(`cover/${selected.id}`, selected.cover.version) : null;
+
+  // Vurgu rengi (@property ile kayıtlı) dünya değişince yumuşakça geçer.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", accent);
+  }, [accent]);
+
   return (
     <div className={styles.app}>
-      <Sidebar />
-      <main className={styles.main}>
-        {view.name === "empty" && <EmptyScreen />}
-        {view.name === "wizard" && <NewServerWizard />}
-        {view.name === "instance" && <InstanceScreen key={view.id} id={view.id} />}
-      </main>
+      <Background image={image} color={accent} />
+      <TitleBar />
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={view}
+          className={styles.main}
+          variants={screen}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+        >
+          {inSetup ? <SetupFlow /> : <HomeScreen />}
+        </motion.main>
+      </AnimatePresence>
+
+      <AdvancedSheet />
+      <CoverSheet />
+      <AppSettingsSheet />
 
       {shuttingDown && (
         <Dialog title="Kapatılıyor">
-          <p>Sunucu durduruluyor ve dünya kaydediliyor…</p>
+          <p>Dünya kaydediliyor ve sunucu durduruluyor…</p>
           <Progress value={null} />
         </Dialog>
       )}

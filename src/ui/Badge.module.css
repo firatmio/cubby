@@ -1,8 +1,8 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 var(--sp-2);
+  height: 22px;
+  padding: 0 var(--sp-3);
   border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 500;
@@ -15,18 +15,18 @@
 }
 
 .accent {
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--on-primary);
 }
 
 .warning {
   background: var(--warning-soft);
-  color: var(--warning-text);
+  color: var(--warning);
 }
 
 .danger {
   background: var(--danger-soft);
-  color: var(--danger-text);
+  color: var(--danger);
 }
 
 .dot {
@@ -38,51 +38,22 @@
 }
 
 .stopped {
-  background: var(--status-stopped);
+  background: var(--text-3);
 }
 
 .running {
-  background: var(--status-running);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(108, 192, 74, 0.2);
 }
 
 .starting,
 .stopping {
-  background: var(--status-busy);
-  animation: pulse 1.2s ease-in-out infinite;
+  background: var(--busy);
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
 .crashed {
-  background: var(--status-crashed);
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  height: 26px;
-  padding: 0 var(--sp-3);
-  border-radius: var(--radius-full);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  background: var(--surface-2);
-  color: var(--text-2);
-}
-
-.s_running {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
-.s_starting,
-.s_stopping {
-  background: var(--warning-soft);
-  color: var(--warning-text);
-}
-
-.s_crashed {
-  background: var(--danger-soft);
-  color: var(--danger-text);
+  background: var(--danger);
 }
 
 @keyframes pulse {

@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -9,6 +10,29 @@ use crate::paths;
 use crate::registry::Registry;
 
 pub const INSTANCE_FILE: &str = "instance.json";
+
+/// `instance.json`'u okuyup yazan işlemler (arayüz + arka plan kapak üretimi) çakışmasın.
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CoverKind {
+    /// Oyun içi ekran görüntülerinden otomatik seçildi; yeni oturumda güncellenebilir.
+    Auto,
+    /// Kullanıcı seçti; otomatik olarak değiştirilmez.
+    Manual,
+}
+
+/// Dünyanın arka plan görseli (`.mcsm/cover.jpg`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Cover {
+    pub kind: CoverKind,
+    /// Görselin baskın rengi (`#rrggbb`); arayüzde vurgu rengi.
+    pub color: String,
+    /// Her değişimde artar; görsel URL'lerinde önbellek kırıcı.
+    pub version: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +50,8 @@ pub struct Instance {
     pub ram_max_mb: u32,
     pub port: u16,
     pub created_at: u64,
+    #[serde(default)]
+    pub cover: Option<Cover>,
 }
 
 impl Instance {
@@ -41,6 +67,15 @@ impl Instance {
         std::fs::rename(tmp, dir.join(INSTANCE_FILE))?;
         Ok(())
     }
+}
+
+/// Oku → değiştir → yaz; eşzamanlı yazımlara karşı kilitli.
+pub fn modify(dir: &Path, f: impl FnOnce(&mut Instance) -> AppResult<()>) -> AppResult<Instance> {
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut inst = Instance::load(dir)?;
+    f(&mut inst)?;
+    inst.save(dir)?;
+    Ok(inst)
 }
 
 pub fn get(app: &AppHandle, id: &str) -> AppResult<Instance> {

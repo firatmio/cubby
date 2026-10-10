@@ -3,9 +3,8 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--sp-1);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border-radius: var(--radius-card);
 }
 
 .row {
@@ -13,13 +12,14 @@
   align-items: center;
   gap: var(--sp-2);
   width: 100%;
-  height: 34px;
-  padding: 0 var(--sp-2);
+  height: 42px;
+  padding: 0 var(--sp-4) 0 var(--sp-3);
   background: transparent;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-full);
   text-align: left;
   cursor: pointer;
+  transition: background 140ms;
 }
 
 .row:hover:not(:disabled) {
@@ -33,14 +33,14 @@
 
 .selected,
 .selected:hover:not(:disabled) {
-  background: var(--accent-soft);
+  background: var(--surface-3);
 }
 
 .check {
   display: inline-flex;
   flex-shrink: 0;
-  width: 16px;
-  color: var(--accent-text);
+  width: 18px;
+  color: var(--text);
 }
 
 .label {

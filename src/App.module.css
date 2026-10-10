@@ -1,13 +1,12 @@
 .app {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-  height: 100%;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
 }
 
 .main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  background: var(--bg);
+  position: absolute;
+  inset: var(--titlebar-h) 0 0 0;
 }

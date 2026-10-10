@@ -1,32 +1,32 @@
 .track {
   position: relative;
-  height: 6px;
+  height: 4px;
   overflow: hidden;
   border-radius: var(--radius-full);
-  background: var(--surface-3);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .fill,
 .indeterminate {
   height: 100%;
   border-radius: inherit;
-  background: var(--accent);
+  background: var(--primary);
 }
 
 .fill {
-  transition: width 0.15s ease-out;
+  transition: width 0.25s ease-out;
 }
 
 .indeterminate {
   position: absolute;
   top: 0;
-  width: 35%;
-  animation: slide 1.2s ease-in-out infinite;
+  width: 30%;
+  animation: slide 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 @keyframes slide {
   from {
-    left: -35%;
+    left: -30%;
   }
   to {
     left: 100%;

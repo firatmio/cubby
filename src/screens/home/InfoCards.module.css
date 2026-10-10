@@ -1,0 +1,52 @@
+.cards {
+  display: flex;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 200px;
+  padding: var(--sp-4) var(--sp-5);
+  border: none;
+  border-radius: var(--radius-card);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  text-align: left;
+}
+
+.action {
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.action:hover {
+  background: rgba(60, 60, 60, 0.7);
+}
+
+.label {
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  overflow: hidden;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -50,6 +50,7 @@ const instances: Instance[] = [
     ramMaxMb: 4096,
     port: 25565,
     createdAt: 1,
+    cover: { kind: "auto", color: "#8fb7d8", version: 1 },
   },
   {
     id: "mock-2",
@@ -63,11 +64,34 @@ const instances: Instance[] = [
     ramMaxMb: 2048,
     port: 25566,
     createdAt: 2,
+    cover: null,
+  },
+  {
+    id: "mock-3",
+    name: "Ada macerası",
+    loader: "vanilla",
+    mcVersion: "1.21.11",
+    loaderVersion: null,
+    javaPath: null,
+    javaMajor: 21,
+    ramMinMb: 1024,
+    ramMaxMb: 2048,
+    port: 25567,
+    createdAt: 3,
+    cover: { kind: "manual", color: "#d8a26a", version: 1 },
   },
 ];
 
-const status: Record<string, ServerStatus> = { "mock-1": "running", "mock-2": "stopped" };
-const logs: Record<string, LogLine[]> = { "mock-1": [], "mock-2": [] };
+const players: Record<string, string[]> = { "mock-1": ["Ali"] };
+const HOUR = 3_600_000;
+const shots = Array.from({ length: 7 }, (_, i) => ({
+  file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
+  takenAt: Date.now() - (i + 1) * 5 * HOUR,
+}));
+let settings = { minecraftDir: null as string | null, useScreenshots: true };
+
+const status: Record<string, ServerStatus> = { "mock-1": "running", "mock-2": "stopped", "mock-3": "stopped" };
+const logs: Record<string, LogLine[]> = { "mock-1": [], "mock-2": [], "mock-3": [] };
 
 function log(id: string, line: string, stream: LogStream = "stdout") {
   const entry = { stream, line, ts: Date.now() };
@@ -196,9 +220,11 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         ramMaxMb: req.ramMaxMb,
         port: 25565,
         createdAt: Date.now(),
+        cover: null,
       };
       instances.push(inst);
       status[id] = "stopped";
+      emit("install://progress", { id, stage: "done", file: null, downloaded: 0, total: null });
       return inst;
     }
     case "update_instance": {
@@ -222,7 +248,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       log(args.id, info(`[Server] ${String(args.command).replace(/^say /, "")}`));
       return null;
     case "server_snapshot":
-      return { status: status[args.id] ?? "stopped", logs: logs[args.id] ?? [] };
+      return { status: status[args.id] ?? "stopped", logs: logs[args.id] ?? [], players: players[args.id] ?? [] };
     case "list_java":
       return JAVAS;
     case "instance_java": {
@@ -243,6 +269,27 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "set_instance_java":
       byId(args.id).javaPath = args.path;
       return { ...byId(args.id) };
+    case "get_settings":
+      return { settings, minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true };
+    case "update_settings":
+      settings = args.settings;
+      return mockInvoke("get_settings");
+    case "list_screenshots":
+      return args.id === "mock-1" ? { matched: shots.slice(0, 3), others: shots.slice(3) } : { matched: [], others: shots };
+    case "set_cover": {
+      const inst = byId(args.id);
+      await sleep(600);
+      const hue = Math.floor(Math.random() * 360);
+      inst.cover =
+        args.source.type === "auto" && args.id !== "mock-1"
+          ? null
+          : { kind: args.source.type === "auto" ? "auto" : "manual", color: `hsl(${hue} 50% 65%)`, version: (inst.cover?.version ?? 0) + 1 };
+      return { ...inst };
+    }
+    case "play_stats":
+      return args.id === "mock-2" ? { lastPlayedAt: null, totalMs: 0 } : { lastPlayedAt: Date.now() - 26 * HOUR, totalMs: 7.5 * HOUR };
+    case "lan_address":
+      return `192.168.1.24:${byId(args.id).port}`;
     default:
       return null;
   }

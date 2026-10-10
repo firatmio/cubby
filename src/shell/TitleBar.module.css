@@ -1,0 +1,29 @@
+.bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  height: var(--titlebar-h);
+  padding: 0 var(--sp-2) 0 var(--sp-5);
+}
+
+.name {
+  flex: 1;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.actions {
+  display: flex;
+  gap: 2px;
+}
+
+.close:hover:not(:disabled) {
+  background: var(--danger-fill);
+  color: #fff;
+}

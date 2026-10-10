@@ -1,0 +1,99 @@
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 calc(-1 * var(--sp-2));
+  padding: 0 var(--sp-2) var(--sp-4);
+}
+
+.section {
+  margin: var(--sp-4) 0 var(--sp-3);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.shot {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.shot:disabled {
+  cursor: default;
+}
+
+.shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 160ms;
+}
+
+.shot:hover img {
+  filter: brightness(1.08);
+}
+
+.when {
+  position: absolute;
+  left: var(--sp-2);
+  bottom: var(--sp-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(20, 20, 20, 0.6);
+  font-size: var(--fs-xs);
+  opacity: 0;
+  transition: opacity 160ms;
+}
+
+.shot:hover .when {
+  opacity: 1;
+}
+
+.busy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 20, 20, 0.55);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dim {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.error {
+  margin-bottom: var(--sp-3);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  user-select: text;
+}

@@ -1,0 +1,59 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  font-weight: 500;
+}
+
+.description {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.track {
+  display: flex;
+  flex-shrink: 0;
+  width: 46px;
+  height: 28px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  transition: background 200ms;
+}
+
+.on {
+  justify-content: flex-end;
+  background: var(--primary);
+}
+
+.knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.on .knob {
+  background: var(--on-primary);
+}

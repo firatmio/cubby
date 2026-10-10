@@ -1,0 +1,12 @@
+.path {
+  overflow: hidden;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  background: #232323;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}

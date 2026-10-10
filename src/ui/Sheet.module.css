@@ -1,0 +1,47 @@
+.backdrop {
+  position: fixed;
+  inset: var(--titlebar-h) 0 0 0;
+  z-index: 50;
+  background: var(--overlay);
+}
+
+.sheet {
+  position: fixed;
+  top: calc(var(--titlebar-h) + 8px);
+  right: 12px;
+  bottom: 12px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #262626;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-6) var(--sp-6) var(--sp-4);
+}
+
+.title {
+  font-size: var(--fs-xl);
+}
+
+.subtitle {
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 var(--sp-6) var(--sp-6);
+}

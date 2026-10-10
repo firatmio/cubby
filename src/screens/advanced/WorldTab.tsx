@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { api, errorMessage, type Instance, type ServerStatus } from "../../lib/api";
-import { formatRam } from "../../lib/format";
+import { describeInstance, formatRam } from "../../lib/format";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -9,18 +9,12 @@ import { Card } from "../../ui/Card";
 import { Dialog } from "../../ui/Dialog";
 import { Field, Input } from "../../ui/Input";
 import { Slider } from "../../ui/Slider";
-import { JavaSection } from "./JavaSection";
-import page from "./TabPage.module.css";
-import styles from "./SettingsTab.module.css";
+import styles from "../instance/sections.module.css";
 
 const MAX_NAME_LEN = 48;
 
-type Props = {
-  instance: Instance;
-  status: ServerStatus;
-};
-
-export function SettingsTab({ instance, status }: Props) {
+/** Gelişmiş > Dünya: isim, bellek, teknik bilgi, silme. */
+export function WorldTab({ instance, status }: { instance: Instance; status: ServerStatus }) {
   const replaceInstance = useAppStore((s) => s.replaceInstance);
   const removeInstance = useAppStore((s) => s.removeInstance);
 
@@ -58,7 +52,7 @@ export function SettingsTab({ instance, status }: Props) {
       const ramChanged = ramMax !== instance.ramMaxMb;
       setNotice({
         ok: true,
-        text: active && ramChanged ? "Kaydedildi. Bellek ayarı bir sonraki başlatmada geçerli olur." : "Kaydedildi.",
+        text: active && ramChanged ? "Kaydedildi. Bellek bir sonraki açılışta geçerli olur." : "Kaydedildi",
       });
     } catch (e) {
       setNotice({ ok: false, text: errorMessage(e) });
@@ -80,13 +74,13 @@ export function SettingsTab({ instance, status }: Props) {
   };
 
   return (
-    <div className={page.page}>
-      <Card title="Genel">
-        <Field label="Sunucu adı" htmlFor="settings-name">
-          <Input id="settings-name" value={name} maxLength={MAX_NAME_LEN} onChange={(e) => setName(e.target.value)} />
+    <div className={styles.stack}>
+      <Card>
+        <Field label="Dünyanın adı" htmlFor="world-name">
+          <Input id="world-name" value={name} maxLength={MAX_NAME_LEN} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Slider
-          label="En fazla RAM"
+          label="En fazla bellek"
           valueLabel={formatRam(ramMax)}
           value={ramMax}
           min={RAM_MIN}
@@ -102,23 +96,17 @@ export function SettingsTab({ instance, status }: Props) {
         </div>
       </Card>
 
-      <JavaSection instance={instance} />
-
       <Card
-        title="Sunucu özellikleri"
-        description="Zorluk, oyun modu, port, beyaz liste ve TLauncher desteği yakında burada."
+        title="Teknik bilgi"
+        description={`${describeInstance(instance)} · Java ${instance.javaMajor}+ · port ${instance.port}`}
       />
 
       <Card
         tone="danger"
-        title="Sunucuyu sil"
-        description={
-          active
-            ? "Silmeden önce sunucuyu durdur."
-            : "Dünya dahil tüm dosyalar Geri Dönüşüm Kutusu'na taşınır."
-        }
+        title="Dünyayı sil"
+        description={active ? "Silmeden önce dünyayı kapat." : "Tüm dosyalar Geri Dönüşüm Kutusu'na taşınır."}
         actions={
-          <Button variant="danger" icon={Trash2} disabled={active} onClick={() => setConfirmDelete(true)}>
+          <Button variant="danger" size="sm" icon={Trash2} disabled={active} onClick={() => setConfirmDelete(true)}>
             Sil
           </Button>
         }
@@ -126,7 +114,7 @@ export function SettingsTab({ instance, status }: Props) {
 
       {confirmDelete && (
         <Dialog
-          title="Sunucu silinsin mi?"
+          title="Dünya silinsin mi?"
           actions={
             <>
               <Button variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(false)}>
@@ -139,8 +127,8 @@ export function SettingsTab({ instance, status }: Props) {
           }
         >
           <p>
-            "{instance.name}" ve dünyası dahil tüm dosyaları Geri Dönüşüm Kutusu'na taşınacak. Pişman olursan oradan
-            geri alabilirsin.
+            "{instance.name}" ve bütün dosyaları Geri Dönüşüm Kutusu'na taşınacak. Pişman olursan oradan geri
+            alabilirsin.
           </p>
         </Dialog>
       )}

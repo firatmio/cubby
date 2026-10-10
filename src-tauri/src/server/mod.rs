@@ -2,7 +2,7 @@ pub mod log;
 mod process;
 pub mod stats;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -20,6 +20,7 @@ use crate::util::now_ms;
 pub const EVENT_LOG: &str = "server://log";
 pub const EVENT_STATUS: &str = "server://status";
 pub const EVENT_STATS: &str = "server://stats";
+pub const EVENT_PLAYERS: &str = "server://players";
 
 /// Kill sonrası sürecin bitmesi için beklenen ek süre.
 const KILL_GRACE: Duration = Duration::from_secs(5);
@@ -60,6 +61,8 @@ pub struct LogLine {
 pub struct ServerSnapshot {
     pub status: ServerStatus,
     pub logs: Vec<LogLine>,
+    /// Şu an bağlı oyuncular (log'daki giriş/çıkış satırlarından).
+    pub players: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -73,6 +76,12 @@ struct LogPayload<'a> {
 struct StatusPayload<'a> {
     id: &'a str,
     status: ServerStatus,
+}
+
+#[derive(Serialize, Clone)]
+struct PlayersPayload<'a> {
+    id: &'a str,
+    players: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -91,6 +100,7 @@ pub struct LaunchSpec {
 struct State {
     status: ServerStatus,
     logs: VecDeque<LogLine>,
+    players: BTreeSet<String>,
     stop_requested: bool,
     kill_tx: Option<oneshot::Sender<()>>,
     /// Süreç bitince `true` olur.
@@ -110,6 +120,7 @@ impl ServerHandle {
             state: Mutex::new(State {
                 status: ServerStatus::Stopped,
                 logs: VecDeque::new(),
+                players: BTreeSet::new(),
                 stop_requested: false,
                 kill_tx: None,
                 exit_rx: None,
@@ -141,6 +152,30 @@ impl ServerHandle {
             s.status = to;
         }
         self.emit_status(app, to);
+    }
+
+    /// Oyuncu listesini günceller (`Some(true)` giriş, `Some(false)` çıkış, `None` temizle).
+    fn update_players(&self, app: &AppHandle, change: Option<(&str, bool)>) {
+        let players: Vec<String> = {
+            let mut s = self.lock();
+            match change {
+                Some((name, true)) => {
+                    s.players.insert(name.to_string());
+                }
+                Some((name, false)) => {
+                    s.players.remove(name);
+                }
+                None => s.players.clear(),
+            }
+            s.players.iter().cloned().collect()
+        };
+        let _ = app.emit(
+            EVENT_PLAYERS,
+            PlayersPayload {
+                id: &self.id,
+                players,
+            },
+        );
     }
 
     fn emit_status(&self, app: &AppHandle, status: ServerStatus) {
@@ -235,11 +270,13 @@ impl ServerManager {
                 ServerSnapshot {
                     status: s.status,
                     logs: s.logs.iter().cloned().collect(),
+                    players: s.players.iter().cloned().collect(),
                 }
             }
             None => ServerSnapshot {
                 status: ServerStatus::Stopped,
                 logs: Vec::new(),
+                players: Vec::new(),
             },
         }
     }
@@ -258,6 +295,7 @@ impl ServerManager {
             s.status = ServerStatus::Starting;
             s.stop_requested = false;
             s.logs.clear();
+            s.players.clear();
         }
         h.emit_status(app, ServerStatus::Starting);
         process::spawn(app, &h, spec).await

@@ -1,0 +1,42 @@
+import type { MouseEvent } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Minus, Settings, X } from "lucide-react";
+import { IS_MOCK } from "../lib/api";
+import { useAppStore } from "../store/appStore";
+import { IconButton } from "../ui/IconButton";
+import styles from "./TitleBar.module.css";
+
+/** Pencere işlemleri; tarayıcıdaki mock modunda etkisiz. */
+const win = () => (IS_MOCK ? null : getCurrentWindow());
+
+/**
+ * Kendi başlık çubuğumuz: boş yerden sürüklenir, yalnız küçült ve kapat var
+ * (pencere sabit boyutlu; çift tıkla büyütme olmasın diye drag-region yerine startDragging).
+ */
+export function TitleBar() {
+  const openSheet = useAppStore((s) => s.openSheet);
+
+  const onMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    win()?.startDragging().catch(console.error);
+  };
+
+  return (
+    <header className={styles.bar} onMouseDown={onMouseDown}>
+      <span className={styles.name}>Sunucu Yöneticisi</span>
+      <div className={styles.actions}>
+        <IconButton icon={Settings} label="Ayarlar" size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
+        <IconButton icon={Minus} label="Küçült" size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />
+        <IconButton
+          icon={X}
+          label="Kapat"
+          size="sm"
+          variant="ghost"
+          tipBelow
+          className={styles.close}
+          onClick={() => win()?.close()}
+        />
+      </div>
+    </header>
+  );
+}

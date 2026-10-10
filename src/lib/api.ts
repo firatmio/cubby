@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -32,6 +32,47 @@ export interface Instance {
   ramMaxMb: number;
   port: number;
   createdAt: number;
+  cover: Cover | null;
+}
+
+export interface Cover {
+  /** auto: ekran görüntülerinden otomatik; manual: kullanıcı seçti */
+  kind: "auto" | "manual";
+  /** Görselin baskın rengi (#rrggbb) */
+  color: string;
+  version: number;
+}
+
+export interface Shot {
+  file: string;
+  takenAt: number;
+}
+
+export interface ShotList {
+  matched: Shot[];
+  others: Shot[];
+}
+
+export type CoverSource =
+  | { type: "screenshot"; file: string }
+  | { type: "file"; path: string }
+  | { type: "auto" };
+
+export interface AppSettings {
+  minecraftDir: string | null;
+  useScreenshots: boolean;
+}
+
+export interface SettingsView {
+  settings: AppSettings;
+  /** Kullanılan Minecraft klasörü (ayar ya da varsayılan) */
+  minecraftDir: string | null;
+  screenshotsFound: boolean;
+}
+
+export interface PlayStats {
+  lastPlayedAt: number | null;
+  totalMs: number;
 }
 
 export type ServerStatus = "stopped" | "starting" | "running" | "stopping" | "crashed";
@@ -46,6 +87,7 @@ export interface LogLine {
 export interface ServerSnapshot {
   status: ServerStatus;
   logs: LogLine[];
+  players: string[];
 }
 
 export interface ProcessStats {
@@ -156,12 +198,51 @@ export const api = {
   installJava: (major: number) => invoke<JavaInfo>("install_java", { major }),
   setInstanceJava: (id: string, path: string | null) =>
     invoke<Instance>("set_instance_java", { id, path }),
+  getSettings: () => invoke<SettingsView>("get_settings"),
+  updateSettings: (settings: AppSettings) => invoke<SettingsView>("update_settings", { settings }),
+  listScreenshots: (id: string) => invoke<ShotList>("list_screenshots", { id }),
+  setCover: (id: string, source: CoverSource) => invoke<Instance>("set_cover", { id, source }),
+  playStats: (id: string) => invoke<PlayStats>("play_stats", { id }),
+  lanAddress: (id: string) => invoke<string>("lan_address", { id }),
 };
+
+/**
+ * `media://` protokolünden görsel adresi: `cover/<id>`, `thumb/<id>`, `shot/<dosya>`.
+ * `v` önbellek kırıcı (kapak sürümü).
+ */
+export function mediaUrl(path: string, v?: number | string): string {
+  if (import.meta.env.DEV && IS_MOCK) return mockMediaUrl(path);
+  const base = convertFileSrc("", "media");
+  return `${base}${path}${v !== undefined ? `?v=${v}` : ""}`;
+}
+
+/** Mock modunda gerçek görsel yok: dosya adından üretilen degrade manzara. */
+function mockMediaUrl(path: string): string {
+  let h = 0;
+  for (const c of path.replace(/^(cover|thumb)\//, "")) h = (h * 31 + c.charCodeAt(0)) % 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="none">
+    <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${h},55%,62%)"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},45%,35%)"/></linearGradient></defs>
+    <rect width="160" height="90" fill="url(#s)"/>
+    <path d="M0 62 L30 48 L55 58 L85 38 L115 54 L160 42 L160 90 L0 90Z" fill="hsl(${(h + 90) % 360},40%,28%)"/>
+    <path d="M0 74 L40 64 L80 72 L120 60 L160 70 L160 90 L0 90Z" fill="hsl(${(h + 100) % 360},35%,18%)"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
 
 /** Klasör seçme penceresi; iptal edilirse null. */
 export async function pickFolder(title: string): Promise<string | null> {
   if (import.meta.env.DEV && IS_MOCK) return "D:\\Oyunlar\\Sunucular";
   const picked = await openDialog({ directory: true, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** Resim dosyası seçme penceresi; iptal edilirse null. */
+export async function pickImage(title: string): Promise<string | null> {
+  if (import.meta.env.DEV && IS_MOCK) return "C:\\Resimler\\kapak.png";
+  const picked = await openDialog({
+    multiple: false,
+    title,
+    filters: [{ name: "Resim", extensions: ["png", "jpg", "jpeg"] }],
+  });
   return typeof picked === "string" ? picked : null;
 }
 

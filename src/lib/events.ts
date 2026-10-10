@@ -1,6 +1,7 @@
 import { listen as tauriListen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store/appStore";
 import {
+  api,
   IS_MOCK,
   type InstallProgress,
   type JavaProgress,
@@ -25,6 +26,8 @@ const EVENT_STATUS = "server://status";
 const EVENT_STATS = "server://stats";
 const EVENT_INSTALL_PROGRESS = "install://progress";
 const EVENT_JAVA_PROGRESS = "java://progress";
+const EVENT_PLAYERS = "server://players";
+const EVENT_COVER_CHANGED = "cover://changed";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
 
 type WithId<T> = T & { id: string };
@@ -66,6 +69,13 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<JavaProgress>(EVENT_JAVA_PROGRESS, ({ payload }) => {
       store().setJavaProgress(payload);
+    }),
+    listen<{ id: string; players: string[] }>(EVENT_PLAYERS, ({ payload }) => {
+      store().setPlayers(payload.id, payload.players);
+    }),
+    // Oturum sonunda Rust kapağı güncelledi: yeni sürümü çek, arka plan geçsin.
+    listen<string>(EVENT_COVER_CHANGED, ({ payload: id }) => {
+      api.getInstance(id).then(store().replaceInstance).catch(console.error);
     }),
     listen(EVENT_SHUTTING_DOWN, () => store().setShuttingDown(true)),
   ]);

@@ -18,7 +18,7 @@ body,
 body {
   font-family: var(--font-sans);
   font-size: var(--fs-md);
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -40,7 +40,7 @@ h2,
 h3,
 h4 {
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 button,
@@ -51,22 +51,23 @@ textarea {
   color: inherit;
 }
 
-a {
-  color: var(--accent-text);
-  text-decoration: none;
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
-a:hover {
+a {
+  color: var(--text);
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 :focus-visible {
   outline: none;
-  box-shadow: var(--focus);
+  box-shadow: 0 0 0 3px var(--primary);
 }
 
 ::-webkit-scrollbar {
@@ -80,12 +81,7 @@ a:hover {
 
 ::-webkit-scrollbar-thumb {
   background: var(--surface-3);
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   border-radius: var(--radius-full);
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
   background-clip: padding-box;
 }

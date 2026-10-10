@@ -1,23 +1,18 @@
 .card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-}
-
-.danger {
-  border-color: var(--danger-soft);
+  background: var(--surface);
+  border-radius: var(--radius-card);
 }
 
 .danger .title {
-  color: var(--danger-text);
+  color: var(--danger);
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-5);
+  padding: var(--sp-5) var(--sp-6);
 }
 
 .header + .body {
@@ -44,7 +39,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-5) var(--sp-5);
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
 }
 
 .empty {
@@ -62,10 +57,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   margin-bottom: var(--sp-2);
-  border-radius: var(--radius-lg);
+  border-radius: 50%;
   background: var(--surface-2);
   color: var(--text-2);
 }

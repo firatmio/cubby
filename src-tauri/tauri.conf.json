@@ -14,10 +14,12 @@
       {
         "label": "main",
         "title": "MC Sunucu Yöneticisi",
-        "width": 1100,
+        "width": 1200,
         "height": 720,
-        "minWidth": 900,
-        "minHeight": 600,
+        "resizable": false,
+        "maximizable": false,
+        "decorations": false,
+        "shadow": true,
         "center": true
       }
     ],

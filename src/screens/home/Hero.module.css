@@ -1,0 +1,36 @@
+.hero {
+  max-width: 720px;
+}
+
+.caption {
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+.name {
+  margin: var(--sp-1) 0 var(--sp-3);
+  font-size: var(--fs-display);
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.detail {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.crashed {
+  color: var(--danger);
+}

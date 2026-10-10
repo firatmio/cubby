@@ -10,23 +10,12 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
 
 export const STATUS_LABELS: Record<ServerStatus, string> = {
   stopped: "Kapalı",
-  starting: "Başlıyor",
+  starting: "Açılıyor",
   running: "Açık",
   stopping: "Kapanıyor",
-  crashed: "Çöktü",
+  crashed: "Beklenmedik şekilde kapandı",
 };
 
-/** Yalnızca nokta (liste satırları için). */
 export function StatusDot({ status }: { status: ServerStatus }) {
-  return <span className={[styles.dot, styles[status]].join(" ")} aria-label={STATUS_LABELS[status]} />;
-}
-
-/** Noktalı hap: "● Açık". */
-export function StatusBadge({ status }: { status: ServerStatus }) {
-  return (
-    <span className={[styles.status, styles[`s_${status}`]].join(" ")}>
-      <span className={[styles.dot, styles[status]].join(" ")} aria-hidden />
-      {STATUS_LABELS[status]}
-    </span>
-  );
+  return <span className={[styles.dot, styles[status]].join(" ")} aria-hidden />;
 }

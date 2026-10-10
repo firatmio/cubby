@@ -4,7 +4,7 @@ import { api, errorMessage, type Instance } from "../../lib/api";
 import { CONTENT_DIR_LABEL } from "../../lib/format";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
-import styles from "./TabPage.module.css";
+import styles from "./sections.module.css";
 
 export function FilesTab({ instance }: { instance: Instance }) {
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export function FilesTab({ instance }: { instance: Instance }) {
   };
 
   return (
-    <div className={styles.page}>
+    <div className={styles.stack}>
       <Card
         title="Sunucu klasörü"
         description="Dünya, ayar ve kayıt (log) dosyaları burada."

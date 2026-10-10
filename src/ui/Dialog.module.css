@@ -5,23 +5,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-8);
+  padding: var(--edge);
   background: var(--overlay);
-  animation: fade var(--dur) ease-out;
+  backdrop-filter: blur(6px);
+  animation: fade 200ms ease-out;
 }
 
 .dialog {
   width: min(460px, 100%);
-  padding: var(--sp-6);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  padding: var(--sp-8);
+  background: #262626;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tile);
   box-shadow: var(--shadow-pop);
-  animation: pop 160ms ease-out;
+  animation: pop 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .title {
-  font-size: var(--fs-lg);
+  font-size: var(--fs-xl);
   margin-bottom: var(--sp-3);
 }
 
@@ -36,7 +37,7 @@
   display: flex;
   gap: var(--sp-2);
   justify-content: flex-end;
-  margin-top: var(--sp-6);
+  margin-top: var(--sp-8);
 }
 
 @keyframes fade {
@@ -48,6 +49,6 @@
 @keyframes pop {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.98);
+    transform: translateY(10px) scale(0.97);
   }
 }
