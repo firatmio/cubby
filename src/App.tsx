@@ -1,51 +1,43 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect } from "react";
+import { McModal } from "./components/McModal";
+import { McProgress } from "./components/McProgress";
+import { bindBackendEvents } from "./lib/events";
+import { HomeScreen } from "./screens/HomeScreen";
+import { InstanceScreen } from "./screens/InstanceScreen";
+import { NewServerWizard } from "./screens/NewServerWizard";
+import { useAppStore } from "./store/appStore";
+import styles from "./App.module.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+export default function App() {
+  const view = useAppStore((s) => s.view);
+  const shuttingDown = useAppStore((s) => s.shuttingDown);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    let cancelled = false;
+    let unbind: (() => void) | undefined;
+    bindBackendEvents().then((un) => {
+      if (cancelled) un();
+      else unbind = un;
+    });
+    useAppStore.getState().loadInstances().catch(console.error);
+    return () => {
+      cancelled = true;
+      unbind?.();
+    };
+  }, []);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className={styles.app}>
+      {view.name === "home" && <HomeScreen />}
+      {view.name === "wizard" && <NewServerWizard />}
+      {view.name === "instance" && <InstanceScreen key={view.id} id={view.id} />}
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      {shuttingDown && (
+        <McModal title="Kapatılıyor">
+          <p>Sunucu durduruluyor, dünya kaydediliyor…</p>
+          <McProgress value={null} />
+        </McModal>
+      )}
+    </div>
   );
 }
-
-export default App;

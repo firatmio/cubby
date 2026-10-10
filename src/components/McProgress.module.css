@@ -1,0 +1,36 @@
+.track {
+  position: relative;
+  height: 20px;
+  overflow: hidden;
+  background: #1a1a1a;
+  border: var(--px) solid var(--outline);
+}
+
+.fill,
+.indeterminate {
+  height: 100%;
+  background: #80ff20;
+  box-shadow:
+    inset 0 calc(2 * var(--px)) 0 #c0ff80,
+    inset 0 calc(-2 * var(--px)) 0 #40a010;
+}
+
+.fill {
+  transition: width 0.1s steps(4);
+}
+
+.indeterminate {
+  position: absolute;
+  top: 0;
+  width: 25%;
+  animation: slide 1.2s steps(24) infinite;
+}
+
+@keyframes slide {
+  from {
+    left: -25%;
+  }
+  to {
+    left: 100%;
+  }
+}

@@ -1,8 +1,8 @@
 [package]
 name = "mc-server-launcher"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Minecraft sunucu yöneticisi"
+authors = ["firatmio"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -22,6 +22,16 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tokio = { version = "1.53.2", features = ["rt-multi-thread", "process", "io-util", "sync", "time", "macros"] }
+futures-util = "0.3.34"
+sha1 = "0.11.0"
+sha2 = "0.11.0"
+hex = "0.4.3"
+thiserror = "2.0.21"
+sysinfo = "0.39.6"
+tauri-plugin-single-instance = "2.5.2"
+uuid = { version = "1.28.0", features = ["v4"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
@@ -31,3 +41,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+tokio = { version = "1.53.2", features = ["net", "macros", "rt-multi-thread", "io-util"] }

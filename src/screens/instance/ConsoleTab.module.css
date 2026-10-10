@@ -1,0 +1,52 @@
+.console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.log {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--gap-2) var(--gap-3);
+  background: var(--console-bg);
+  font-size: 14px;
+  line-height: 20px;
+  text-shadow: none;
+  user-select: text;
+}
+
+.line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 20px;
+}
+
+.system {
+  color: var(--text-yellow);
+}
+
+.warn {
+  color: var(--text-gold);
+}
+
+.error {
+  color: var(--text-red);
+}
+
+.empty {
+  color: var(--text-dim);
+}
+
+.sendError {
+  padding: var(--gap-1) var(--gap-3);
+  color: var(--text-red);
+  font-size: var(--fs-sm);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--gap-2);
+  padding: var(--gap-2);
+}

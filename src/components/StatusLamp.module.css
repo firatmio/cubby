@@ -1,0 +1,36 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.lamp {
+  width: 12px;
+  height: 12px;
+  border: var(--px) solid var(--outline);
+}
+
+.stopped {
+  background: #6f6f6f;
+}
+
+.starting,
+.stopping {
+  background: var(--text-gold);
+  animation: blink 1s steps(2) infinite;
+}
+
+.running {
+  background: var(--text-green);
+  box-shadow: 0 0 8px #55ff55;
+}
+
+.crashed {
+  background: var(--text-red);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.4;
+  }
+}

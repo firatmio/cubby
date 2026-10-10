@@ -1,0 +1,38 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-8);
+  background: rgba(16, 16, 16, 0.75);
+}
+
+.modal {
+  width: min(560px, 100%);
+  padding: var(--gap-6);
+  background: rgba(0, 0, 0, 0.85);
+  border: var(--px) solid #a0a0a0;
+}
+
+.title {
+  margin: 0 0 var(--gap-4);
+  font-size: var(--fs-lg);
+  text-align: center;
+}
+
+.body {
+  color: #e0e0e0;
+}
+
+.body p {
+  margin: 0 0 var(--gap-3);
+}
+
+.actions {
+  display: flex;
+  gap: var(--gap-2);
+  justify-content: center;
+  margin-top: var(--gap-6);
+}

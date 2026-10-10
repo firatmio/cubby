@@ -1,0 +1,29 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-3);
+  height: 100%;
+  padding: var(--gap-6);
+  text-align: center;
+}
+
+.page p {
+  margin: 0;
+}
+
+.soon {
+  color: var(--text-yellow);
+  font-size: var(--fs-lg);
+}
+
+.dim {
+  max-width: 480px;
+  color: var(--text-dim);
+}
+
+.error {
+  color: var(--text-red);
+  user-select: text;
+}

@@ -1,0 +1,109 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  position: relative;
+  padding: var(--gap-6) 0 var(--gap-4);
+  text-align: center;
+}
+
+.logo {
+  display: inline-block;
+  margin: 0;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 4px;
+  color: #e0e0e0;
+  text-shadow:
+    4px 4px 0 #3f3f3f,
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000;
+}
+
+.splash {
+  position: absolute;
+  top: 56%;
+  left: calc(50% + 160px);
+  color: var(--text-yellow);
+  text-shadow: var(--px) var(--px) 0 #3f3f00;
+  transform: rotate(-20deg);
+  animation: pulse 0.5s ease-in-out infinite alternate;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  to {
+    transform: rotate(-20deg) scale(1.08);
+  }
+}
+
+.list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-1);
+  overflow-y: auto;
+  padding: var(--gap-2) max(var(--gap-4), calc((100% - 640px) / 2));
+}
+
+.empty {
+  margin: auto;
+  color: var(--text-dim);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
+  width: 100%;
+  padding: var(--gap-2);
+  background: transparent;
+  border: var(--px) solid transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #808080;
+}
+
+.card:focus-visible {
+  border-color: #fff;
+  outline: none;
+}
+
+.icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.cardText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cardName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardMeta {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  padding: var(--gap-4);
+}

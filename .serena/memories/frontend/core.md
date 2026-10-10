@@ -1,0 +1,13 @@
+# frontend/core (src)
+
+- Router yok: `store/appStore.ts` (zustand) içindeki `view` (`home | wizard | instance{id}`) `App.tsx`'te ekran seçer.
+- `lib/api.ts` — typed invoke wrapper'ları + Rust tiplerinin aynası; `errorMessage()` Rust string hatalarını açar.
+- `lib/events.ts` — Rust event'lerini store'a bağlar; log satırları rAF ile toplu eklenir; `starting` durumu logları sıfırlar.
+- `components/Mc*` — pixel UI kit (McButton/McPanel/McInput/McSlider/McProgress/McModal/McTabs/StatusLamp), CSS Modules.
+- `screens/` — HomeScreen, NewServerWizard (loader→sürüm→RAM→isim→kur), InstanceScreen (+ `instance/` sekmeleri: Console, Files, Placeholder).
+
+## Style invariants
+- Stil: CSS Modules + `styles/global.css` değişkenleri; Tailwind yok.
+- Tüm ölçüler 2/4'ün katı; `--px: 2px` "piksel" birimi; `image-rendering: pixelated`.
+- Font Monocraft (OFL); Türkçe glifler var, ama `■ ✓ „` gibi bazı semboller yok — kullanmadan önce kontrol et.
+- tsconfig lib ES2020: `Array.prototype.at` vb. yok.
