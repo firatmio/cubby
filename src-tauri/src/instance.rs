@@ -1,13 +1,14 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 use crate::loaders::LoaderKind;
 use crate::paths;
+use crate::registry::Registry;
 
-const INSTANCE_FILE: &str = "instance.json";
+pub const INSTANCE_FILE: &str = "instance.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,17 +48,14 @@ pub fn get(app: &AppHandle, id: &str) -> AppResult<Instance> {
     Instance::load(&dir).map_err(|_| AppError::msg("Sunucu bulunamadı"))
 }
 
-/// Okunamayan (yarım kalmış/bozuk) klasörler atlanır.
-pub fn list(app: &AppHandle) -> AppResult<Vec<Instance>> {
-    let root = paths::instances_dir(app)?;
-    let Ok(entries) = std::fs::read_dir(&root) else {
-        return Ok(Vec::new());
-    };
-    let mut out: Vec<Instance> = entries
-        .flatten()
-        .filter(|e| e.path().is_dir())
-        .filter_map(|e| Instance::load(&e.path()).ok())
+/// Okunamayan klasörler (silinmiş, takılı olmayan disk, bozuk dosya) atlanır.
+pub fn list(app: &AppHandle) -> Vec<Instance> {
+    let mut out: Vec<Instance> = app
+        .state::<Registry>()
+        .paths()
+        .iter()
+        .filter_map(|p| Instance::load(p).ok())
         .collect();
     out.sort_by_key(|i| i.created_at);
-    Ok(out)
+    out
 }

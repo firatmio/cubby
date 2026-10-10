@@ -3,7 +3,7 @@ import { McButton } from "../components/McButton";
 import { McPanel } from "../components/McPanel";
 import { StatusLamp } from "../components/StatusLamp";
 import type { Instance } from "../lib/api";
-import { LOADER_LABELS, formatRam } from "../lib/format";
+import { describeInstance, formatRam } from "../lib/format";
 import { useAppStore, useServer } from "../store/appStore";
 import styles from "./HomeScreen.module.css";
 
@@ -20,7 +20,7 @@ function InstanceCard({ instance }: { instance: Instance }) {
       <span className={styles.cardText}>
         <span className={styles.cardName}>{instance.name}</span>
         <span className={styles.cardMeta}>
-          {LOADER_LABELS[instance.loader]} {instance.mcVersion} · {formatRam(instance.ramMaxMb)}
+          {describeInstance(instance)} · {formatRam(instance.ramMaxMb)}
         </span>
       </span>
       <StatusLamp status={status} />

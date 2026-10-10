@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 // Rust tarafındaki serde tiplerinin aynası (camelCase).
 
-export type LoaderKind = "vanilla";
+export type LoaderKind = "vanilla" | "fabric" | "paper";
 
 export interface Instance {
   id: string;
@@ -48,6 +48,18 @@ export interface GameVersionList {
   versions: GameVersion[];
 }
 
+export interface LoaderVersion {
+  version: string;
+  stable: boolean;
+  /** Paper: "stable" | "beta" | "alpha" */
+  channel: string | null;
+}
+
+export interface LoaderVersionList {
+  versions: LoaderVersion[];
+  recommended: string | null;
+}
+
 export interface JavaInfo {
   path: string;
   major: number;
@@ -61,25 +73,42 @@ export interface SystemInfo {
 
 export interface CreateInstanceRequest {
   name: string;
+  loader: LoaderKind;
   mcVersion: string;
+  loaderVersion: string | null;
   ramMinMb: number;
   ramMaxMb: number;
+  /** null: uygulama veri dizini */
+  parentDir: string | null;
+}
+
+export interface UpdateInstanceRequest {
+  name?: string;
+  ramMinMb?: number;
+  ramMaxMb?: number;
 }
 
 export interface InstallProgress {
   id: string;
   stage: "meta" | "download" | "done";
+  /** download aşamasında hangi dosya */
+  file: "server" | "fabric" | "paper" | null;
   downloaded: number;
   total: number | null;
 }
 
 export const api = {
   systemInfo: () => invoke<SystemInfo>("system_info"),
-  listMcVersions: (includeSnapshots: boolean) =>
-    invoke<GameVersionList>("list_mc_versions", { includeSnapshots }),
+  listGameVersions: (loader: LoaderKind, includeSnapshots: boolean) =>
+    invoke<GameVersionList>("list_game_versions", { loader, includeSnapshots }),
+  listLoaderVersions: (loader: LoaderKind, game: string) =>
+    invoke<LoaderVersionList>("list_loader_versions", { loader, game }),
   listInstances: () => invoke<Instance[]>("list_instances"),
   getInstance: (id: string) => invoke<Instance>("get_instance", { id }),
   createInstance: (req: CreateInstanceRequest) => invoke<Instance>("create_instance", { req }),
+  updateInstance: (id: string, changes: UpdateInstanceRequest) =>
+    invoke<Instance>("update_instance", { id, changes }),
+  deleteInstance: (id: string) => invoke<void>("delete_instance", { id }),
   eulaStatus: (id: string) => invoke<boolean>("eula_status", { id }),
   acceptEula: (id: string) => invoke<void>("accept_eula", { id }),
   startServer: (id: string) => invoke<void>("start_server", { id }),
@@ -87,6 +116,7 @@ export const api = {
   sendCommand: (id: string, command: string) => invoke<void>("send_command", { id, command }),
   serverSnapshot: (id: string) => invoke<ServerSnapshot>("server_snapshot", { id }),
   openInstanceDir: (id: string) => invoke<void>("open_instance_dir", { id }),
+  openContentDir: (id: string) => invoke<void>("open_content_dir", { id }),
 };
 
 /** Rust hataları string olarak gelir. */

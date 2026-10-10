@@ -6,11 +6,12 @@ import { McModal } from "../components/McModal";
 import { McTabs } from "../components/McTabs";
 import { StatusLamp } from "../components/StatusLamp";
 import { api, errorMessage } from "../lib/api";
-import { LOADER_LABELS } from "../lib/format";
+import { describeInstance } from "../lib/format";
 import { useAppStore, useServer } from "../store/appStore";
 import { ConsoleTab } from "./instance/ConsoleTab";
 import { FilesTab } from "./instance/FilesTab";
 import { PlaceholderTab } from "./instance/PlaceholderTab";
+import { SettingsTab } from "./instance/SettingsTab";
 import styles from "./InstanceScreen.module.css";
 
 type Tab = "console" | "players" | "settings" | "connection" | "files";
@@ -98,9 +99,7 @@ export function InstanceScreen({ id }: { id: string }) {
         <img src={grassIcon} alt="" className={styles.icon} />
         <div className={styles.title}>
           <h2>{instance.name}</h2>
-          <span className={styles.meta}>
-            {LOADER_LABELS[instance.loader]} {instance.mcVersion}
-          </span>
+          <span className={styles.meta}>{describeInstance(instance)}</span>
         </div>
         <div className={styles.state}>
           <StatusLamp status={status} />
@@ -137,13 +136,11 @@ export function InstanceScreen({ id }: { id: string }) {
         {tab === "players" && (
           <PlaceholderTab text="Çevrimiçi oyuncular, whitelist ve op yönetimi burada olacak." />
         )}
-        {tab === "settings" && (
-          <PlaceholderTab text="server.properties düzenleyici ve TLauncher (premium olmayan oyuncu) desteği burada olacak." />
-        )}
+        {tab === "settings" && <SettingsTab instance={instance} status={status} />}
         {tab === "connection" && (
           <PlaceholderTab text="LAN adresi ve internetten katılım (playit.gg / UPnP) burada olacak." />
         )}
-        {tab === "files" && <FilesTab id={id} />}
+        {tab === "files" && <FilesTab instance={instance} />}
       </div>
 
       {eulaOpen && (

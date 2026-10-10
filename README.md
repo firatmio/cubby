@@ -6,7 +6,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 ## Durum
 
 - [x] **M1** — Pixel UI temeli, Vanilla sunucu indirme (sha1 doğrulamalı), başlat/durdur, canlı konsol, CPU/RAM
-- [ ] M2 — Loader mimarisi, Fabric, Paper, instance yönetimi
+- [x] **M2** — Loader mimarisi, Fabric + Paper (Fill v3), loader sürümü seçimi, yeniden adlandırma / RAM / silme (Geri Dönüşüm Kutusu), sunucu başına konum
 - [ ] M3 — Java tespiti + Adoptium'dan otomatik indirme
 - [ ] M4 — server.properties, EULA, TLauncher desteği, whitelist, oyuncular
 - [ ] M5 — Bağlantı: LAN, playit.gg, UPnP
@@ -30,11 +30,12 @@ cd src-tauri && cargo test && cargo clippy --all-targets
 bun run build
 ```
 
-Mojang API'sine giden canlı indirme testi: `cargo test -- --ignored live_install`
+Canlı indirme testleri (Mojang, Fabric, Paper): `cargo test -- --ignored live_install`
 
 ## Veri konumu
 
-Sunucular uygulama veri dizininde tutulur:
-`%APPDATA%\com.firatmio.mc-server-launcher\instances\<id>\{instance.json, server/}`
+Varsayılan olarak sunucular uygulama veri dizininde tutulur:
+`%APPDATA%\com.firatmio.mc-server-launcher\instances\<id>\{instance.json, server/}`.
+Sihirbazda başka bir klasör seçilebilir; hangi sunucunun nerede olduğu `instances.json` kaydında durur.
 
 Asset lisansları: [ASSETS.md](ASSETS.md).

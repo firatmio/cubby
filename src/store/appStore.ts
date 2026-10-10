@@ -29,6 +29,8 @@ interface AppStore {
   instances: Instance[];
   loadInstances: () => Promise<void>;
   addInstance: (instance: Instance) => void;
+  replaceInstance: (instance: Instance) => void;
+  removeInstance: (id: string) => void;
 
   servers: Record<string, ServerRuntime>;
   appendLogs: (id: string, lines: LogLine[]) => void;
@@ -54,6 +56,13 @@ export const useAppStore = create<AppStore>((set) => {
     instances: [],
     loadInstances: async () => set({ instances: await api.listInstances() }),
     addInstance: (instance) => set((st) => ({ instances: [...st.instances, instance] })),
+    replaceInstance: (instance) =>
+      set((st) => ({ instances: st.instances.map((i) => (i.id === instance.id ? instance : i)) })),
+    removeInstance: (id) =>
+      set((st) => {
+        const { [id]: _removed, ...servers } = st.servers;
+        return { instances: st.instances.filter((i) => i.id !== id), servers };
+      }),
 
     servers: {},
     appendLogs: (id, lines) =>

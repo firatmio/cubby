@@ -7,6 +7,7 @@ mod instance;
 mod java;
 mod loaders;
 mod paths;
+mod registry;
 mod server;
 mod util;
 
@@ -16,7 +17,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
 use commands::AppState;
-use loaders::vanilla::VanillaApi;
+use loaders::Loaders;
+use registry::Registry;
 use server::ServerManager;
 
 pub const EVENT_SHUTTING_DOWN: &str = "app://shutting-down";
@@ -63,8 +65,13 @@ pub fn run() {
             focus_main(app)
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            app.manage(Registry::load(&app.path().app_data_dir()?));
+            Ok(())
+        })
         .manage(AppState {
-            vanilla: VanillaApi::new(http),
+            loaders: Loaders::new(http),
             servers: Arc::new(ServerManager::default()),
         })
         .on_window_event(|window, event| {
@@ -78,10 +85,13 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::system_info,
-            commands::list_mc_versions,
+            commands::list_game_versions,
+            commands::list_loader_versions,
             commands::list_instances,
             commands::get_instance,
             commands::create_instance,
+            commands::update_instance,
+            commands::delete_instance,
             commands::eula_status,
             commands::accept_eula,
             commands::start_server,
@@ -89,6 +99,7 @@ pub fn run() {
             commands::send_command,
             commands::server_snapshot,
             commands::open_instance_dir,
+            commands::open_content_dir,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

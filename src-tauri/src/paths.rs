@@ -3,18 +3,23 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
+use crate::registry::Registry;
 
-pub fn instances_dir(app: &AppHandle) -> AppResult<PathBuf> {
-    Ok(app.path().app_data_dir()?.join("instances"))
+/// `id` frontend'den gelir; yalnızca uuid karakterlerine izin verilir.
+pub fn validate_id(id: &str) -> AppResult<()> {
+    let valid = !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::msg("Geçersiz sunucu kimliği"))
+    }
 }
 
-/// `id` frontend'den gelir; dizin dışına çıkılamasın diye yalnızca uuid karakterlerine izin verilir.
 pub fn instance_dir(app: &AppHandle, id: &str) -> AppResult<PathBuf> {
-    let valid = !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
-    if !valid {
-        return Err(AppError::msg("Geçersiz sunucu kimliği"));
-    }
-    Ok(instances_dir(app)?.join(id))
+    validate_id(id)?;
+    app.state::<Registry>()
+        .path_of(id)
+        .ok_or_else(|| AppError::msg("Sunucu bulunamadı"))
 }
 
 pub fn server_dir(app: &AppHandle, id: &str) -> AppResult<PathBuf> {

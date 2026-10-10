@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -9,9 +9,11 @@ use crate::consts::DEFAULT_PORT;
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
 use crate::java::{self, JavaInfo};
-use crate::loaders::vanilla::{InstallStage, SERVER_JAR, VanillaApi};
-use crate::loaders::{GameVersionList, LoaderKind};
+use crate::loaders::{
+    GameVersionList, InstallRequest, InstallStage, LoaderKind, LoaderVersionList, Loaders,
+};
 use crate::paths;
+use crate::registry::Registry;
 use crate::server::{LaunchSpec, ServerManager, ServerSnapshot, stats};
 use crate::util::now_ms;
 
@@ -21,7 +23,7 @@ const MIN_RAM_MB: u32 = 512;
 const MAX_NAME_LEN: usize = 48;
 
 pub struct AppState {
-    pub vanilla: VanillaApi,
+    pub loaders: Loaders,
     pub servers: Arc<ServerManager>,
 }
 
@@ -41,15 +43,28 @@ pub async fn system_info() -> SystemInfo {
 }
 
 #[tauri::command]
-pub async fn list_mc_versions(
+pub async fn list_game_versions(
     state: State<'_, AppState>,
+    loader: LoaderKind,
     include_snapshots: bool,
 ) -> AppResult<GameVersionList> {
-    state.vanilla.list_game_versions(include_snapshots).await
+    state
+        .loaders
+        .list_game_versions(loader, include_snapshots)
+        .await
 }
 
 #[tauri::command]
-pub fn list_instances(app: AppHandle) -> AppResult<Vec<Instance>> {
+pub async fn list_loader_versions(
+    state: State<'_, AppState>,
+    loader: LoaderKind,
+    game: String,
+) -> AppResult<LoaderVersionList> {
+    state.loaders.list_loader_versions(loader, &game).await
+}
+
+#[tauri::command]
+pub fn list_instances(app: AppHandle) -> Vec<Instance> {
     instance::list(&app)
 }
 
@@ -58,13 +73,34 @@ pub fn get_instance(app: AppHandle, id: String) -> AppResult<Instance> {
     instance::get(&app, &id)
 }
 
+fn validate_name(name: &str) -> AppResult<String> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > MAX_NAME_LEN {
+        return Err(AppError::msg(format!(
+            "İsim 1–{MAX_NAME_LEN} karakter olmalı"
+        )));
+    }
+    Ok(name.to_string())
+}
+
+fn validate_ram(min: u32, max: u32) -> AppResult<()> {
+    if min < MIN_RAM_MB || max < min {
+        return Err(AppError::msg("RAM değerleri geçersiz"));
+    }
+    Ok(())
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateInstanceRequest {
     name: String,
+    loader: LoaderKind,
     mc_version: String,
+    loader_version: Option<String>,
     ram_min_mb: u32,
     ram_max_mb: u32,
+    /// Kullanıcının seçtiği üst klasör; `None` ise uygulama veri dizini.
+    parent_dir: Option<PathBuf>,
 }
 
 #[derive(Serialize, Clone)]
@@ -72,72 +108,83 @@ pub struct CreateInstanceRequest {
 struct InstallProgress<'a> {
     id: &'a str,
     stage: &'static str,
+    /// "server" | "fabric" | "paper" (yalnız `download` aşamasında)
+    file: Option<&'static str>,
     downloaded: u64,
     total: Option<u64>,
 }
 
-/// Klasörü oluşturur, sunucu jar'ını indirir; başarılı olursa `instance.json` yazar.
+/// Klasörü oluşturur, sunucu dosyalarını kurar; başarılı olursa `instance.json` yazar ve kayda ekler.
 /// Hata olursa yarım klasör silinir.
 #[tauri::command]
 pub async fn create_instance(
     app: AppHandle,
     state: State<'_, AppState>,
+    registry: State<'_, Registry>,
     req: CreateInstanceRequest,
 ) -> AppResult<Instance> {
-    let name = req.name.trim().to_string();
-    if name.is_empty() || name.chars().count() > MAX_NAME_LEN {
-        return Err(AppError::msg(format!(
-            "İsim 1–{MAX_NAME_LEN} karakter olmalı"
-        )));
-    }
-    if req.ram_min_mb < MIN_RAM_MB || req.ram_max_mb < req.ram_min_mb {
-        return Err(AppError::msg("RAM değerleri geçersiz"));
-    }
+    let name = validate_name(&req.name)?;
+    validate_ram(req.ram_min_mb, req.ram_max_mb)?;
 
     let id = uuid::Uuid::new_v4().to_string();
-    let dir = paths::instance_dir(&app, &id)?;
-    let server_dir = paths::server_dir(&app, &id)?;
-    let emit = |stage: &'static str, downloaded: u64, total: Option<u64>| {
-        let _ = app.emit(
-            EVENT_INSTALL_PROGRESS,
-            InstallProgress {
-                id: &id,
-                stage,
-                downloaded,
-                total,
-            },
-        );
-    };
+    let dir = registry.allocate(&id, &name, req.parent_dir.as_deref())?;
+    let server_dir = dir.join("server");
+    let emit =
+        |stage: &'static str, file: Option<&'static str>, downloaded: u64, total: Option<u64>| {
+            let _ = app.emit(
+                EVENT_INSTALL_PROGRESS,
+                InstallProgress {
+                    id: &id,
+                    stage,
+                    file,
+                    downloaded,
+                    total,
+                },
+            );
+        };
 
     let installed = state
-        .vanilla
-        .install(&req.mc_version, &server_dir, |stage| match stage {
-            InstallStage::Meta => emit("meta", 0, None),
-            InstallStage::Download { downloaded, total } => emit("download", downloaded, total),
-        })
+        .loaders
+        .install(
+            req.loader,
+            &InstallRequest {
+                mc_version: &req.mc_version,
+                loader_version: req.loader_version.as_deref(),
+            },
+            &server_dir,
+            &mut |stage| match stage {
+                InstallStage::Meta => emit("meta", None, 0, None),
+                InstallStage::Download {
+                    file,
+                    downloaded,
+                    total,
+                } => emit("download", Some(file), downloaded, total),
+            },
+        )
         .await;
 
-    let result = installed.and_then(|java_major| {
+    let result = installed.and_then(|installed| {
         let inst = Instance {
             id: id.clone(),
             name,
-            loader: LoaderKind::Vanilla,
+            loader: req.loader,
             mc_version: req.mc_version.clone(),
-            loader_version: None,
+            loader_version: installed.loader_version,
             java_path: None,
-            java_major,
+            java_major: installed.java_major,
             ram_min_mb: req.ram_min_mb,
             ram_max_mb: req.ram_max_mb,
             port: DEFAULT_PORT,
             created_at: now_ms(),
         };
         inst.save(&dir)?;
+        registry.insert(&id, dir.clone())?;
         Ok(inst)
     });
 
     match result {
         Ok(inst) => {
-            emit("done", 0, None);
+            emit("done", None, 0, None);
             Ok(inst)
         }
         Err(e) => {
@@ -145,6 +192,57 @@ pub async fn create_instance(
             Err(e)
         }
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateInstanceRequest {
+    name: Option<String>,
+    ram_min_mb: Option<u32>,
+    ram_max_mb: Option<u32>,
+}
+
+/// RAM değişikliği sunucu bir sonraki açılışında geçerli olur.
+#[tauri::command]
+pub fn update_instance(
+    app: AppHandle,
+    id: String,
+    changes: UpdateInstanceRequest,
+) -> AppResult<Instance> {
+    let dir = paths::instance_dir(&app, &id)?;
+    let mut inst = Instance::load(&dir)?;
+    if let Some(name) = &changes.name {
+        inst.name = validate_name(name)?;
+    }
+    let min = changes.ram_min_mb.unwrap_or(inst.ram_min_mb);
+    let max = changes.ram_max_mb.unwrap_or(inst.ram_max_mb);
+    validate_ram(min, max)?;
+    inst.ram_min_mb = min;
+    inst.ram_max_mb = max;
+    inst.save(&dir)?;
+    Ok(inst)
+}
+
+/// Klasörü Geri Dönüşüm Kutusu'na taşır ve kayıttan çıkarır.
+#[tauri::command]
+pub async fn delete_instance(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    registry: State<'_, Registry>,
+    id: String,
+) -> AppResult<()> {
+    if state.servers.snapshot(&id).status.is_active() {
+        return Err(AppError::msg("Çalışan sunucu silinemez, önce durdur"));
+    }
+    let dir = paths::instance_dir(&app, &id)?;
+    if dir.exists() {
+        let target = dir.clone();
+        tokio::task::spawn_blocking(move || trash::delete(target))
+            .await
+            .map_err(|e| AppError::msg(e.to_string()))?
+            .map_err(|e| AppError::msg(format!("Geri Dönüşüm Kutusu'na taşınamadı: {e}")))?;
+    }
+    registry.remove(&id)
 }
 
 fn eula_accepted(server_dir: &Path) -> bool {
@@ -198,16 +296,14 @@ pub async fn start_server(app: AppHandle, state: State<'_, AppState>, id: String
         )));
     }
 
-    let args = vec![
+    let mut args = vec![
         format!("-Xms{}M", inst.ram_min_mb),
         format!("-Xmx{}M", inst.ram_max_mb),
         // Konsol çıktısı yerel kod sayfasıyla (ör. Cp1254) değil UTF-8 gelsin.
         "-Dstdout.encoding=UTF-8".into(),
         "-Dstderr.encoding=UTF-8".into(),
-        "-jar".into(),
-        SERVER_JAR.into(),
-        "nogui".into(),
     ];
+    args.extend(state.loaders.launch_args(inst.loader));
     state
         .servers
         .start(
@@ -242,11 +338,25 @@ pub fn server_snapshot(state: State<'_, AppState>, id: String) -> ServerSnapshot
     state.servers.snapshot(&id)
 }
 
-#[tauri::command]
-pub fn open_instance_dir(app: AppHandle, id: String) -> AppResult<()> {
-    let dir = paths::server_dir(&app, &id)?;
-    std::fs::create_dir_all(&dir)?;
+fn open_dir(app: &AppHandle, dir: &Path) -> AppResult<()> {
+    std::fs::create_dir_all(dir)?;
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
         .map_err(|e| AppError::msg(format!("Klasör açılamadı: {e}")))
+}
+
+#[tauri::command]
+pub fn open_instance_dir(app: AppHandle, id: String) -> AppResult<()> {
+    open_dir(&app, &paths::server_dir(&app, &id)?)
+}
+
+/// `mods/` (Fabric) veya `plugins/` (Paper).
+#[tauri::command]
+pub fn open_content_dir(app: AppHandle, state: State<'_, AppState>, id: String) -> AppResult<()> {
+    let inst = instance::get(&app, &id)?;
+    let sub = state
+        .loaders
+        .content_dir(inst.loader)
+        .ok_or_else(|| AppError::msg("Bu sunucu türünde mod/plugin klasörü yok"))?;
+    open_dir(&app, &paths::server_dir(&app, &id)?.join(sub))
 }

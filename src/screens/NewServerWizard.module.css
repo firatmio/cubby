@@ -75,7 +75,7 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.versionStep {
+.listStep {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -88,14 +88,14 @@
   gap: var(--gap-2);
 }
 
-.versionList {
+.list {
   flex: 1;
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.4);
   border: var(--px) solid #555;
 }
 
-.versionRow {
+.listRow {
   display: flex;
   align-items: center;
   gap: var(--gap-2);
@@ -107,7 +107,7 @@
   cursor: pointer;
 }
 
-.versionRow:hover {
+.listRow:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -156,6 +156,17 @@
   color: var(--text-dim);
 }
 
+.path {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  user-select: text;
+}
+
 .hint {
   margin: 0;
   color: var(--text-dim);
@@ -183,7 +194,9 @@
 }
 
 .warn {
+  margin: 0;
   color: var(--text-gold);
+  font-size: var(--fs-sm);
 }
 
 .success {
