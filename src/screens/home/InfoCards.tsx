@@ -4,7 +4,7 @@ import { Check, Copy } from "lucide-react";
 import { api, type Instance } from "../../lib/api";
 import { formatDuration, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
-import { useServer } from "../../store/appStore";
+import { useAppStore, useServer } from "../../store/appStore";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./InfoCards.module.css";
 
@@ -25,7 +25,7 @@ function InviteCard({ id }: { id: string }) {
 
   return (
     <motion.button type="button" className={[styles.card, styles.action].join(" ")} variants={rise} onClick={copy}>
-      <span className={styles.label}>Kardeşini davet et</span>
+      <span className={styles.label}>Arkadaşını davet et</span>
       <span className={styles.value}>
         {address ?? "Adres bulunamadı"}
         {address && (copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />)}
@@ -37,19 +37,29 @@ function InviteCard({ id }: { id: string }) {
 
 /** Sol alt: okunur ama ana eylem olmayan bilgiler. */
 export function InfoCards({ instance }: { instance: Instance }) {
-  const { status, players } = useServer(instance.id);
+  const { status, players, rejected } = useServer(instance.id);
   const stats = usePlayStats(instance.id, status);
+  const openSheet = useAppStore((s) => s.openSheet);
   const running = status === "running";
 
   return (
     <motion.div className={styles.cards} variants={stagger} initial="hidden" animate="show" exit="exit">
-      <motion.div className={styles.card} variants={rise}>
+      <motion.button
+        type="button"
+        className={[styles.card, styles.action].join(" ")}
+        variants={rise}
+        onClick={() => openSheet("players")}
+      >
         <span className={styles.label}>Oyuncular</span>
         <span className={styles.value}>
           {!running ? "Dünya kapalı" : players.length === 0 ? "Henüz kimse yok" : players.join(", ")}
         </span>
-        <span className={styles.hint}>{running ? `${players.length} kişi oyunda` : "Açınca burada görünür"}</span>
-      </motion.div>
+        {rejected.length > 0 ? (
+          <span className={[styles.hint, styles.alert].join(" ")}>{rejected[0]} girmeye çalıştı · izin ver</span>
+        ) : (
+          <span className={styles.hint}>{running ? `${players.length} kişi oyunda` : "Kimlerin girebileceğini yönet"}</span>
+        )}
+      </motion.button>
 
       <InviteCard id={instance.id} />
 

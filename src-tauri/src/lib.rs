@@ -9,11 +9,14 @@ mod java;
 mod loaders;
 mod media;
 mod paths;
+mod players;
+mod properties;
 mod registry;
 mod server;
 mod sessions;
 mod settings;
 mod util;
+mod world_cmds;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -92,7 +95,8 @@ pub fn run() {
             });
         })
         .manage(AppState {
-            loaders: Loaders::new(http),
+            loaders: Loaders::new(http.clone()),
+            http,
             servers: Arc::new(ServerManager::default()),
         })
         .on_window_event(|window, event| {
@@ -131,6 +135,16 @@ pub fn run() {
             commands::set_cover,
             commands::play_stats,
             commands::lan_address,
+            world_cmds::get_properties,
+            world_cmds::update_properties,
+            world_cmds::world_access,
+            world_cmds::lookup_player,
+            world_cmds::whitelist_add,
+            world_cmds::whitelist_remove,
+            world_cmds::set_whitelist_enabled,
+            world_cmds::set_offline_mode,
+            world_cmds::set_op,
+            world_cmds::kick_player,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

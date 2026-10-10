@@ -3,7 +3,7 @@ import type { Instance } from "../../lib/api";
 import { kindCaption, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
 import { useServer } from "../../store/appStore";
-import { STATUS_LABELS, StatusDot } from "../../ui/Badge";
+import { STATUS_LABELS } from "../../ui/Badge";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./Hero.module.css";
 
@@ -16,7 +16,7 @@ export function Hero({ instance }: { instance: Instance }) {
     status === "running"
       ? players.length > 0
         ? `${players.length} oyuncu bağlı`
-        : "Kardeşin katılabilir"
+        : "Arkadaşın katılabilir"
       : status === "crashed"
         ? "Ayrıntılar Gelişmiş > Konsol'da"
         : status === "stopped" && stats?.lastPlayedAt
@@ -32,9 +32,8 @@ export function Hero({ instance }: { instance: Instance }) {
         {instance.name}
       </motion.h1>
       <motion.p className={[styles.status, styles[status]].join(" ")} variants={rise}>
-        <StatusDot status={status} />
         {STATUS_LABELS[status]}
-        {detail && <span className={styles.detail}> · {detail}</span>}
+        {detail && <span className={styles.detail}>{detail}</span>}
       </motion.p>
     </motion.div>
   );

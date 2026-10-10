@@ -16,6 +16,8 @@ pub struct AppSettings {
     pub minecraft_dir: Option<PathBuf>,
     /// Ekran görüntülerinden dünya kapağı seçilsin mi?
     pub use_screenshots: bool,
+    /// Minecraft EULA'sı bir kez kabul edildi; yeni dünyalarda tekrar sorulmaz.
+    pub eula_accepted: bool,
 }
 
 impl Default for AppSettings {
@@ -23,6 +25,7 @@ impl Default for AppSettings {
         Self {
             minecraft_dir: None,
             use_screenshots: true,
+            eula_accepted: false,
         }
     }
 }
@@ -102,14 +105,14 @@ mod tests {
             store
                 .set(AppSettings {
                     minecraft_dir: Some(dir.join("yok")),
-                    use_screenshots: true
+                    ..AppSettings::default()
                 })
                 .is_err()
         );
         store
             .set(AppSettings {
-                minecraft_dir: None,
                 use_screenshots: false,
+                ..AppSettings::default()
             })
             .unwrap();
         assert!(!SettingsStore::load(&dir).get().use_screenshots);

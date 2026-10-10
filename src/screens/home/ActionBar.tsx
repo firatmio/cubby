@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, FolderOpen, ImageIcon, Play, SlidersHorizontal, Square, X } from "lucide-react";
-import { api, type Instance } from "../../lib/api";
+import { AlertTriangle, ImageIcon, Play, Settings2, Square, Users, Wrench, X } from "lucide-react";
+import type { Instance } from "../../lib/api";
 import { spring } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -36,9 +36,10 @@ export function ActionBar({ instance }: { instance: Instance }) {
       </AnimatePresence>
 
       <div className={styles.buttons}>
-        <IconButton icon={SlidersHorizontal} label="Gelişmiş" onClick={() => openSheet("advanced")} />
+        <IconButton icon={Users} label="Oyuncular" onClick={() => openSheet("players")} />
+        <IconButton icon={Settings2} label="Dünya ayarları" onClick={() => openSheet("world")} />
         <IconButton icon={ImageIcon} label="Kapak resmi" onClick={() => openSheet("cover")} />
-        <IconButton icon={FolderOpen} label="Dünya klasörü" onClick={() => api.openInstanceDir(instance.id)} />
+        <IconButton icon={Wrench} label="Gelişmiş" onClick={() => openSheet("advanced")} />
         {active ? (
           <Button
             variant="secondary"

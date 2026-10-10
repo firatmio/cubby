@@ -4,6 +4,7 @@
  * (`api.ts` içindeki `import.meta.env.DEV` koşulu sayesinde).
  */
 import type {
+  AccessView,
   Instance,
   JavaInfo,
   LogLine,
@@ -88,7 +89,68 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true };
+
+const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
+const fakeUuid = (name: string) =>
+  `${[...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(16).padStart(8, "0")}-0000-3000-8000-000000000000`;
+
+type Access = Omit<AccessView, "notice">;
+const access: Record<string, Access> = {
+  "mock-1": {
+    offlineMode: true,
+    whitelistEnabled: true,
+    whitelist: ["Sen", "Ali"].map((name) => ({ name, uuid: fakeUuid(name) })),
+    ops: ["Sen"],
+    known: ["Sen", "Ali", "Mehmet", "Zeynep"],
+  },
+  "mock-2": { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [] },
+  "mock-3": { offlineMode: false, whitelistEnabled: true, whitelist: [], ops: [], known: ["firatmio"] },
+};
+const accessOf = (id: string) =>
+  (access[id] ??= { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [] });
+
+const BASE_PROPS: Record<string, string> = {
+  "accepts-transfers": "false",
+  "allow-flight": "false",
+  difficulty: "easy",
+  "enable-command-block": "false",
+  "enforce-whitelist": "false",
+  gamemode: "survival",
+  hardcore: "false",
+  "level-name": "world",
+  "level-seed": "",
+  "level-type": "minecraft:normal",
+  "max-players": "20",
+  motd: "A Minecraft Server",
+  "online-mode": "true",
+  pvp: "true",
+  "server-port": "25565",
+  "simulation-distance": "10",
+  "spawn-protection": "16",
+  "view-distance": "10",
+  "white-list": "false",
+};
+const props: Record<string, Record<string, string>> = {};
+const propsOf = (id: string) => {
+  if (!props[id]) {
+    const inst = byId(id);
+    const a = accessOf(id);
+    props[id] = {
+      ...BASE_PROPS,
+      motd: inst.name,
+      "server-port": String(inst.port),
+      "online-mode": String(!a.offlineMode),
+      "white-list": String(a.whitelistEnabled),
+      "enforce-whitelist": String(a.whitelistEnabled),
+    };
+  }
+  return props[id];
+};
+
+function accessView(id: string, notice: string | null = null): AccessView {
+  return { ...structuredClone(accessOf(id)), notice };
+}
 
 const status: Record<string, ServerStatus> = { "mock-1": "running", "mock-2": "stopped", "mock-3": "stopped" };
 const logs: Record<string, LogLine[]> = { "mock-1": [], "mock-2": [], "mock-3": [] };
@@ -224,6 +286,13 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       };
       instances.push(inst);
       status[id] = "stopped";
+      access[id] = {
+        offlineMode: req.offlineMode,
+        whitelistEnabled: req.offlineMode || req.whitelist !== null,
+        whitelist: (req.whitelist ?? []).map((name: string) => ({ name, uuid: fakeUuid(name) })),
+        ops: [],
+        known: [],
+      };
       emit("install://progress", { id, stage: "done", file: null, downloaded: 0, total: null });
       return inst;
     }
@@ -248,7 +317,69 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       log(args.id, info(`[Server] ${String(args.command).replace(/^say /, "")}`));
       return null;
     case "server_snapshot":
-      return { status: status[args.id] ?? "stopped", logs: logs[args.id] ?? [], players: players[args.id] ?? [] };
+      return {
+        status: status[args.id] ?? "stopped",
+        logs: logs[args.id] ?? [],
+        players: players[args.id] ?? [],
+        rejected: rejected[args.id] ?? [],
+      };
+    case "accept_eula":
+      settings.eulaAccepted = true;
+      return null;
+    case "get_properties":
+      return { values: { ...propsOf(args.id) }, exists: args.id !== "mock-2" };
+    case "update_properties":
+      Object.assign(propsOf(args.id), args.changes);
+      return { values: { ...propsOf(args.id) }, exists: true };
+    case "world_access":
+      return accessView(args.id);
+    case "lookup_player": {
+      const name = String(args.name).trim();
+      if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) throw "İsim 3-16 karakter olmalı; yalnız harf, rakam ve _ kullanılabilir.";
+      if (!args.offline && name.toLowerCase().startsWith("yok"))
+        throw `"${name}" adında bir Minecraft hesabı yok. Arkadaşın TLauncher kullanıyorsa "Premium olmayanlar da girebilsin"i aç.`;
+      return { name, uuid: fakeUuid(name) };
+    }
+    case "whitelist_add": {
+      const profile = (await mockInvoke("lookup_player", { name: args.name, offline: accessOf(args.id).offlineMode })) as {
+        name: string;
+        uuid: string;
+      };
+      const a = accessOf(args.id);
+      if (!a.whitelist.some((p) => p.name.toLowerCase() === profile.name.toLowerCase())) a.whitelist.push(profile);
+      rejected[args.id] = (rejected[args.id] ?? []).filter((n) => n.toLowerCase() !== profile.name.toLowerCase());
+      emit("server://rejected", { id: args.id, players: rejected[args.id] });
+      return accessView(args.id);
+    }
+    case "whitelist_remove": {
+      const a = accessOf(args.id);
+      a.whitelist = a.whitelist.filter((p) => p.name.toLowerCase() !== String(args.name).toLowerCase());
+      return accessView(args.id);
+    }
+    case "set_whitelist_enabled": {
+      const a = accessOf(args.id);
+      if (!args.on && a.offlineMode) throw "Premium olmayanlar girebilirken beyaz liste kapatılamaz.";
+      a.whitelistEnabled = args.on;
+      return accessView(args.id);
+    }
+    case "set_offline_mode": {
+      if (status[args.id] !== "stopped") throw "Bu ayarı değiştirmek için önce dünyayı durdur.";
+      const a = accessOf(args.id);
+      a.offlineMode = args.offline;
+      if (args.offline) a.whitelistEnabled = true;
+      propsOf(args.id)["online-mode"] = String(!args.offline);
+      return accessView(args.id);
+    }
+    case "set_op": {
+      const a = accessOf(args.id);
+      a.ops = args.op ? [...a.ops, args.name] : a.ops.filter((n) => n !== args.name);
+      const online = (players[args.id] ?? []).includes(args.name) || status[args.id] !== "running";
+      return accessView(args.id, online ? null : "Yeniden başlatınca geçerli olur.");
+    }
+    case "kick_player":
+      players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
+      emit("server://players", { id: args.id, players: players[args.id] });
+      return null;
     case "list_java":
       return JAVAS;
     case "instance_java": {

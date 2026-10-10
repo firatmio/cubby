@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, FolderOpen, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, FolderOpen, Plus, RotateCcw, X } from "lucide-react";
 import {
   api,
   errorMessage,
@@ -26,8 +26,7 @@ import { Toggle } from "../../ui/Toggle";
 import { KIND_ICONS } from "../home/TileRow";
 import styles from "./SetupFlow.module.css";
 
-type Step = "kind" | "version" | "name" | "install";
-const QUESTION_STEPS: Step[] = ["kind", "version", "name"];
+type Step = "kind" | "version" | "name" | "access" | "whitelist" | "install";
 
 const KINDS: { id: LoaderKind; text: string }[] = [
   { id: "fabric", text: "Mod kurabilirsin. Çoğu kişi için en iyi başlangıç." },
@@ -78,6 +77,14 @@ export function SetupFlow() {
   const [parentDir, setParentDir] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  const [whitelistOn, setWhitelistOn] = useState(false);
+  const [offline, setOffline] = useState(false);
+  /** Doğrulanmış isimler (hesabın gerçek yazımıyla). */
+  const [allowed, setAllowed] = useState<string[]>([]);
+  const [playerInput, setPlayerInput] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
   const [installError, setInstallError] = useState<string | null>(null);
   const [created, setCreated] = useState<Instance | null>(null);
 
@@ -117,6 +124,34 @@ export function SetupFlow() {
   const bounds = ramBounds(sys?.totalMemMb ?? 4096);
   const defaultName = useMemo(() => `${KIND_LABELS[kind]} dünya`, [kind]);
   const noLoaderForVersion = kind !== "vanilla" && loaderVersions !== null && loaderVersions.versions.length === 0;
+  // Premium olmayanlar girebiliyorsa beyaz liste zorunlu: yoksa herkes herkesin adıyla girebilir.
+  const useWhitelist = whitelistOn || offline;
+  const questionSteps = useMemo<Step[]>(
+    () => ["kind", "version", "name", "access", ...(useWhitelist ? (["whitelist"] as Step[]) : [])],
+    [useWhitelist],
+  );
+  const lastStep = questionSteps[questionSteps.length - 1];
+
+  const addPlayer = async (e: FormEvent) => {
+    e.preventDefault();
+    const n = playerInput.trim();
+    if (!n || lookupBusy) return;
+    if (allowed.some((a) => a.toLowerCase() === n.toLowerCase())) {
+      setPlayerInput("");
+      return;
+    }
+    setLookupBusy(true);
+    setLookupError(null);
+    try {
+      const profile = await api.lookupPlayer(n, offline);
+      setAllowed((list) => [...list, profile.name]);
+      setPlayerInput("");
+    } catch (err) {
+      setLookupError(errorMessage(err));
+    } finally {
+      setLookupBusy(false);
+    }
+  };
 
   const install = () => {
     if (!version) return;
@@ -132,6 +167,8 @@ export function SetupFlow() {
         ramMinMb: ramMinFor(ramMax),
         ramMaxMb: ramMax,
         parentDir,
+        offlineMode: offline,
+        whitelist: useWhitelist ? allowed : null,
       })
       .then((inst) => {
         addInstance(inst);
@@ -140,17 +177,19 @@ export function SetupFlow() {
       .catch((e) => setInstallError(errorMessage(e)));
   };
 
-  const qIndex = QUESTION_STEPS.indexOf(step);
-  const back = () => (qIndex <= 0 ? setView("home") : setStep(QUESTION_STEPS[qIndex - 1]));
+  const qIndex = questionSteps.indexOf(step);
+  const back = () => (qIndex <= 0 ? setView("home") : setStep(questionSteps[qIndex - 1]));
   const next = () => {
     if (step === "version" && !name) setName(defaultName);
-    if (step === "name") install();
-    else setStep(QUESTION_STEPS[qIndex + 1]);
+    if (step === lastStep) install();
+    else setStep(questionSteps[qIndex + 1]);
   };
   const canNext =
     step === "kind" ||
     (step === "version" && version !== null && !noLoaderForVersion) ||
-    (step === "name" && name.trim().length > 0 && name.trim().length <= MAX_NAME_LEN);
+    (step === "name" && name.trim().length > 0 && name.trim().length <= MAX_NAME_LEN) ||
+    step === "access" ||
+    (step === "whitelist" && allowed.length > 0 && !lookupBusy);
 
   let question: string;
   let sub: string;
@@ -187,7 +226,7 @@ export function SetupFlow() {
     );
   } else if (step === "version") {
     question = "Hangi Minecraft sürümü?";
-    sub = "Kardeşinin oyunu da aynı sürümde olmalı. Genelde en yenisi iyidir.";
+    sub = "Arkadaşının oyunu da aynı sürümde olmalı. Genelde en yenisi iyidir.";
     const latest = versions?.versions.find((v) => v.id === versions.latestRelease);
     content = versionsError ? (
       <div className={styles.errorBox}>
@@ -341,6 +380,92 @@ export function SetupFlow() {
         </AnimatePresence>
       </div>
     );
+  } else if (step === "access") {
+    question = "Kimler girebilsin?";
+    sub = "Bunları sonradan Oyuncular ve Dünya ayarlarından değiştirebilirsin.";
+    content = (
+      <div className={styles.accessStep}>
+        <div className={styles.panel}>
+          <Toggle
+            checked={useWhitelist}
+            onChange={setWhitelistOn}
+            disabled={offline}
+            label="Beyaz liste"
+            description={
+              offline
+                ? "Premium olmayanlar girebildiği için açık kalmalı."
+                : "Yalnız adını eklediğin oyuncular girebilir. Adresi bilen başka biri giremez."
+            }
+          />
+          <Toggle
+            checked={offline}
+            onChange={setOffline}
+            label="Premium olmayanlar da girebilsin (TLauncher)"
+            description="Arkadaşın satın alınmış bir Minecraft hesabı olmadan oynuyorsa aç."
+          />
+        </div>
+        {offline && (
+          <p className={styles.warn}>
+            <AlertTriangle size={15} aria-hidden />
+            Bu modda isimler doğrulanamaz; adresi bilen biri senin ya da arkadaşının adını kullanabilir. Bu yüzden
+            yalnız beyaz listedekiler girebilecek.
+          </p>
+        )}
+      </div>
+    );
+  } else if (step === "whitelist") {
+    question = "Beyaz liste";
+    sub = offline
+      ? "Oyunda kullandıkları isimleri yaz. Kendi adını da eklemeyi unutma."
+      : "Minecraft hesap adlarını yaz; her ismi Mojang'dan kontrol ederim. Kendi adını da ekle.";
+    content = (
+      <div className={styles.accessStep}>
+        <form className={styles.addRow} onSubmit={addPlayer}>
+          <Input
+            className={styles.playerInput}
+            value={playerInput}
+            maxLength={16}
+            placeholder="Oyuncu adı"
+            onChange={(e) => {
+              setPlayerInput(e.target.value);
+              setLookupError(null);
+            }}
+            autoFocus
+            aria-label="Oyuncu adı"
+          />
+          <Button type="submit" size="lg" icon={Plus} loading={lookupBusy} disabled={!playerInput.trim()}>
+            Ekle
+          </Button>
+        </form>
+        {lookupError && <p className={styles.lookupError}>{lookupError}</p>}
+        <div className={styles.chips}>
+          <AnimatePresence initial={false}>
+            {allowed.map((n) => (
+              <motion.span
+                key={n}
+                layout
+                className={styles.chip}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={spring}
+              >
+                <span className={styles.chipAvatar}>{n.slice(0, 1).toUpperCase()}</span>
+                {n}
+                <button
+                  type="button"
+                  aria-label={`${n} listeden çıkar`}
+                  onClick={() => setAllowed((list) => list.filter((a) => a !== n))}
+                >
+                  <X size={14} />
+                </button>
+              </motion.span>
+            ))}
+          </AnimatePresence>
+        </div>
+        {allowed.length === 0 && <p className={styles.hint}>En az bir isim ekle; liste boşsa kimse giremez.</p>}
+      </div>
+    );
   } else {
     question = installError ? "Kurulum tamamlanamadı" : created ? "Dünyan hazır" : "Dünyan kuruluyor";
     sub = installError
@@ -348,7 +473,7 @@ export function SetupFlow() {
       : created
         ? created.loader === "fabric"
           ? "İlk açılışta mod desteği için birkaç küçük dosya daha iner."
-          : "Başlat'a bastığında kardeşin katılabilir."
+          : "Başlat'a bastığında arkadaşın katılabilir."
         : "Birkaç dakika sürebilir; gereken her şeyi indiriyorum.";
     content = installError || created ? null : (
       <div className={styles.installing}>
@@ -361,7 +486,7 @@ export function SetupFlow() {
   return (
     <div className={styles.setup}>
       <div className={styles.dashes} aria-hidden>
-        {QUESTION_STEPS.map((s, i) => (
+        {questionSteps.map((s, i) => (
           <motion.span
             key={s}
             className={styles.dash}
@@ -400,12 +525,12 @@ export function SetupFlow() {
               {qIndex === 0 ? "Vazgeç" : "Geri"}
             </Button>
             <Button variant="primary" size="lg" icon={ArrowRight} iconRight disabled={!canNext} onClick={next}>
-              {step === "name" ? "Kur" : "Devam"}
+              {step === lastStep ? "Kur" : "Devam"}
             </Button>
           </>
         ) : installError ? (
           <>
-            <Button icon={ArrowLeft} onClick={() => setStep("name")}>
+            <Button icon={ArrowLeft} onClick={() => setStep(lastStep)}>
               Geri
             </Button>
             <Button variant="primary" size="lg" icon={RotateCcw} onClick={install}>

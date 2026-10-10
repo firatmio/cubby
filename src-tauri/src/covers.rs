@@ -153,6 +153,26 @@ pub fn render_cover(src: &Path, meta_dir: &Path) -> AppResult<String> {
     Ok(accent_color(&thumb))
 }
 
+pub const SERVER_ICON: &str = "server-icon.png";
+
+/// Sunucu listesinde görünen 64×64 simge: kapağın ortasından kare kırpılır.
+/// Minecraft simgeyi sunucu açılırken okur.
+pub fn write_server_icon(cover: &Path, server_dir: &Path) -> AppResult<()> {
+    let img = image::open(cover).map_err(|e| AppError::msg(format!("Resim açılamadı: {e}")))?;
+    let (w, h) = img.dimensions();
+    let side = w.min(h);
+    let icon = img
+        .crop_imm((w - side) / 2, (h - side) / 2, side, side)
+        .resize_exact(64, 64, FilterType::Lanczos3);
+    std::fs::create_dir_all(server_dir)?;
+    let tmp = server_dir.join("server-icon.png.tmp");
+    icon.to_rgb8()
+        .save_with_format(&tmp, image::ImageFormat::Png)
+        .map_err(|e| AppError::msg(format!("Simge kaydedilemedi: {e}")))?;
+    std::fs::rename(tmp, server_dir.join(SERVER_ICON))?;
+    Ok(())
+}
+
 fn screenshots_dir(app: &AppHandle) -> AppResult<PathBuf> {
     app.state::<SettingsStore>()
         .screenshots_dir()
@@ -176,15 +196,23 @@ async fn apply(
     let color = match src {
         Some(src) => {
             let meta = meta.clone();
-            Some(
-                tauri::async_runtime::spawn_blocking(move || render_cover(&src, &meta))
-                    .await
-                    .map_err(|e| AppError::msg(e.to_string()))??,
-            )
+            let server_dir = dir.join("server");
+            let color = tauri::async_runtime::spawn_blocking(move || {
+                let color = render_cover(&src, &meta)?;
+                // Simge hatası kapağı bozmasın.
+                if let Err(e) = write_server_icon(&meta.join(COVER_FILE), &server_dir) {
+                    eprintln!("Sunucu simgesi yazılamadı: {e}");
+                }
+                Ok::<_, AppError>(color)
+            })
+            .await
+            .map_err(|e| AppError::msg(e.to_string()))??;
+            Some(color)
         }
         None => {
             let _ = std::fs::remove_file(meta.join(COVER_FILE));
             let _ = std::fs::remove_file(meta.join(THUMB_FILE));
+            let _ = std::fs::remove_file(dir.join("server").join(SERVER_ICON));
             None
         }
     };
@@ -318,6 +346,13 @@ mod tests {
         let g = u8::from_str_radix(&color[3..5], 16).unwrap();
         let r = u8::from_str_radix(&color[1..3], 16).unwrap();
         assert!(g > r, "yeşil baskın olmalı: {color}");
+
+        let server = dir.join("server");
+        write_server_icon(&meta.join(COVER_FILE), &server).unwrap();
+        assert_eq!(
+            image::open(server.join(SERVER_ICON)).unwrap().dimensions(),
+            (64, 64)
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 

@@ -66,6 +66,7 @@
 
 .add {
   background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(5px);
   color: var(--text-2);
   outline: 1.5px dashed var(--line-strong);
   outline-offset: -1.5px;

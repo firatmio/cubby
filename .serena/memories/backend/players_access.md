@@ -1,0 +1,10 @@
+# backend/players_access (M4)
+
+- `properties.rs` — `server.properties` okuyucu/yazıcı; satır sırası + yorumlar korunur. Java Properties kaçışı: `\:`, `\=`, `\\`, `\uXXXX` (yazarken ASCII dışı → `\uXXXX`; okurken surrogate çiftleri birleştirilir — emoji). Yeni anahtarlar sona eklenir; dosya yoksa yalnız verilenlerle oluşur.
+- `players.rs` — `offline_uuid` = MD5("OfflinePlayer:"+isim) v3 (Notch → b50ad385-829d-3141-a216-7e7d7539ba7f). `lookup_premium`: `api.minecraftservices.com/minecraft/profile/lookup/name/<isim>` (+ `api.mojang.com/users/profiles/minecraft/` yedek). `resolve(http, name, offline)`. `whitelist.json` / `ops.json` (level 4) okuma-yazma, `usercache.json` → "daha önce girenler", `rekey` (online↔offline geçişte UUID'leri yeniden hesaplar).
+- `world_cmds.rs` — `get_properties`, `update_properties` (yönetilen anahtarlar `online-mode`/`white-list`/`enforce-whitelist` reddedilir; `validate_property`), `world_access` → `AccessView`, `lookup_player`, `whitelist_add/remove`, `set_whitelist_enabled` (offline modda kapatılamaz), `set_offline_mode` (sunucu durmuş olmalı; beyaz listeyi zorla açar + rekey), `set_op`, `kick_player`.
+- **KRİTİK:** offline modda sunucunun `whitelist add` komutu PREMIUM UUID yazar (gerçek sunucuda doğrulandı) → oyuncu giremez. Bu yüzden offline modda dosyaya offline UUID yazılır, sunucu açıksa `whitelist reload`. Online modda çalışırken konsol komutu kullanılır.
+- `server/log.rs` `LogEvent::Rejected` ("You are not white-listed" / Paper "whitelisted") → `ServerHandle.rejected`, event `server://rejected` (payload `{id, players}`); isim eklenince `forget_rejected`.
+- `create_instance`: `offlineMode`, `whitelist: Option<Vec<String>>` — isimler İNDİRMEDEN ÖNCE çözülür (hata erken). `motd` = dünya adı, `online-mode`, `white-list`/`enforce-whitelist` (= offline || whitelist.is_some()), `whitelist.json`, `settings.eula_accepted` ise `eula.txt`.
+- EULA tek sefer: `AppSettings.eula_accepted`; `eula_status` kabul edildiyse dosyayı kendisi yazar.
+- `covers::write_server_icon` kapakla birlikte `server/server-icon.png` 64×64.

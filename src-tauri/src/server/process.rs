@@ -133,6 +133,7 @@ async fn read_lines(
             }
             Some(LogEvent::Joined(name)) => h.update_players(&app, Some((&name, true))),
             Some(LogEvent::Left(name)) => h.update_players(&app, Some((&name, false))),
+            Some(LogEvent::Rejected(name)) => h.add_rejected(&app, &name),
             None => {}
         }
     }

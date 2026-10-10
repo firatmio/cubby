@@ -21,6 +21,7 @@ pub const EVENT_LOG: &str = "server://log";
 pub const EVENT_STATUS: &str = "server://status";
 pub const EVENT_STATS: &str = "server://stats";
 pub const EVENT_PLAYERS: &str = "server://players";
+pub const EVENT_REJECTED: &str = "server://rejected";
 
 /// Kill sonrası sürecin bitmesi için beklenen ek süre.
 const KILL_GRACE: Duration = Duration::from_secs(5);
@@ -63,6 +64,8 @@ pub struct ServerSnapshot {
     pub logs: Vec<LogLine>,
     /// Şu an bağlı oyuncular (log'daki giriş/çıkış satırlarından).
     pub players: Vec<String>,
+    /// Beyaz listede olmadığı için atılanlar (bu açılışta).
+    pub rejected: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -101,6 +104,7 @@ struct State {
     status: ServerStatus,
     logs: VecDeque<LogLine>,
     players: BTreeSet<String>,
+    rejected: BTreeSet<String>,
     stop_requested: bool,
     kill_tx: Option<oneshot::Sender<()>>,
     /// Süreç bitince `true` olur.
@@ -121,6 +125,7 @@ impl ServerHandle {
                 status: ServerStatus::Stopped,
                 logs: VecDeque::new(),
                 players: BTreeSet::new(),
+                rejected: BTreeSet::new(),
                 stop_requested: false,
                 kill_tx: None,
                 exit_rx: None,
@@ -174,6 +179,37 @@ impl ServerHandle {
             PlayersPayload {
                 id: &self.id,
                 players,
+            },
+        );
+    }
+
+    /// Atılanlar listesi; `Some(isim)` ekler, `forget` ile çıkarılır.
+    fn add_rejected(&self, app: &AppHandle, name: &str) {
+        let list: Vec<String> = {
+            let mut s = self.lock();
+            s.rejected.insert(name.to_string());
+            s.rejected.iter().cloned().collect()
+        };
+        let _ = app.emit(
+            EVENT_REJECTED,
+            PlayersPayload {
+                id: &self.id,
+                players: list,
+            },
+        );
+    }
+
+    fn forget_rejected(&self, app: &AppHandle, name: &str) {
+        let list: Vec<String> = {
+            let mut s = self.lock();
+            s.rejected.retain(|n| !n.eq_ignore_ascii_case(name));
+            s.rejected.iter().cloned().collect()
+        };
+        let _ = app.emit(
+            EVENT_REJECTED,
+            PlayersPayload {
+                id: &self.id,
+                players: list,
             },
         );
     }
@@ -271,12 +307,14 @@ impl ServerManager {
                     status: s.status,
                     logs: s.logs.iter().cloned().collect(),
                     players: s.players.iter().cloned().collect(),
+                    rejected: s.rejected.iter().cloned().collect(),
                 }
             }
             None => ServerSnapshot {
                 status: ServerStatus::Stopped,
                 logs: Vec::new(),
                 players: Vec::new(),
+                rejected: Vec::new(),
             },
         }
     }
@@ -296,6 +334,7 @@ impl ServerManager {
             s.stop_requested = false;
             s.logs.clear();
             s.players.clear();
+            s.rejected.clear();
         }
         h.emit_status(app, ServerStatus::Starting);
         process::spawn(app, &h, spec).await
@@ -352,6 +391,17 @@ impl ServerManager {
         }
         h.push_log(app, LogStream::System, format!("> {command}"));
         h.write_line(command).await
+    }
+
+    pub fn is_active(&self, id: &str) -> bool {
+        self.get(id).is_some_and(|h| h.status().is_active())
+    }
+
+    /// Kabul edilen bir oyuncuyu "girmeye çalışanlar" listesinden düşürür.
+    pub fn forget_rejected(&self, app: &AppHandle, id: &str, name: &str) {
+        if let Some(h) = self.get(id) {
+            h.forget_rejected(app, name);
+        }
     }
 
     pub async fn stop_all(&self, app: &AppHandle) {

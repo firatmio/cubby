@@ -3,7 +3,7 @@
 Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone listesi: `SPEC.md` (M1–M7). M7 = istemci "Katıl" modu (davet linki, servers.dat, mod senkronu).
 
 ## Source map
-- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`
+- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`, kapak/oturumlar `mem:backend/covers_sessions`, server.properties/beyaz liste/oyuncular `mem:backend/players_access`
 - `src/` — React UI; yalnızca `invoke` + event dinler. Ayrıntı: `mem:frontend/core`
 - `scripts/gen-textures.mjs` — 16x16 doku PNG üretici (Mojang asset'i repoya girmez; lisanslar `ASSETS.md`)
 

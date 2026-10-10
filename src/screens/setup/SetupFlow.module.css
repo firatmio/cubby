@@ -266,3 +266,105 @@
   align-items: center;
   justify-content: space-between;
 }
+
+.accessStep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 560px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--radius-card);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+}
+
+.accessStep .warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.accessStep .warn svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.addRow {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.playerInput {
+  flex: 1;
+  height: var(--h-lg);
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-lg);
+}
+
+.lookupError {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  user-select: text;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 40px;
+  padding: 0 var(--sp-1) 0 var(--sp-1);
+  border-radius: var(--radius-full);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+.chipAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.chip button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.hint {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}

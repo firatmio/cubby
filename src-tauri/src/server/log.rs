@@ -5,6 +5,8 @@ pub enum LogEvent {
     Done,
     Joined(String),
     Left(String),
+    /// Beyaz listede olmadığı için atıldı.
+    Rejected(String),
 }
 
 /// Minecraft kullanıcı adı: 1–16 harf, rakam veya `_` (sohbet ve `[Server]` satırları elenir).
@@ -23,6 +25,14 @@ pub fn parse(line: &str) -> Option<LogEvent> {
     }
     if let Some(name) = msg.strip_suffix(" left the game") {
         return is_player_name(name).then(|| LogEvent::Left(name.to_string()));
+    }
+    // "Disconnecting Ali (/192.168.0.5:51234): You are not white-listed on this server!"
+    if let Some(rest) = msg.strip_prefix("Disconnecting ") {
+        let lower = rest.to_ascii_lowercase();
+        if lower.contains("not white-listed") || lower.contains("not whitelisted") {
+            let name = rest.split([' ', '(']).next().unwrap_or("");
+            return is_player_name(name).then(|| LogEvent::Rejected(name.to_string()));
+        }
     }
     None
 }
@@ -52,6 +62,28 @@ mod tests {
         assert_eq!(
             parse("[16:30:00 INFO]: Ali left the game"),
             Some(LogEvent::Left("Ali".into()))
+        );
+    }
+
+    #[test]
+    fn detects_whitelist_rejections() {
+        assert_eq!(
+            parse(
+                "[18:18:04] [Server thread/INFO]: Disconnecting firatmio (/192.168.0.195:24351): You are not white-listed on this server!"
+            ),
+            Some(LogEvent::Rejected("firatmio".into()))
+        );
+        assert_eq!(
+            parse(
+                "[18:18:04 INFO]: Disconnecting Ali (/127.0.0.1:5000): You are not whitelisted on this server!"
+            ),
+            Some(LogEvent::Rejected("Ali".into()))
+        );
+        assert_eq!(
+            parse(
+                "[18:18:04] [Server thread/INFO]: firatmio (/192.168.0.195:24351) lost connection: You are not white-listed on this server!"
+            ),
+            None
         );
     }
 

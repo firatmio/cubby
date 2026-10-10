@@ -7,14 +7,16 @@ import { Sheet } from "../../ui/Sheet";
 import { ConsoleTab } from "../instance/ConsoleTab";
 import { FilesTab } from "../instance/FilesTab";
 import { JavaSection } from "../instance/JavaSection";
+import { PropertiesTab } from "./PropertiesTab";
 import { WorldTab } from "./WorldTab";
 import styles from "./AdvancedSheet.module.css";
 
-type Tab = "console" | "world" | "java" | "files";
+type Tab = "console" | "world" | "properties" | "java" | "files";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "console", label: "Konsol" },
   { id: "world", label: "Dünya" },
+  { id: "properties", label: "Tüm ayarlar" },
   { id: "java", label: "Java" },
   { id: "files", label: "Dosyalar" },
 ];
@@ -49,6 +51,9 @@ export function AdvancedSheet() {
             >
               {tab === "console" && <ConsoleTab id={instance.id} status={server.status} logs={server.logs} />}
               {tab === "world" && <WorldTab key={instance.id} instance={instance} status={server.status} />}
+              {tab === "properties" && (
+                <PropertiesTab key={instance.id} instance={instance} status={server.status} />
+              )}
               {tab === "java" && <JavaSection instance={instance} />}
               {tab === "files" && <FilesTab instance={instance} />}
             </motion.div>

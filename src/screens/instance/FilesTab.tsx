@@ -31,7 +31,7 @@ export function FilesTab({ instance }: { instance: Instance }) {
           title={`${contentLabel} klasörü`}
           description={
             instance.loader === "fabric"
-              ? "Mod .jar dosyalarını buraya at, sunucuyu yeniden başlat. Oyuna yeni içerik ekleyen modları kardeşinin de kurması gerekir."
+              ? "Mod .jar dosyalarını buraya at, sunucuyu yeniden başlat. Oyuna yeni içerik ekleyen modları arkadaşının da kurması gerekir."
               : "Plugin .jar dosyalarını buraya at, sunucuyu yeniden başlat."
           }
           actions={

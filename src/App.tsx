@@ -6,9 +6,11 @@ import { accentOf } from "./lib/format";
 import { screen } from "./lib/motion";
 import { AdvancedSheet } from "./screens/advanced/AdvancedSheet";
 import { CoverSheet } from "./screens/cover/CoverSheet";
+import { PlayersSheet } from "./screens/players/PlayersSheet";
 import { HomeScreen } from "./screens/home/HomeScreen";
 import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
 import { SetupFlow } from "./screens/setup/SetupFlow";
+import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
 import { Background } from "./shell/Background";
 import { TitleBar } from "./shell/TitleBar";
 import { useAppStore, useSelected } from "./store/appStore";
@@ -63,6 +65,8 @@ export default function App() {
         </motion.main>
       </AnimatePresence>
 
+      <PlayersSheet />
+      <WorldSettingsSheet />
       <AdvancedSheet />
       <CoverSheet />
       <AppSettingsSheet />

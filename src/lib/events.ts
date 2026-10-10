@@ -27,6 +27,7 @@ const EVENT_STATS = "server://stats";
 const EVENT_INSTALL_PROGRESS = "install://progress";
 const EVENT_JAVA_PROGRESS = "java://progress";
 const EVENT_PLAYERS = "server://players";
+const EVENT_REJECTED = "server://rejected";
 const EVENT_COVER_CHANGED = "cover://changed";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
 
@@ -72,6 +73,9 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<{ id: string; players: string[] }>(EVENT_PLAYERS, ({ payload }) => {
       store().setPlayers(payload.id, payload.players);
+    }),
+    listen<{ id: string; players: string[] }>(EVENT_REJECTED, ({ payload }) => {
+      store().setRejected(payload.id, payload.players);
     }),
     // Oturum sonunda Rust kapağı güncelledi: yeni sürümü çek, arka plan geçsin.
     listen<string>(EVENT_COVER_CHANGED, ({ payload: id }) => {

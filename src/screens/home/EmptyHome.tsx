@@ -24,7 +24,7 @@ export function EmptyHome() {
         </motion.button>
         <motion.h1 variants={rise}>İlk dünyanı kuralım</motion.h1>
         <motion.p variants={rise}>
-          Birkaç adımda kardeşinle oynayabileceğin bir Minecraft dünyası. Gereken her şeyi ben indiririm.
+          Birkaç adımda arkadaşınla oynayabileceğin bir Minecraft dünyası. Gereken her şeyi ben indiririm.
         </motion.p>
       </motion.div>
       <div className={styles.action}>

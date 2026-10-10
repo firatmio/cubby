@@ -63,7 +63,7 @@ const DAY = 24 * HOUR;
 /** "az önce", "12 dk önce", "3 sa önce", "dün", "4 gün önce", tarih. */
 export function relativeTime(ms: number, now = Date.now()): string {
   const diff = Math.max(0, now - ms);
-  if (diff < MIN) return "az önce";
+  if (diff < MIN) return "Az önce";
   if (diff < HOUR) return `${Math.floor(diff / MIN)} dk önce`;
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   if (ms >= startOfToday) return `${Math.floor(diff / HOUR)} sa önce`;

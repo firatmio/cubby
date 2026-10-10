@@ -61,6 +61,30 @@ export type CoverSource =
 export interface AppSettings {
   minecraftDir: string | null;
   useScreenshots: boolean;
+  eulaAccepted: boolean;
+}
+
+export interface Profile {
+  uuid: string;
+  name: string;
+}
+
+export interface AccessView {
+  /** Premium olmayan oyuncular (TLauncher) girebilir mi? */
+  offlineMode: boolean;
+  whitelistEnabled: boolean;
+  whitelist: Profile[];
+  ops: string[];
+  /** Bu sunucuya daha önce girenler */
+  known: string[];
+  /** Değişiklik yeniden başlatınca geçerliyse açıklama */
+  notice: string | null;
+}
+
+export interface PropertiesView {
+  values: Record<string, string>;
+  /** false: dünya hiç açılmadı, kalan ayarları sunucu ilk açılışta ekler */
+  exists: boolean;
 }
 
 export interface SettingsView {
@@ -88,6 +112,7 @@ export interface ServerSnapshot {
   status: ServerStatus;
   logs: LogLine[];
   players: string[];
+  rejected: string[];
 }
 
 export interface ProcessStats {
@@ -156,6 +181,10 @@ export interface CreateInstanceRequest {
   ramMaxMb: number;
   /** null: uygulama veri dizini */
   parentDir: string | null;
+  /** Premium olmayanlar (TLauncher) girebilsin; açıksa beyaz liste zorunlu */
+  offlineMode: boolean;
+  /** null: beyaz liste kapalı */
+  whitelist: string[] | null;
 }
 
 export interface UpdateInstanceRequest {
@@ -204,6 +233,17 @@ export const api = {
   setCover: (id: string, source: CoverSource) => invoke<Instance>("set_cover", { id, source }),
   playStats: (id: string) => invoke<PlayStats>("play_stats", { id }),
   lanAddress: (id: string) => invoke<string>("lan_address", { id }),
+  getProperties: (id: string) => invoke<PropertiesView>("get_properties", { id }),
+  updateProperties: (id: string, changes: Record<string, string>) =>
+    invoke<PropertiesView>("update_properties", { id, changes }),
+  worldAccess: (id: string) => invoke<AccessView>("world_access", { id }),
+  lookupPlayer: (name: string, offline: boolean) => invoke<Profile>("lookup_player", { name, offline }),
+  whitelistAdd: (id: string, name: string) => invoke<AccessView>("whitelist_add", { id, name }),
+  whitelistRemove: (id: string, name: string) => invoke<AccessView>("whitelist_remove", { id, name }),
+  setWhitelistEnabled: (id: string, on: boolean) => invoke<AccessView>("set_whitelist_enabled", { id, on }),
+  setOfflineMode: (id: string, offline: boolean) => invoke<AccessView>("set_offline_mode", { id, offline }),
+  setOp: (id: string, name: string, op: boolean) => invoke<AccessView>("set_op", { id, name, op }),
+  kickPlayer: (id: string, name: string) => invoke<void>("kick_player", { id, name }),
 };
 
 /**

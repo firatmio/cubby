@@ -14,6 +14,8 @@ use crate::loaders::{
     GameVersionList, InstallRequest, InstallStage, LoaderKind, LoaderVersionList, Loaders,
 };
 use crate::paths;
+use crate::players;
+use crate::properties::Properties;
 use crate::registry::Registry;
 use crate::server::{LaunchSpec, ServerManager, ServerSnapshot, stats};
 use crate::sessions::{self, PlayStats};
@@ -27,6 +29,7 @@ const MIN_RAM_MB: u32 = 512;
 const MAX_NAME_LEN: usize = 48;
 
 pub struct AppState {
+    pub http: reqwest::Client,
     pub loaders: Loaders,
     pub servers: Arc<ServerManager>,
 }
@@ -106,6 +109,12 @@ pub struct CreateInstanceRequest {
     ram_max_mb: u32,
     /// Kullanıcının seçtiği üst klasör; `None` ise uygulama veri dizini.
     parent_dir: Option<PathBuf>,
+    /// Premium olmayan hesaplar (TLauncher) girebilsin mi? Açıksa beyaz liste zorunlu.
+    #[serde(default)]
+    offline_mode: bool,
+    /// `Some` ise beyaz liste açık başlar ve bu isimler eklenir.
+    #[serde(default)]
+    whitelist: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -127,10 +136,20 @@ pub async fn create_instance(
     state: State<'_, AppState>,
     registry: State<'_, Registry>,
     java: State<'_, JavaManager>,
+    settings: State<'_, SettingsStore>,
     req: CreateInstanceRequest,
 ) -> AppResult<Instance> {
     let name = validate_name(&req.name)?;
     validate_ram(req.ram_min_mb, req.ram_max_mb)?;
+    // İsimler indirmelerden önce çözülür: premium hesap yoksa kurulum hiç başlamasın.
+    let whitelist_on = req.offline_mode || req.whitelist.is_some();
+    let mut profiles = Vec::new();
+    for n in req.whitelist.iter().flatten() {
+        players::upsert(
+            &mut profiles,
+            players::resolve(&state.http, n, req.offline_mode).await?,
+        );
+    }
 
     let id = uuid::Uuid::new_v4().to_string();
     let dir = registry.allocate(&id, &name, req.parent_dir.as_deref())?;
@@ -202,6 +221,18 @@ pub async fn create_instance(
             created_at: now_ms(),
             cover: None,
         };
+        let mut props = Properties::load(&server_dir)?;
+        props.set("motd", inst.name.clone());
+        props.set("online-mode", (!req.offline_mode).to_string());
+        props.set("white-list", whitelist_on.to_string());
+        props.set("enforce-whitelist", whitelist_on.to_string());
+        props.save(&server_dir)?;
+        if whitelist_on {
+            players::write_whitelist(&server_dir, &profiles)?;
+        }
+        if settings.get().eula_accepted {
+            write_eula(&server_dir)?;
+        }
         inst.save(&dir)?;
         registry.insert(&id, dir.clone())?;
         Ok(inst)
@@ -280,19 +311,46 @@ fn eula_accepted(server_dir: &Path) -> bool {
         .unwrap_or(false)
 }
 
-#[tauri::command]
-pub fn eula_status(app: AppHandle, id: String) -> AppResult<bool> {
-    Ok(eula_accepted(&paths::server_dir(&app, &id)?))
-}
-
-#[tauri::command]
-pub fn accept_eula(app: AppHandle, id: String) -> AppResult<()> {
-    let dir = paths::server_dir(&app, &id)?;
-    std::fs::create_dir_all(&dir)?;
+fn write_eula(server_dir: &Path) -> AppResult<()> {
+    std::fs::create_dir_all(server_dir)?;
     std::fs::write(
-        dir.join("eula.txt"),
+        server_dir.join("eula.txt"),
         "# Minecraft EULA arayüzden onaylandı: https://aka.ms/MinecraftEULA\neula=true\n",
     )?;
+    Ok(())
+}
+
+/// EULA bir kez kabul edildiyse (uygulama ayarı) bu dünyaya da kendiliğinden yazılır.
+#[tauri::command]
+pub fn eula_status(
+    app: AppHandle,
+    settings: State<'_, SettingsStore>,
+    id: String,
+) -> AppResult<bool> {
+    let dir = paths::server_dir(&app, &id)?;
+    if eula_accepted(&dir) {
+        return Ok(true);
+    }
+    if settings.get().eula_accepted {
+        write_eula(&dir)?;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+/// Kabul tüm dünyalar için hatırlanır.
+#[tauri::command]
+pub fn accept_eula(
+    app: AppHandle,
+    settings: State<'_, SettingsStore>,
+    id: String,
+) -> AppResult<()> {
+    write_eula(&paths::server_dir(&app, &id)?)?;
+    let mut s = settings.get();
+    if !s.eula_accepted {
+        s.eula_accepted = true;
+        settings.set(s)?;
+    }
     Ok(())
 }
 

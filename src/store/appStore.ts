@@ -17,16 +17,18 @@ const MAX_LOG_LINES = 5000;
 export type View = "home" | "setup";
 
 /** Sağdan kayan paneller. */
-export type SheetName = "advanced" | "cover" | "settings";
+export type SheetName = "advanced" | "cover" | "settings" | "players" | "world";
 
 export interface ServerRuntime {
   status: ServerStatus;
   logs: LogLine[];
   stats: ProcessStats | null;
   players: string[];
+  /** Beyaz listede olmadığı için atılanlar */
+  rejected: string[];
 }
 
-const EMPTY_RUNTIME: ServerRuntime = { status: "stopped", logs: [], stats: null, players: [] };
+const EMPTY_RUNTIME: ServerRuntime = { status: "stopped", logs: [], stats: null, players: [], rejected: [] };
 
 interface AppStore {
   view: View;
@@ -55,6 +57,7 @@ interface AppStore {
   setStatus: (id: string, status: ServerStatus) => void;
   setStats: (id: string, stats: ProcessStats) => void;
   setPlayers: (id: string, players: string[]) => void;
+  setRejected: (id: string, rejected: string[]) => void;
   hydrateServer: (id: string, snapshot: ServerSnapshot) => void;
 
   installProgress: InstallProgress | null;
@@ -141,15 +144,18 @@ export const useAppStore = create<AppStore>((set, get) => {
         logs: status === "starting" ? [] : s.logs,
         stats: status === "running" || status === "starting" ? s.stats : null,
         players: status === "running" || status === "stopping" ? s.players : [],
+        rejected: status === "starting" ? [] : s.rejected,
       })),
     setStats: (id, stats) => updateServer(id, (s) => ({ ...s, stats })),
     setPlayers: (id, players) => updateServer(id, (s) => ({ ...s, players })),
+    setRejected: (id, rejected) => updateServer(id, (s) => ({ ...s, rejected })),
     hydrateServer: (id, snapshot) =>
       updateServer(id, (s) => ({
         ...s,
         status: snapshot.status,
         logs: snapshot.logs,
         players: snapshot.players,
+        rejected: snapshot.rejected,
       })),
 
     installProgress: null,
