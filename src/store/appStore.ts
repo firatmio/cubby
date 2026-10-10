@@ -3,6 +3,8 @@ import {
   api,
   type ConnectionView,
   type InstallProgress,
+  type ClientStatus,
+  type JoinProgress,
   type JoinedView,
   type JoinStatus,
   type ModProgress,
@@ -82,6 +84,13 @@ interface AppStore {
   /** Katıl penceresi: null kapalı, "" boş, dolu ise davet kodu/linki. */
   joinDialog: string | null;
   openJoin: (code: string | null) => void;
+
+  /** Dünya başına kendi Minecraft'ına mod eşitlemesi. */
+  clientStatus: Record<string, ClientStatus>;
+  setClientStatus: (id: string, s: ClientStatus) => void;
+  /** Katılırken oyuncunun Minecraft'ına mod kurulumu. */
+  joinProgress: JoinProgress | null;
+  setJoinProgress: (p: JoinProgress | null) => void;
 
   /** Süren mod indirmesi. */
   modProgress: ModProgress | null;
@@ -213,6 +222,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       }),
     setJoinStatus: (id, status) =>
       set((st) => ({ joined: st.joined.map((j) => (j.world.id === id ? { ...j, status } : j)) })),
+    clientStatus: {},
+    setClientStatus: (id, s) => set((st) => ({ clientStatus: { ...st.clientStatus, [id]: s } })),
+    joinProgress: null,
+    setJoinProgress: (joinProgress) => set({ joinProgress }),
     modProgress: null,
     setModProgress: (modProgress) => set({ modProgress }),
     joinDialog: null,

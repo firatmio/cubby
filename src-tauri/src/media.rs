@@ -52,7 +52,7 @@ fn jpeg(bytes: Vec<u8>) -> Response<Vec<u8>> {
 
 /// Ekran görüntüsü önizlemesi: ilk istekte küçültülüp `app_data/cache/shots`'a yazılır.
 fn shot_preview(app: &AppHandle, file: &str) -> Option<PathBuf> {
-    let src = app.state::<SettingsStore>().screenshots_dir()?.join(file);
+    let src = app.state::<SettingsStore>().find_shot(file)?;
     let cache = app.path().app_data_dir().ok()?.join("cache").join("shots");
     let out = cache.join(format!("{file}.jpg"));
     let fresh = |p: &Path| {

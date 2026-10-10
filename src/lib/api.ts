@@ -65,6 +65,40 @@ export interface AppSettings {
   minecraftDir: string | null;
   useScreenshots: boolean;
   eulaAccepted: boolean;
+  /** Modlu dünyaların oyuncuda gereken modları kendi Minecraft'ıma da kurulsun */
+  clientSync: boolean;
+}
+
+export type Launcher = "official" | "tLauncher";
+
+/** Kendi Minecraft'ına mod eşitlemesinin durumu (host). */
+export interface ClientStatus {
+  state: "off" | "working" | "ok" | "error" | "";
+  launcher: Launcher | null;
+  /** Launcher'da seçilecek profil adı (resmi) ya da sürüm (TLauncher) */
+  pick: string | null;
+  mods: number;
+  blocked: string[];
+  message: string | null;
+}
+
+export interface ModItem {
+  title: string;
+  size: number;
+}
+
+export interface ModCheck {
+  launcher: Launcher | null;
+  /** Olmadan girilemeyecek, eksik olanlar */
+  required: ModItem[];
+  recommended: ModItem[];
+}
+
+export interface JoinProgress {
+  id: string;
+  title: string;
+  index: number;
+  count: number;
 }
 
 export interface Profile {
@@ -173,6 +207,8 @@ export interface JoinStatus {
   running: boolean;
   path: PathKind | null;
   error: string | null;
+  /** Arkadaşının şu anki mod listesi özeti */
+  modsRev: string | null;
 }
 
 /** Arkadaşının, davetle katılınan dünyası. */
@@ -186,6 +222,11 @@ export interface JoinedWorld {
   loaderVersion: string | null;
   localPort: number;
   addedAt: number;
+  /** Modlar kurulduysa Launcher'da seçilecek profil (ya da TLauncher sürümü) */
+  profile: string | null;
+  gameDir: string | null;
+  modsRev: string | null;
+  withRecommended: boolean;
 }
 
 export interface JoinedView {
@@ -208,6 +249,9 @@ export interface InvitePreview {
   minecraftRunning: boolean;
   requiredVersion: string;
   versionInstalled: boolean;
+  /** Fabric dünyada oyuncuda eksik modlar (arkadaşına ulaşılabildiyse) */
+  mods: ModCheck | null;
+  modsError: string | null;
 }
 
 /** off: dünya kapalı ya da internete açık değil. */
@@ -395,7 +439,11 @@ export const api = {
   /** Yeni anahtar; eski linkler ve kodlar geçersiz olur. */
   resetInvite: (id: string) => invoke<InviteLinks>("reset_invite", { id }),
   previewInvite: (code: string) => invoke<InvitePreview>("preview_invite", { code }),
-  joinWorld: (code: string, force: boolean) => invoke<JoinedView>("join_world", { code, force }),
+  joinWorld: (code: string, force: boolean, installRecommended: boolean) =>
+    invoke<JoinedView>("join_world", { code, force, installRecommended }),
+  updateJoinedMods: (id: string) => invoke<JoinedView>("update_joined_mods", { id }),
+  clientStatus: (id: string) => invoke<ClientStatus>("client_status", { id }),
+  clientResync: (id: string) => invoke<void>("client_resync", { id }),
   listJoined: () => invoke<JoinedView[]>("list_joined"),
   removeJoined: (id: string) => invoke<void>("remove_joined", { id }),
   readdServerEntry: (id: string, force: boolean) => invoke<void>("readd_server_entry", { id, force }),

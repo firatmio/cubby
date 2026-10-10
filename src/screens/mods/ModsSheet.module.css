@@ -307,3 +307,38 @@ div.rowMain {
   white-space: pre-wrap;
   user-select: text;
 }
+
+.clientLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.clientLine span {
+  display: inline;
+}
+
+.clientLine svg {
+  vertical-align: -3px;
+  color: var(--ok);
+}
+
+.clientLine b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.clientError {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.clientError svg {
+  color: var(--danger);
+}

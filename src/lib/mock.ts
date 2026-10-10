@@ -95,7 +95,7 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true };
 
 const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
@@ -242,8 +242,12 @@ const joined: { world: Record<string, unknown> & { id: string; name: string; loc
       loaderVersion: null,
       localPort: 25600,
       addedAt: 1,
+      profile: null,
+      gameDir: null,
+      modsRev: null,
+      withRecommended: false,
     },
-    status: ONLINE,
+    status: { ...ONLINE, modsRev: null },
     address: "127.0.0.1:25600",
   },
 ];
@@ -512,9 +516,23 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         minecraftRunning: false,
         requiredVersion: "fabric-loader-0.19.5-26.3",
         versionInstalled: false,
+        mods: {
+          launcher: "official",
+          required: [{ title: "Farmer's Delight", size: 3_400_000 }],
+          recommended: [
+            { title: "Just Enough Items (JEI)", size: 2_388_519 },
+            { title: "Fabric API", size: 1_772_377 },
+          ],
+        },
+        modsError: null,
       };
     case "join_world": {
       const id = `join-${Date.now()}`;
+      const titles = ["Farmer's Delight", ...(args.installRecommended ? ["Just Enough Items (JEI)", "Fabric API"] : [])];
+      for (let i = 0; i < titles.length; i++) {
+        emit("join://progress", { id, title: titles[i], index: i + 1, count: titles.length });
+        await sleep(700);
+      }
       const view = {
         world: {
           id,
@@ -526,6 +544,10 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           loaderVersion: "0.19.5",
           localPort: 25600 + joined.length,
           addedAt: Date.now(),
+          profile: "Mehmet'in modlu dünyası · MC Sunucu",
+          gameDir: "C:\\Users\\sen\\AppData\\Roaming\\.minecraft\\mcsm\\mehmet",
+          modsRev: "aaaa",
+          withRecommended: !!args.installRecommended,
         },
         status: { reachable: null, running: false, path: null, error: null } as Record<string, unknown>,
         address: `127.0.0.1:${25600 + joined.length}`,
@@ -533,7 +555,8 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       joined.push(view);
       entries.add(id);
       setTimeout(() => {
-        view.status = { reachable: true, running: true, path: "relay", error: null };
+        // Biraz sonra arkadaş yeni bir mod ekler: "Güncelle" butonu görünsün.
+        view.status = { reachable: true, running: true, path: "relay", error: null, modsRev: "bbbb" };
         emit("join://status", { id, status: view.status });
       }, 1500);
       return view;
@@ -554,6 +577,19 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "refresh_joined":
       return structuredClone(joined.find((j) => j.world.id === args.id));
     case "take_pending_invite":
+      return null;
+    case "update_joined_mods": {
+      const j = joined.find((x) => x.world.id === args.id)!;
+      await sleep(900);
+      (j.world as Record<string, unknown>).modsRev = (j.status as Record<string, unknown>).modsRev;
+      return structuredClone(j);
+    }
+    case "client_status":
+      return byId(args.id).loader === "fabric" && settings.clientSync
+        ? { state: "ok", launcher: "official", pick: `${byId(args.id).name} · MC Sunucu`, mods: 3, blocked: [], message: null }
+        : { state: "off", launcher: null, pick: null, mods: 0, blocked: [], message: null };
+    case "client_resync":
+      await sleep(500);
       return null;
     case "mods_search": {
       await sleep(300);

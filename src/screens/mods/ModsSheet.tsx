@@ -80,6 +80,53 @@ function InstallProgress() {
   );
 }
 
+/** Kendi Minecraft'ına mod eşitlemesinin durumu (yalnız Fabric). */
+function ClientLine({ id }: { id: string }) {
+  const status = useAppStore((s) => s.clientStatus[id]);
+  const setClientStatus = useAppStore((s) => s.setClientStatus);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .clientStatus(id)
+      .then((st) => setClientStatus(id, st))
+      .catch(console.error);
+  }, [id, setClientStatus]);
+
+  if (!status || status.state === "off" || status.state === "") return null;
+  const retry = async () => {
+    setBusy(true);
+    try {
+      await api.clientResync(id);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={[styles.clientLine, status.state === "error" && styles.clientError].filter(Boolean).join(" ")}>
+      {status.state === "working" && <span>Senin Minecraft'ına da kuruluyor…</span>}
+      {status.state === "ok" && (
+        <span>
+          <Check size={15} aria-hidden /> Senin Minecraft'ına da kuruldu ·{" "}
+          {status.launcher === "tLauncher" ? "TLauncher'da" : "Launcher'da"} <b>{status.pick}</b>{" "}
+          {status.launcher === "tLauncher" ? "sürümünü" : "profilini"} seç.
+          {status.blocked.length > 0 && ` Aynı adlı dosya olduğu için eklenmedi: ${status.blocked.join(", ")}.`}
+        </span>
+      )}
+      {status.state === "error" && (
+        <>
+          <span>
+            <AlertTriangle size={15} aria-hidden /> Senin Minecraft'ına kurulamadı: {status.message}
+          </span>
+          <Button size="sm" icon={RotateCcw} loading={busy} onClick={retry}>
+            Tekrar dene
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Mod/eklenti mağazası (Modrinth): keşfet, ayrıntı, kurulu olanlar. */
 export function ModsSheet() {
   const open = useAppStore((s) => s.sheet === "mods");
@@ -214,6 +261,7 @@ export function ModsSheet() {
     >
       <div className={styles.root}>
         <PillTabs tabs={tabs} active={tab} onChange={setTab} layoutId="mods-tab" />
+        {id && !plugin && <ClientLine id={id} />}
 
         <AnimatePresence>
           {changed && active && (

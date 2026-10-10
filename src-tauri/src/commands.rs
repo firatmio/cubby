@@ -245,6 +245,8 @@ pub async fn create_instance(
     match result {
         Ok(inst) => {
             emit("done", None, 0, None);
+            // Modlu dünya: Fabric ve dünyaya özel profil oyuncunun Minecraft'ına da hazırlansın.
+            crate::client_cmds::spawn_sync(&app, &inst.id);
             Ok(inst)
         }
         Err(e) => {
@@ -580,10 +582,18 @@ pub fn get_settings(store: State<'_, SettingsStore>) -> SettingsView {
 
 #[tauri::command]
 pub fn update_settings(
+    app: AppHandle,
     store: State<'_, SettingsStore>,
     settings: AppSettings,
 ) -> AppResult<SettingsView> {
+    let turned_on = settings.client_sync && !store.get().client_sync;
     store.set(settings)?;
+    // "Modları kendi Minecraft'ıma da kur" yeni açıldıysa modlu dünyalar hemen eşitlensin.
+    if turned_on {
+        for inst in instance::list(&app) {
+            crate::client_cmds::spawn_sync(&app, &inst.id);
+        }
+    }
     Ok(get_settings(store))
 }
 

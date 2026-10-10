@@ -11,6 +11,8 @@ import {
   type ConnectionView,
   type JoinStatus,
   type ModProgress,
+  type ClientStatus,
+  type JoinProgress,
 } from "./api";
 
 type Unlisten = () => void;
@@ -36,6 +38,8 @@ const EVENT_SHUTTING_DOWN = "app://shutting-down";
 const EVENT_NET = "net://status";
 const EVENT_JOIN_STATUS = "join://status";
 const EVENT_MODS_PROGRESS = "mods://progress";
+const EVENT_CLIENT_STATUS = "client://status";
+const EVENT_JOIN_PROGRESS = "join://progress";
 const EVENT_INVITE = "join://invite";
 
 type WithId<T> = T & { id: string };
@@ -93,6 +97,10 @@ export async function bindBackendEvents(): Promise<() => void> {
       store().setConnection(payload.id, payload.view);
     }),
     listen<ModProgress>(EVENT_MODS_PROGRESS, ({ payload }) => store().setModProgress(payload)),
+    listen<{ id: string; status: ClientStatus }>(EVENT_CLIENT_STATUS, ({ payload }) =>
+      store().setClientStatus(payload.id, payload.status),
+    ),
+    listen<JoinProgress>(EVENT_JOIN_PROGRESS, ({ payload }) => store().setJoinProgress(payload)),
     listen<{ id: string; status: JoinStatus }>(EVENT_JOIN_STATUS, ({ payload }) => {
       store().setJoinStatus(payload.id, payload.status);
     }),

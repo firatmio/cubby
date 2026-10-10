@@ -44,6 +44,17 @@ pub struct JoinedWorld {
     pub loader_version: Option<String>,
     pub local_port: u16,
     pub added_at: u64,
+    /// Modlar kurulduysa: Launcher'da seçilecek profil (ya da TLauncher sürümü) ve oyun klasörü.
+    #[serde(default)]
+    pub profile: Option<String>,
+    #[serde(default)]
+    pub game_dir: Option<String>,
+    /// Kurulan mod listesinin özeti; host'unki değişince "güncelle" çıkar.
+    #[serde(default)]
+    pub mods_rev: Option<String>,
+    /// Önerilen modlar da kurulsun mu (katılırken seçilen).
+    #[serde(default)]
+    pub with_recommended: bool,
 }
 
 impl JoinedWorld {
@@ -61,6 +72,8 @@ pub struct JoinStatus {
     pub running: bool,
     pub path: Option<PathKind>,
     pub error: Option<String>,
+    /// Host'un şu anki mod listesi özeti.
+    pub mods_rev: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -86,29 +99,38 @@ fn host_id(w: &JoinedWorld) -> AppResult<EndpointId> {
 /// Ping sonucunu arayüz durumuna çevirir.
 pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
     match result {
-        Ok((Reply::Ok { running, .. }, path)) => JoinStatus {
+        Ok((
+            Reply::Ok {
+                running, mods_rev, ..
+            },
+            path,
+        )) => JoinStatus {
             reachable: Some(true),
             running,
             path: Some(path),
             error: None,
+            mods_rev,
         },
         Ok((Reply::Offline, path)) => JoinStatus {
             reachable: Some(true),
             running: false,
             path: Some(path),
             error: None,
+            mods_rev: None,
         },
         Ok((Reply::Denied, _)) => JoinStatus {
             reachable: Some(true),
             running: false,
             path: None,
             error: Some("Davet artık geçerli değil. Arkadaşından yeni bir davet iste.".into()),
+            mods_rev: None,
         },
         Err(_) => JoinStatus {
             reachable: Some(false),
             running: false,
             path: None,
             error: None,
+            mods_rev: None,
         },
     }
 }
@@ -323,6 +345,10 @@ impl JoinManager {
                 loader_version: invite.loader_version.clone(),
                 local_port: free_port(&taken)?,
                 added_at: now_ms(),
+                profile: None,
+                game_dir: None,
+                mods_rev: None,
+                with_recommended: false,
             };
             worlds.push(w.clone());
             w
@@ -334,6 +360,23 @@ impl JoinManager {
         let (me, app2, w) = (self.clone(), app.clone(), joined.clone());
         tauri::async_runtime::spawn(async move { me.poll(&app2, &w).await });
         Ok(joined)
+    }
+
+    /// Kaydı günceller (profil, mod özeti…).
+    pub async fn update(
+        &self,
+        id: &str,
+        f: impl FnOnce(&mut JoinedWorld),
+    ) -> AppResult<JoinedWorld> {
+        let mut worlds = self.worlds.lock().await;
+        let w = worlds
+            .iter_mut()
+            .find(|w| w.id == id)
+            .ok_or_else(|| AppError::msg("Bu dünya listede yok."))?;
+        f(w);
+        let out = w.clone();
+        self.save(&worlds).await?;
+        Ok(out)
     }
 
     pub async fn remove(&self, id: &str) -> AppResult<JoinedWorld> {
@@ -363,6 +406,7 @@ mod tests {
             Reply::Ok {
                 running: true,
                 name: "x".into(),
+                mods_rev: None,
             },
             PathKind::Direct,
         )));

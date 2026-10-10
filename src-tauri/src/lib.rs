@@ -1,3 +1,5 @@
+mod client;
+mod client_cmds;
 mod commands;
 mod consts;
 mod covers;
@@ -170,6 +172,8 @@ pub fn run() {
 
                 app.manage(PendingInvite::default());
                 app.manage(mods_cmds::ModIcons::default());
+                app.manage(client_cmds::ClientStates::default());
+                client_cmds::install(app.handle());
                 // Kurulumda NSIS kaydeder; geliştirirken ve taşınabilir kullanımda burada kaydedilir.
                 #[cfg(any(windows, target_os = "linux"))]
                 if let Err(e) = app.deep_link().register_all() {
@@ -268,6 +272,7 @@ pub fn run() {
             join_cmds::server_entry_exists,
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
+            join_cmds::update_joined_mods,
             mods_cmds::mods_search,
             mods_cmds::mods_project,
             mods_cmds::mods_install,
@@ -275,6 +280,8 @@ pub fn run() {
             mods_cmds::mods_remove,
             mods_cmds::mods_update,
             mods_cmds::mods_update_all,
+            client_cmds::client_status,
+            client_cmds::client_resync,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

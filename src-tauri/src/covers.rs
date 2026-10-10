@@ -173,16 +173,27 @@ pub fn write_server_icon(cover: &Path, server_dir: &Path) -> AppResult<()> {
     Ok(())
 }
 
-fn screenshots_dir(app: &AppHandle) -> AppResult<PathBuf> {
+/// Tüm ekran görüntüsü klasörleri birlikte, en yeni önce.
+fn all_shots(app: &AppHandle) -> Vec<Shot> {
+    let mut shots: Vec<Shot> = app
+        .state::<SettingsStore>()
+        .screenshot_dirs()
+        .iter()
+        .flat_map(|d| scan_shots(d))
+        .collect();
+    shots.sort_by_key(|s| std::cmp::Reverse(s.taken_at));
+    shots
+}
+
+fn shot_path(app: &AppHandle, file: &str) -> AppResult<PathBuf> {
     app.state::<SettingsStore>()
-        .screenshots_dir()
-        .ok_or_else(|| AppError::msg("Minecraft klasörü bulunamadı"))
+        .find_shot(file)
+        .ok_or_else(|| AppError::msg("Ekran görüntüsü bulunamadı"))
 }
 
 pub fn list_for(app: &AppHandle, id: &str) -> AppResult<ShotList> {
     let dir = paths::instance_dir(app, id)?;
-    let shots = scan_shots(&screenshots_dir(app)?);
-    Ok(split_shots(shots, &sessions::load(&dir)))
+    Ok(split_shots(all_shots(app), &sessions::load(&dir)))
 }
 
 async fn apply(
@@ -233,14 +244,14 @@ pub async fn set_cover(app: &AppHandle, id: &str, source: CoverSource) -> AppRes
             if !is_valid_shot_name(&file) {
                 return Err(AppError::msg("Geçersiz dosya adı"));
             }
-            let path = screenshots_dir(app)?.join(file);
+            let path = shot_path(app, &file)?;
             apply(app, id, Some(path), CoverKind::Manual).await
         }
         CoverSource::File { path } => apply(app, id, Some(path), CoverKind::Manual).await,
         CoverSource::Auto => {
             let newest = list_for(app, id)?.matched.into_iter().next();
             let src = match newest {
-                Some(s) => Some(screenshots_dir(app)?.join(s.file)),
+                Some(s) => Some(shot_path(app, &s.file)?),
                 None => None,
             };
             apply(app, id, src, CoverKind::Auto).await
@@ -261,11 +272,13 @@ pub async fn after_session(app: &AppHandle, id: &str, session: Session) -> AppRe
     {
         return Ok(());
     }
-    let shots = scan_shots(&screenshots_dir(app)?);
-    let Some(newest) = shots.into_iter().find(|s| in_session(s.taken_at, &session)) else {
+    let Some(newest) = all_shots(app)
+        .into_iter()
+        .find(|s| in_session(s.taken_at, &session))
+    else {
         return Ok(());
     };
-    let path = screenshots_dir(app)?.join(newest.file);
+    let path = shot_path(app, &newest.file)?;
     apply(app, id, Some(path), CoverKind::Auto).await?;
     use tauri::Emitter;
     let _ = app.emit(EVENT_COVER_CHANGED, id);

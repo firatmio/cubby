@@ -342,6 +342,7 @@ pub async fn mods_install(
         records.push(rec);
         mods::save_records(&c.meta, &records)?;
     }
+    crate::client_cmds::spawn_sync(&app, &id);
     installed_view(&app, &state, &icons, &id, false).await
 }
 
@@ -390,12 +391,12 @@ async fn installed_view(
                     project_id: v.project_id.clone(),
                     version_id: v.id.clone(),
                     dependency: false,
+                    title: None,
+                    need: None,
                 });
             }
         }
     }
-    let _ = mods::save_records(&c.meta, &records);
-
     let ids: Vec<String> = records
         .iter()
         .map(|r| r.project_id.clone())
@@ -403,6 +404,14 @@ async fn installed_view(
         .into_iter()
         .collect();
     let projects = api.projects(&ids).await.unwrap_or_default();
+    // Ad ve oyuncu ihtiyacı kayda yazılır: oyuncuya mod gönderirken ağ gerekmesin.
+    for r in records.iter_mut() {
+        if let Some(p) = projects.iter().find(|p| p.id == r.project_id) {
+            r.title = Some(p.title.clone());
+            r.need = Some(client_need(&p.environment, p.client_side));
+        }
+    }
+    let _ = mods::save_records(&c.meta, &records);
     let shas: Vec<String> = records.iter().map(|r| r.sha1.clone()).collect();
     let latest = if check_updates {
         api.latest_for(&shas, c.inst.loader, &c.inst.mc_version)
@@ -473,6 +482,7 @@ pub async fn mods_remove(
         .filter(|r| r.file != name)
         .collect();
     mods::save_records(&c.meta, &records)?;
+    crate::client_cmds::spawn_sync(&app, &id);
     installed_view(&app, &state, &icons, &id, false).await
 }
 
@@ -543,6 +553,7 @@ pub async fn mods_update(
     let _guard = OPS.lock().await;
     let c = ctx(&app, &state, &id)?;
     update_one(&app, &state, &c, &id, &file).await?;
+    crate::client_cmds::spawn_sync(&app, &id);
     installed_view(&app, &state, &icons, &id, true).await
 }
 
@@ -562,6 +573,7 @@ pub async fn mods_update_all(
     for f in files {
         update_one(&app, &state, &c, &id, &f).await?;
     }
+    crate::client_cmds::spawn_sync(&app, &id);
     installed_view(&app, &state, &icons, &id, true).await
 }
 

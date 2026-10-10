@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::download::download_file;
 use crate::error::{AppError, AppResult};
 use crate::hash::{HashAlgo, hash_bytes};
-use crate::modrinth::{DependencyType, Version, VersionFile};
+use crate::modrinth::{ClientNeed, DependencyType, Version, VersionFile};
 
 const RECORD_FILE: &str = "mods.json";
 const DOWNLOAD_DIR: &str = "downloads";
@@ -24,6 +24,11 @@ pub struct ModRecord {
     /// Başka bir mod istediği için kendiliğinden kuruldu.
     #[serde(default)]
     pub dependency: bool,
+    /// Modrinth'ten öğrenilen ad ve oyuncu ihtiyacı (oyuncuya mod gönderirken ağsız kullanılır).
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub need: Option<ClientNeed>,
 }
 
 /// Sürümün kurulacak dosyası: önce `primary` olan `.jar`, yoksa ilk `.jar`.
@@ -255,6 +260,8 @@ fn record(name: &str, v: &Version, f: &VersionFile) -> ModRecord {
         project_id: v.project_id.clone(),
         version_id: v.id.clone(),
         dependency: false,
+        title: None,
+        need: None,
     }
 }
 
@@ -426,6 +433,8 @@ mod tests {
             project_id: "p".into(),
             version_id: "v".into(),
             dependency: true,
+            title: None,
+            need: None,
         };
         save_records(&dir, std::slice::from_ref(&r)).unwrap();
         assert_eq!(load_records(&dir), vec![r.clone()]);

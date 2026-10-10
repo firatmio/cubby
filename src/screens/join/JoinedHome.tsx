@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Check, Copy, Info, ListPlus, Play, RefreshCw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, Info, ListPlus, Play, RefreshCw, Trash2, X } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
 import { KIND_LABELS } from "../../lib/format";
 import { rise, spring, stagger } from "../../lib/motion";
@@ -83,6 +83,15 @@ export function JoinedCards({ view }: { view: JoinedView }) {
   );
 }
 
+/** Minecraft'ı hangi profille/sürümle açması gerektiği. */
+function playHint(view: JoinedView): string {
+  const p = view.world.profile;
+  const where = `Çok Oyunculu → ${view.world.name}`;
+  if (!p) return `Minecraft'ı aç → ${where}`;
+  if (p.startsWith("fabric-loader-")) return `TLauncher'da "${p}" sürümünü seç → ${where}`;
+  return `Launcher'da "${p}" profilini seç → ${where}`;
+}
+
 /** Sağ alt: yenile, listeye yeniden ekle, kaldır; ana buton "Oyna". */
 export function JoinedActions({ view }: { view: JoinedView }) {
   const upsertJoined = useAppStore((s) => s.upsertJoined);
@@ -107,8 +116,15 @@ export function JoinedActions({ view }: { view: JoinedView }) {
   const play = () =>
     run("play", async () => {
       if (!(await api.serverEntryExists(id))) await api.readdServerEntry(id, false);
-      setMessage({ tone: "info", text: `Minecraft'ı aç → Çok Oyunculu → ${view.world.name}` });
+      setMessage({ tone: "info", text: playHint(view) });
     });
+
+  // Arkadaşın mod ekledi/güncelledi: oyuncunun profilindeki modlar eski kaldı.
+  const modsChanged =
+    view.world.loader === "fabric" &&
+    !!view.status.modsRev &&
+    !!view.world.modsRev &&
+    view.status.modsRev !== view.world.modsRev;
 
   return (
     <div className={bar.bar}>
@@ -151,6 +167,21 @@ export function JoinedActions({ view }: { view: JoinedView }) {
           }
         />
         <IconButton icon={Trash2} label="Listemden kaldır" disabled={busy !== null} onClick={() => setConfirmRemove(true)} />
+        {modsChanged && (
+          <Button
+            icon={Download}
+            loading={busy === "mods"}
+            disabled={busy !== null}
+            onClick={() =>
+              run("mods", async () => {
+                upsertJoined(await api.updateJoinedMods(id));
+                setMessage({ tone: "info", text: "Modlar arkadaşınınkiyle aynı oldu." });
+              })
+            }
+          >
+            Arkadaşın modları değiştirdi · Güncelle
+          </Button>
+        )}
         <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
           Oyna
         </Button>

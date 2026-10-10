@@ -17,8 +17,9 @@ use iroh::{Endpoint, EndpointId, SecretKey};
 use serde::Serialize;
 use tokio::sync::Mutex;
 
+use crate::client::manifest::ClientMod;
 use crate::error::{AppError, AppResult};
-use protocol::{ALPN, Reply, StreamHeader, StreamKind, read_line, write_line};
+use protocol::{ALPN, MAX_BODY, Reply, StreamHeader, StreamKind, read_body, read_line, write_line};
 
 const KEY_FILE: &str = "iroh.key";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
@@ -35,8 +36,14 @@ pub enum PathKind {
 
 /// Host'un bir akış için kararı.
 pub enum Decision {
-    /// Yanıtı yaz; `Some(port)` ise ardından o porta aktar.
-    Reply(Reply, Option<u16>),
+    /// Yalnız yanıt.
+    Reply(Reply),
+    /// Yanıt, sonra `127.0.0.1:<port>`'a iki yönlü aktarım.
+    Tcp(Reply, u16),
+    /// Yanıt, sonra gövde (mod listesi).
+    Body(Reply, Vec<u8>),
+    /// Yanıt, sonra dosyanın içeriği.
+    File(Reply, std::path::PathBuf),
 }
 
 pub type Decide = Arc<dyn Fn(&StreamHeader) -> Decision + Send + Sync>;
@@ -156,10 +163,70 @@ impl P2p {
             world: world.into(),
             token: token.into(),
             kind: StreamKind::Ping,
+            file: None,
         };
         let (mut send, _recv, reply, path) = self.open(host, &header).await?;
         let _ = send.finish();
         Ok((reply, path))
+    }
+
+    /// Arkadaşın dünyasında oyuncuya gidecek modların listesi.
+    pub async fn manifest(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+    ) -> AppResult<Vec<ClientMod>> {
+        let header = StreamHeader {
+            world: world.into(),
+            token: token.into(),
+            kind: StreamKind::Manifest,
+            file: None,
+        };
+        let (mut send, mut recv, reply, _) = self.open(host, &header).await?;
+        let _ = send.finish();
+        if !matches!(reply, Reply::Ok { .. }) {
+            return Err(AppError::msg("Davet artık geçerli değil."));
+        }
+        let body = tokio::time::timeout(CONNECT_TIMEOUT, read_body(&mut recv, MAX_BODY))
+            .await
+            .map_err(|_| AppError::msg("Mod listesi alınamadı (zaman aşımı)."))??;
+        serde_json::from_slice(&body)
+            .map_err(|e| AppError::msg(format!("Mod listesi okunamadı: {e}")))
+    }
+
+    /// Listedeki bir mod dosyasını arkadaşın bilgisayarından `dest`'e indirir (en fazla `max` bayt).
+    pub async fn fetch_file(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+        file: &str,
+        dest: &std::path::Path,
+        max: u64,
+    ) -> AppResult<()> {
+        let header = StreamHeader {
+            world: world.into(),
+            token: token.into(),
+            kind: StreamKind::File,
+            file: Some(file.into()),
+        };
+        let (mut send, recv, reply, _) = self.open(host, &header).await?;
+        let _ = send.finish();
+        if !matches!(reply, Reply::Ok { .. }) {
+            return Err(AppError::msg(format!(
+                "{file} arkadaşının bilgisayarından alınamadı."
+            )));
+        }
+        let mut out = tokio::fs::File::create(dest).await?;
+        let copied =
+            tokio::io::copy(&mut tokio::io::AsyncReadExt::take(recv, max + 1), &mut out).await?;
+        if copied > max {
+            drop(out);
+            let _ = std::fs::remove_file(dest);
+            return Err(AppError::msg(format!("{file} beklenenden büyük geldi.")));
+        }
+        Ok(())
     }
 
     /// Minecraft'ın bir TCP bağlantısını host'a taşır; bağlantı kapanana kadar sürer.
@@ -174,6 +241,7 @@ impl P2p {
             world: world.into(),
             token: token.into(),
             kind: StreamKind::Tcp,
+            file: None,
         };
         let (send, recv, reply, _) = self.open(host, &header).await?;
         if !matches!(reply, Reply::Ok { .. }) {
@@ -195,17 +263,28 @@ async fn handle_stream(
     let header: StreamHeader = tokio::time::timeout(HEADER_TIMEOUT, read_line(&mut recv))
         .await
         .map_err(|_| std::io::Error::other("başlık gelmedi"))??;
-    let Decision::Reply(reply, target) = decide(&header);
-    write_line(&mut send, &reply).await?;
-    match (header.kind, target) {
-        (StreamKind::Tcp, Some(port)) => {
+    match decide(&header) {
+        Decision::Reply(reply) => {
+            write_line(&mut send, &reply).await?;
+            let _ = send.finish();
+        }
+        Decision::Tcp(reply, port) => {
+            write_line(&mut send, &reply).await?;
             let mut tcp =
                 tokio::net::TcpStream::connect(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
                     .await?;
             let mut stream = tokio::io::join(recv, send);
             tokio::io::copy_bidirectional(&mut stream, &mut tcp).await?;
         }
-        _ => {
+        Decision::Body(reply, body) => {
+            write_line(&mut send, &reply).await?;
+            tokio::io::AsyncWriteExt::write_all(&mut send, &body).await?;
+            let _ = send.finish();
+        }
+        Decision::File(reply, path) => {
+            write_line(&mut send, &reply).await?;
+            let mut file = tokio::fs::File::open(path).await?;
+            tokio::io::copy(&mut file, &mut send).await?;
             let _ = send.finish();
         }
     }
@@ -226,6 +305,9 @@ mod tests {
         let host = P2p::bind(&base.join("host")).await.unwrap();
         let guest = P2p::bind(&base.join("guest")).await.unwrap();
 
+        let file_path = base.join("a.jar");
+        std::fs::create_dir_all(&base).unwrap();
+        std::fs::write(&file_path, b"jar").unwrap();
         let echo = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = echo.local_addr().unwrap().port();
         tokio::spawn(async move {
@@ -238,16 +320,17 @@ mod tests {
         });
 
         host.serve(Arc::new(move |h: &StreamHeader| {
-            if h.world == "w" && h.token == "t" {
-                Decision::Reply(
-                    Reply::Ok {
-                        running: true,
-                        name: "Deneme".into(),
-                    },
-                    Some(port),
-                )
-            } else {
-                Decision::Reply(Reply::Denied, None)
+            let ok = Reply::Ok {
+                running: true,
+                name: "Deneme".into(),
+                mods_rev: None,
+            };
+            match (h.world == "w" && h.token == "t", h.kind) {
+                (false, _) => Decision::Reply(Reply::Denied),
+                (true, StreamKind::Tcp) => Decision::Tcp(ok, port),
+                (true, StreamKind::Manifest) => Decision::Body(ok, br#"[{"file":"a.jar","title":"A","sha1":"x","sha512":"y","size":3,"projectId":null,"versionId":null,"need":"required"}]"#.to_vec()),
+                (true, StreamKind::File) => Decision::File(ok, file_path.clone()),
+                (true, StreamKind::Ping) => Decision::Reply(ok),
             }
         }));
 
@@ -273,6 +356,22 @@ mod tests {
         let mut buf = [0u8; 17];
         client.read_exact(&mut buf).await.unwrap();
         assert_eq!(&buf, b"merhaba minecraft");
+
+        // Mod listesi ve dosya aktarımı.
+        let list = guest.manifest(host_id, "w", "t").await.unwrap();
+        assert_eq!(list.len(), 1);
+        let dest = base.join("indirilen.jar");
+        guest
+            .fetch_file(host_id, "w", "t", "a.jar", &dest, 3)
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"jar");
+        assert!(
+            guest
+                .fetch_file(host_id, "w", "t", "a.jar", &base.join("k.jar"), 2)
+                .await
+                .is_err()
+        );
 
         guest.close().await;
         host.close().await;

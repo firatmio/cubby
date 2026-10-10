@@ -31,7 +31,7 @@ pub enum Side {
 }
 
 /// Oyuncunun (istemcinin) bu moda ihtiyacı. Modrinth'in `environment` alanından.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClientNeed {
     /// Oyuncuda da kurulu olmalı, yoksa giremez (yeni blok/eşya ekleyen modlar).

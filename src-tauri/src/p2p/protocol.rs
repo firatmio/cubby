@@ -7,6 +7,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 pub const ALPN: &[u8] = b"mcsm/mc/1";
 /// Başlık ve yanıt satırları için üst sınır.
 pub const MAX_LINE: usize = 1024;
+/// Mod listesi gövdesi için üst sınır.
+pub const MAX_BODY: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -15,6 +17,10 @@ pub enum StreamKind {
     Ping,
     /// Minecraft TCP bağlantısı; başlıktan sonra ham bayt aktarılır.
     Tcp,
+    /// Oyuncuya gidecek mod listesi (yanıttan sonra JSON gövde).
+    Manifest,
+    /// Listedeki bir mod dosyası (yanıttan sonra ham bayt). Dosya adı `file` alanında.
+    File,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,13 +28,20 @@ pub struct StreamHeader {
     pub world: String,
     pub token: String,
     pub kind: StreamKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum Reply {
-    /// Ping yanıtı ya da TCP için "aktarım başlıyor".
-    Ok { running: bool, name: String },
+    /// Ping yanıtı ya da TCP için "aktarım başlıyor". `modsRev`: oyuncuya giden mod listesinin özeti.
+    Ok {
+        running: bool,
+        name: String,
+        #[serde(default, rename = "modsRev", skip_serializing_if = "Option::is_none")]
+        mods_rev: Option<String>,
+    },
     /// Davet geçersiz (token yanlış, dünya silinmiş).
     Denied,
     /// Dünya kapalı (TCP isteğinde).
@@ -42,6 +55,16 @@ pub async fn write_line<T: Serialize>(
     let mut buf = serde_json::to_vec(value).map_err(std::io::Error::other)?;
     buf.push(b'\n');
     w.write_all(&buf).await
+}
+
+/// Gövdeyi sonuna kadar okur; `max`'tan büyükse hata.
+pub async fn read_body(r: &mut (impl AsyncRead + Unpin), max: usize) -> std::io::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    let n = r.take(max as u64 + 1).read_to_end(&mut buf).await?;
+    if n > max {
+        return Err(std::io::Error::other("gövde çok büyük"));
+    }
+    Ok(buf)
 }
 
 /// `\n`'e kadar okur (bayt bayt; başlıktan sonraki veriyi tüketmemek için).
@@ -72,6 +95,7 @@ mod tests {
             world: "w1".into(),
             token: "t".into(),
             kind: StreamKind::Tcp,
+            file: None,
         };
         let mut buf = Vec::new();
         write_line(&mut buf, &h).await.unwrap();
@@ -107,6 +131,7 @@ mod tests {
         let r = Reply::Ok {
             running: true,
             name: "x".into(),
+            mods_rev: None,
         };
         assert_eq!(
             serde_json::to_string(&r).unwrap(),
@@ -116,5 +141,15 @@ mod tests {
             serde_json::to_string(&Reply::Denied).unwrap(),
             r#"{"status":"denied"}"#
         );
+        // Eski sürümün yanıtı (modsRev yok) okunabilir.
+        let old: Reply =
+            serde_json::from_str(r#"{"status":"ok","running":false,"name":"y"}"#).unwrap();
+        assert!(matches!(old, Reply::Ok { mods_rev: None, .. }));
+    }
+
+    #[tokio::test]
+    async fn body_limit() {
+        assert_eq!(read_body(&mut b"abc".as_slice(), 3).await.unwrap(), b"abc");
+        assert!(read_body(&mut b"abcd".as_slice(), 3).await.is_err());
     }
 }

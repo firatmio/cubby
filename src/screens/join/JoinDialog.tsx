@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
-import { api, errorMessage, type InvitePreview, type JoinStatus } from "../../lib/api";
-import { KIND_LABELS } from "../../lib/format";
+import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
+import { KIND_LABELS, formatBytesMb } from "../../lib/format";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
+import { Progress } from "../../ui/Progress";
+import { Toggle } from "../../ui/Toggle";
 import styles from "./JoinDialog.module.css";
 
 function hostLine(s: JoinStatus): { ok: boolean; text: string } {
@@ -27,6 +29,19 @@ function Item({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   );
 }
 
+function ModList({ items }: { items: ModItem[] }) {
+  return (
+    <ul className={styles.mods}>
+      {items.map((m) => (
+        <li key={m.title}>
+          {m.title}
+          <span>{formatBytesMb(m.size)} MB</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Davet kodu/linkiyle katılma: önce ne yapılacağını gösterir, onay olmadan hiçbir dosyaya dokunmaz. */
 export function JoinDialog() {
   const initial = useAppStore((s) => s.joinDialog);
@@ -38,6 +53,9 @@ export function JoinDialog() {
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [withRecommended, setWithRecommended] = useState(true);
+  const progress = useAppStore((s) => s.joinProgress);
+  const setJoinProgress = useAppStore((s) => s.setJoinProgress);
 
   const check = useCallback(async (value: string) => {
     if (!value.trim()) return;
@@ -68,12 +86,14 @@ export function JoinDialog() {
     setBusy(true);
     setError(null);
     try {
-      upsertJoined(await api.joinWorld(code, false));
+      setJoinProgress(null);
+      upsertJoined(await api.joinWorld(code, false, withRecommended));
       close();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
       setBusy(false);
+      setJoinProgress(null);
     }
   };
 
@@ -151,25 +171,64 @@ export function JoinDialog() {
                   </button>
                 </Item>
               )}
-              {preview.versionInstalled ? (
-                <Item ok>Gereken sürüm kurulu ({preview.requiredVersion})</Item>
-              ) : preview.loader === "fabric" ? (
-                <Item ok={false}>
-                  Fabric {preview.loaderVersion} (Minecraft {preview.mcVersion}) kurulu değil. Otomatik kurulum yakında;
-                  şimdilik fabricmc.net'ten kurman gerekiyor.
-                </Item>
-              ) : (
-                <Item ok={false}>
-                  Minecraft {preview.mcVersion} sürümünü Minecraft Launcher'da bir kez açman gerekiyor.
-                </Item>
+              {preview.loader !== "fabric" &&
+                (preview.versionInstalled ? (
+                  <Item ok>Gereken sürüm kurulu ({preview.requiredVersion})</Item>
+                ) : (
+                  <Item ok={false}>Minecraft {preview.mcVersion} sürümünü Launcher bir kez indirecek; ilk açılış biraz sürebilir.</Item>
+                ))}
+              {preview.loader === "fabric" && preview.mods && (
+                <>
+                  {preview.mods.required.length > 0 && (
+                    <Item ok={false}>
+                      Bu dünyaya girmek için şu modlar gerekiyor, Katıl'a basınca kurulacak:
+                      <ModList items={preview.mods.required} />
+                    </Item>
+                  )}
+                  {preview.mods.recommended.length > 0 && (
+                    <li className={styles.optional}>
+                      <Toggle
+                        checked={withRecommended}
+                        onChange={setWithRecommended}
+                        label={`Önerilen modları da kur (${preview.mods.recommended.length})`}
+                        description="Sunucuda en iyi deneyim için önerilir: ekranlar, tuşlar ya da tarif listesi gibi özellikler ancak sende de kuruluysa görünür. Kurmadan da girebilirsin."
+                      />
+                      {withRecommended && <ModList items={preview.mods.recommended} />}
+                    </li>
+                  )}
+                  {(preview.mods.required.length > 0 || (withRecommended && preview.mods.recommended.length > 0)) && (
+                    <Item ok>
+                      Fabric {preview.loaderVersion} kurulacak
+                      {preview.mods.launcher === "tLauncher"
+                        ? "; modlar TLauncher'ın mods klasörüne konacak"
+                        : ` ve Launcher'da "${preview.name} · MC Sunucu" profili oluşturulacak`}
+                      .
+                    </Item>
+                  )}
+                  {preview.mods.required.length === 0 && preview.mods.recommended.length === 0 && (
+                    <Item ok>Gereken modlar sende zaten kurulu.</Item>
+                  )}
+                </>
               )}
-              {preview.loader === "fabric" && (
-                <Item ok={false}>Modlu dünya: arkadaşının modları sende de kurulu olmalı (otomatik eşitleme yakında).</Item>
+              {preview.loader === "fabric" && !preview.mods && (
+                <Item ok={false}>
+                  {preview.modsError
+                    ? `Mod listesi alınamadı: ${preview.modsError}`
+                    : "Modlar, arkadaşının uygulamasına ulaşılınca kontrol edilecek."}
+                </Item>
               )}
               {preview.minecraftRunning && (
                 <Item ok={false}>Minecraft açık. Kapatmazsan eklediğimiz kayıt silinebilir; oyunu kapatıp tekrar kontrol et.</Item>
               )}
             </ul>
+          )}
+          {busy && progress && (
+            <div className={styles.installing}>
+              <Progress value={progress.count ? (progress.index - 1) / progress.count : null} />
+              <span>
+                {progress.title} kuruluyor · {progress.index}/{progress.count}
+              </span>
+            </div>
           )}
           <p className={styles.note}>Oynarken bu uygulama açık kalmalı; pencereyi kapatınca simge durumunda çalışmaya devam eder.</p>
         </>

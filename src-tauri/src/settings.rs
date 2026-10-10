@@ -18,6 +18,8 @@ pub struct AppSettings {
     pub use_screenshots: bool,
     /// Minecraft EULA'sı bir kez kabul edildi; yeni dünyalarda tekrar sorulmaz.
     pub eula_accepted: bool,
+    /// Modlu dünyaların oyuncuda gereken modları kendi Minecraft'ıma da (dünyaya özel profile) kurulsun.
+    pub client_sync: bool,
 }
 
 impl Default for AppSettings {
@@ -26,6 +28,7 @@ impl Default for AppSettings {
             minecraft_dir: None,
             use_screenshots: true,
             eula_accepted: false,
+            client_sync: true,
         }
     }
 }
@@ -87,6 +90,31 @@ impl SettingsStore {
 
     pub fn screenshots_dir(&self) -> Option<PathBuf> {
         self.minecraft_dir().map(|d| d.join("screenshots"))
+    }
+
+    /// Ana `screenshots` + dünya profillerinin (`.minecraft/mcsm/*/screenshots`) klasörleri.
+    pub fn screenshot_dirs(&self) -> Vec<PathBuf> {
+        let Some(mc) = self.minecraft_dir() else {
+            return Vec::new();
+        };
+        let mut dirs = vec![mc.join("screenshots")];
+        if let Ok(entries) = std::fs::read_dir(mc.join(crate::client::PROFILES_DIR)) {
+            dirs.extend(
+                entries
+                    .flatten()
+                    .map(|e| e.path().join("screenshots"))
+                    .filter(|p| p.is_dir()),
+            );
+        }
+        dirs
+    }
+
+    /// Ekran görüntüsünün bulunduğu klasördeki tam yolu (adlar zaman damgalı, pratikte benzersiz).
+    pub fn find_shot(&self, file: &str) -> Option<PathBuf> {
+        self.screenshot_dirs()
+            .into_iter()
+            .map(|d| d.join(file))
+            .find(|p| p.is_file())
     }
 }
 
