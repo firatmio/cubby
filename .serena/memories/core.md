@@ -18,3 +18,4 @@ Stack/komutlar: `mem:tech_stack`, `mem:suggested_commands`, `mem:task_completion
 
 ## Yol haritası (2026-10-10)
 M1–M5, M7a, M8 (Modrinth mod mağazası; CurseForge anahtar istediği için yok) bitti. Sıra: **M7b** (mod eşitleme M8 altyapısıyla, Fabric istemci kurulumu, web katılım sayfası) → **M6** (NeoForge/Forge/Quilt). Testler (iki bilgisayarlı uçtan uca, kurulum dosyası) en sona; kullanıcı yerelde test edebileceği şeyleri kendisi dener.
+Sonraya (yalnız not): dünya yedekleme — Google hesabı bağlayıp Drive'a yedek; ileride premium hesapla kendi VDS'imizde yedek.

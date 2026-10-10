@@ -18,6 +18,10 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 
 Sıradaki sıra: M7b → M6.
 
+**Sonra (fikir aşamasında):**
+- Dünya yedekleme: Google hesabı bağlayıp Google Drive'a otomatik yedek
+- Premium hesapla kendi sunucumuzda (VDS) yedekleme
+
 ## Geliştirme
 
 Gerekenler: [bun](https://bun.sh), Rust (stable), Windows'ta WebView2. Sunucuyu çalıştırmak için
