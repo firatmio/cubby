@@ -52,6 +52,9 @@ pub struct Instance {
     pub created_at: u64,
     #[serde(default)]
     pub cover: Option<Cover>,
+    /// İnternetten katılım açık mı (modemde port açılır).
+    #[serde(default)]
+    pub internet: bool,
 }
 
 impl Instance {

@@ -33,6 +33,8 @@ export interface Instance {
   port: number;
   createdAt: number;
   cover: Cover | null;
+  /** İnternetten katılım açık mı */
+  internet: boolean;
 }
 
 export interface Cover {
@@ -79,6 +81,22 @@ export interface AccessView {
   known: string[];
   /** Değişiklik yeniden başlatınca geçerliyse açıklama */
   notice: string | null;
+}
+
+/** off: dünya kapalı ya da internete açık değil. */
+export type RouteState = "off" | "working" | "ok" | "error";
+
+export interface Route {
+  state: RouteState;
+  address: string | null;
+  message: string | null;
+}
+
+export interface ConnectionView {
+  lan: string | null;
+  internet: boolean;
+  /** Modem üzerinden (UPnP) */
+  direct: Route;
 }
 
 export interface PropertiesView {
@@ -244,6 +262,8 @@ export const api = {
   setOfflineMode: (id: string, offline: boolean) => invoke<AccessView>("set_offline_mode", { id, offline }),
   setOp: (id: string, name: string, op: boolean) => invoke<AccessView>("set_op", { id, name, op }),
   kickPlayer: (id: string, name: string) => invoke<void>("kick_player", { id, name }),
+  connectionStatus: (id: string) => invoke<ConnectionView>("connection_status", { id }),
+  setInternet: (id: string, on: boolean) => invoke<ConnectionView>("set_internet", { id, on }),
 };
 
 /**

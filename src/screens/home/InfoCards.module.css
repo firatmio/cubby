@@ -54,3 +54,36 @@
 .alert {
   color: var(--warning);
 }
+
+.slot {
+  position: relative;
+  display: flex;
+}
+
+.withCopy {
+  display: block;
+  padding-right: 28px;
+}
+
+.copy {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background 140ms, color 140ms;
+}
+
+.copy:hover {
+  background: var(--hover);
+  color: var(--text);
+}

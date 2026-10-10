@@ -8,6 +8,8 @@ mod instance;
 mod java;
 mod loaders;
 mod media;
+mod net;
+mod net_cmds;
 mod paths;
 mod players;
 mod properties;
@@ -26,6 +28,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use commands::AppState;
 use java::JavaManager;
 use loaders::Loaders;
+use net::NetManager;
 use registry::Registry;
 use server::ServerManager;
 use settings::SettingsStore;
@@ -53,6 +56,8 @@ fn begin_shutdown(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let servers = app.state::<AppState>().servers.clone();
         servers.stop_all(&app).await;
+        // Modemde açılan portlar kapansın.
+        app.state::<Arc<NetManager>>().shutdown().await;
         app.exit(0);
     });
 }
@@ -81,7 +86,10 @@ pub fn run() {
                 let data = app.path().app_data_dir()?;
                 app.manage(Registry::load(&data));
                 app.manage(SettingsStore::load(&data));
-                app.manage(JavaManager::new(data.join("java"), http));
+                app.manage(JavaManager::new(data.join("java"), http.clone()));
+                let net = Arc::new(NetManager::new(http));
+                net::install(app.handle(), net.clone());
+                app.manage(net);
                 sessions::install(app.handle());
                 Ok(())
             }
@@ -145,6 +153,8 @@ pub fn run() {
             world_cmds::set_offline_mode,
             world_cmds::set_op,
             world_cmds::kick_player,
+            net_cmds::connection_status,
+            net_cmds::set_internet,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

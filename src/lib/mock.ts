@@ -52,6 +52,7 @@ const instances: Instance[] = [
     port: 25565,
     createdAt: 1,
     cover: { kind: "auto", color: "#8fb7d8", version: 1 },
+    internet: true,
   },
   {
     id: "mock-2",
@@ -66,6 +67,7 @@ const instances: Instance[] = [
     port: 25566,
     createdAt: 2,
     cover: null,
+    internet: true,
   },
   {
     id: "mock-3",
@@ -80,6 +82,7 @@ const instances: Instance[] = [
     port: 25567,
     createdAt: 3,
     cover: { kind: "manual", color: "#d8a26a", version: 1 },
+    internet: false,
   },
 ];
 
@@ -192,6 +195,37 @@ setInterval(() => {
   }
 }, 2000);
 
+type Route = { state: string; address: string | null; message: string | null };
+const OFF: Route = { state: "off", address: null, message: null };
+const direct: Record<string, Route> = {};
+
+function connectionView(id: string) {
+  const inst = byId(id);
+  const up = status[id] === "running" && inst.internet;
+  return {
+    lan: `192.168.1.24:${inst.port}`,
+    internet: !!inst.internet,
+    direct: up ? (direct[id] ?? OFF) : OFF,
+  };
+}
+
+const pushNet = (id: string) => emit("net://status", { id, view: connectionView(id) });
+
+/** Mock: Paper dünyasında modem UPnP'yi destekliyor, diğerlerinde desteklemiyor. */
+async function netUp(id: string) {
+  direct[id] = { state: "working", address: null, message: null };
+  pushNet(id);
+  await sleep(1200);
+  direct[id] =
+    id === "mock-2"
+      ? { state: "ok", address: `188.119.44.224:${byId(id).port}`, message: null }
+      : { state: "error", address: null, message: "Modemin otomatik port açmayı (UPnP) desteklemiyor ya da kapalı." };
+  pushNet(id);
+}
+
+// Açılışta çalışan ve internete açık dünya için bağlantılar kurulmuş olsun.
+setTimeout(() => void netUp("mock-1"), 300);
+
 async function boot(id: string) {
   setStatus(id, "starting");
   logs[id] = [];
@@ -200,6 +234,7 @@ async function boot(id: string) {
     log(id, info(l));
   }
   setStatus(id, "running");
+  if (byId(id).internet) void netUp(id);
 }
 
 async function stop(id: string) {
@@ -210,6 +245,7 @@ async function stop(id: string) {
   await sleep(400);
   log(id, "Sunucu kapandı (çıkış kodu: 0).", "system");
   setStatus(id, "stopped");
+  pushNet(id);
 }
 
 async function progress(event: string, base: Record<string, unknown>, steps: number) {
@@ -283,6 +319,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         port: 25565,
         createdAt: Date.now(),
         cover: null,
+        internet: false,
       };
       instances.push(inst);
       status[id] = "stopped";
@@ -375,6 +412,13 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       a.ops = args.op ? [...a.ops, args.name] : a.ops.filter((n) => n !== args.name);
       const online = (players[args.id] ?? []).includes(args.name) || status[args.id] !== "running";
       return accessView(args.id, online ? null : "Yeniden başlatınca geçerli olur.");
+    }
+    case "connection_status":
+      return connectionView(args.id);
+    case "set_internet": {
+      byId(args.id).internet = args.on;
+      if (args.on && status[args.id] === "running") void netUp(args.id);
+      return connectionView(args.id);
     }
     case "kick_player":
       players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);

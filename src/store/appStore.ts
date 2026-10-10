@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   api,
+  type ConnectionView,
   type InstallProgress,
   type Instance,
   type JavaProgress,
@@ -17,7 +18,7 @@ const MAX_LOG_LINES = 5000;
 export type View = "home" | "setup";
 
 /** Sağdan kayan paneller. */
-export type SheetName = "advanced" | "cover" | "settings" | "players" | "world";
+export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection";
 
 export interface ServerRuntime {
   status: ServerStatus;
@@ -68,6 +69,10 @@ interface AppStore {
 
   shuttingDown: boolean;
   setShuttingDown: (v: boolean) => void;
+
+  /** Dünya başına bağlantı durumu (LAN, modem). */
+  connections: Record<string, ConnectionView>;
+  setConnection: (id: string, view: ConnectionView) => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => {
@@ -166,6 +171,9 @@ export const useAppStore = create<AppStore>((set, get) => {
 
     shuttingDown: false,
     setShuttingDown: (shuttingDown) => set({ shuttingDown }),
+
+    connections: {},
+    setConnection: (id, view) => set((st) => ({ connections: { ...st.connections, [id]: view } })),
   };
 });
 

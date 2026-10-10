@@ -220,6 +220,7 @@ pub async fn create_instance(
             port: DEFAULT_PORT,
             created_at: now_ms(),
             cover: None,
+            internet: false,
         };
         let mut props = Properties::load(&server_dir)?;
         props.set("motd", inst.name.clone());
@@ -582,7 +583,7 @@ pub fn play_stats(app: AppHandle, id: String) -> AppResult<PlayStats> {
 }
 
 /// Gerçek port `server.properties`'ten; dosya yoksa (ilk açılıştan önce) kayıtlı port.
-fn server_port(server_dir: &Path, fallback: u16) -> u16 {
+pub(crate) fn server_port(server_dir: &Path, fallback: u16) -> u16 {
     std::fs::read_to_string(server_dir.join("server.properties"))
         .ok()
         .and_then(|t| {

@@ -8,6 +8,7 @@ import {
   type LogLine,
   type ProcessStats,
   type ServerStatus,
+  type ConnectionView,
 } from "./api";
 
 type Unlisten = () => void;
@@ -30,6 +31,7 @@ const EVENT_PLAYERS = "server://players";
 const EVENT_REJECTED = "server://rejected";
 const EVENT_COVER_CHANGED = "cover://changed";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
+const EVENT_NET = "net://status";
 
 type WithId<T> = T & { id: string };
 
@@ -82,6 +84,9 @@ export async function bindBackendEvents(): Promise<() => void> {
       api.getInstance(id).then(store().replaceInstance).catch(console.error);
     }),
     listen(EVENT_SHUTTING_DOWN, () => store().setShuttingDown(true)),
+    listen<{ id: string; view: ConnectionView }>(EVENT_NET, ({ payload }) => {
+      store().setConnection(payload.id, payload.view);
+    }),
   ]);
 
   return () => {

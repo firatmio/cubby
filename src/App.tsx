@@ -9,6 +9,7 @@ import { CoverSheet } from "./screens/cover/CoverSheet";
 import { PlayersSheet } from "./screens/players/PlayersSheet";
 import { HomeScreen } from "./screens/home/HomeScreen";
 import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
+import { ConnectionSheet } from "./screens/connection/ConnectionSheet";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
 import { Background } from "./shell/Background";
@@ -67,6 +68,7 @@ export default function App() {
 
       <PlayersSheet />
       <WorldSettingsSheet />
+      <ConnectionSheet />
       <AdvancedSheet />
       <CoverSheet />
       <AppSettingsSheet />

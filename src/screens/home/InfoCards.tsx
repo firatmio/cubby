@@ -1,37 +1,45 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Check, Copy } from "lucide-react";
-import { api, type Instance } from "../../lib/api";
+import type { Instance } from "../../lib/api";
 import { formatDuration, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore, useServer } from "../../store/appStore";
+import { bestInvite, useConnection } from "../connection/useConnection";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./InfoCards.module.css";
 
 function InviteCard({ id }: { id: string }) {
-  const [address, setAddress] = useState<string | null>(null);
+  const openSheet = useAppStore((s) => s.openSheet);
+  const invite = bestInvite(useConnection(id));
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    api.lanAddress(id).then(setAddress).catch(() => setAddress(null));
-  }, [id]);
-
   const copy = async () => {
-    if (!address) return;
-    await navigator.clipboard.writeText(address);
+    if (!invite) return;
+    await navigator.clipboard.writeText(invite.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };
 
   return (
-    <motion.button type="button" className={[styles.card, styles.action].join(" ")} variants={rise} onClick={copy}>
-      <span className={styles.label}>Arkadaşını davet et</span>
-      <span className={styles.value}>
-        {address ?? "Adres bulunamadı"}
-        {address && (copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />)}
-      </span>
-      <span className={styles.hint}>{copied ? "Kopyalandı" : "Aynı evdeyseniz bu adresle girer"}</span>
-    </motion.button>
+    <motion.div className={styles.slot} variants={rise}>
+      <button type="button" className={[styles.card, styles.action].join(" ")} onClick={() => openSheet("connection")}>
+        <span className={styles.label}>Arkadaşını davet et</span>
+        <span className={[styles.value, styles.withCopy].join(" ")}>{invite?.address ?? "Adres bulunamadı"}</span>
+        <span className={styles.hint}>
+          {copied
+            ? "Kopyalandı"
+            : invite?.internet
+              ? "İnternetten bu adresle girer"
+              : "Aynı evdeyseniz bu adresle girer · internet için tıkla"}
+        </span>
+      </button>
+      {invite && (
+        <button type="button" className={styles.copy} aria-label="Adresi kopyala" onClick={copy}>
+          {copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />}
+        </button>
+      )}
+    </motion.div>
   );
 }
 
