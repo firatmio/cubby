@@ -24,3 +24,7 @@ Arkadaşınla doğrudan bağlantı kurulamadığında (iki taraf da katı NAT ar
 cihaz adresleri n0'ın DNS keşif hizmetine yayınlanır. Bu sunucular bağlantı meta verilerini (IP adresleri,
 veri miktarı) görebilir, oyun içeriği uçtan uca şifrelidir. İnternete açma (UPnP) için dış IP
 `api.ipify.org` / `icanhazip.com`'dan öğrenilir.
+
+Mod ve eklentiler [Modrinth](https://modrinth.com)'ten indirilir; her dosya Modrinth'in verdiği sha512 ile
+doğrulanır. Mod ikonları Modrinth CDN'inden uygulama tarafından indirilip yerelde önbelleğe alınır. Her modun
+lisansı ayrıntı ekranında gösterilir; modlar uygulamayla dağıtılmaz.

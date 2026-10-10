@@ -11,6 +11,7 @@ import { HomeScreen } from "./screens/home/HomeScreen";
 import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
 import { ConnectionSheet } from "./screens/connection/ConnectionSheet";
 import { JoinDialog } from "./screens/join/JoinDialog";
+import { ModsSheet } from "./screens/mods/ModsSheet";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
 import { Background } from "./shell/Background";
@@ -78,6 +79,7 @@ export default function App() {
       <PlayersSheet />
       <WorldSettingsSheet />
       <ConnectionSheet />
+      <ModsSheet />
       <AdvancedSheet />
       <CoverSheet />
       <AppSettingsSheet />

@@ -250,6 +250,52 @@ const joined: { world: Record<string, unknown> & { id: string; name: string; loc
 const entries = new Set(["join-1"]);
 const SAMPLE_CODE = "eyJ2IjoxLCJuYW1lIjoiTWVobWV0In0";
 
+type MockMod = {
+  projectId: string;
+  slug: string;
+  title: string;
+  description: string;
+  downloads: number;
+  clientSide: string;
+  deps?: string[];
+  plugin?: boolean;
+};
+const MODS: MockMod[] = [
+  { projectId: "P7dR8mSH", slug: "fabric-api", title: "Fabric API", description: "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.", downloads: 272_714_633, clientSide: "optional" },
+  { projectId: "gvQqBUqZ", slug: "lithium", title: "Lithium", description: "No-compromises game logic optimization mod. Well suited for clients and servers of all kinds.", downloads: 61_200_000, clientSide: "optional" },
+  { projectId: "fALzjamp", slug: "chunky", title: "Chunky", description: "Pre-generates chunks, quickly and efficiently.", downloads: 9_800_000, clientSide: "optional", deps: ["P7dR8mSH"] },
+  { projectId: "Ha28R6CL", slug: "farmers-delight", title: "Farmer's Delight", description: "A gentle expansion to farming and cooking.", downloads: 38_400_000, clientSide: "required", deps: ["P7dR8mSH"] },
+  { projectId: "l6YH9Als", slug: "spark", title: "spark", description: "A performance profiler for Minecraft clients, servers and proxies.", downloads: 21_000_000, clientSide: "optional" },
+  { projectId: "9eGKb6K1", slug: "simple-voice-chat", title: "Simple Voice Chat", description: "A working voice chat in Minecraft!", downloads: 44_100_000, clientSide: "required" },
+  { projectId: "Vebnzrzj", slug: "luckperms", title: "LuckPerms", description: "A permissions plugin for Minecraft servers.", downloads: 5_400_000, clientSide: "unsupported", plugin: true },
+  { projectId: "UmLGoGij", slug: "essentialsx", title: "EssentialsX", description: "The essential plugin suite for Minecraft servers.", downloads: 3_100_000, clientSide: "unsupported", plugin: true },
+];
+const modsInstalled: Record<string, { file: string; projectId: string | null; dependency: boolean; update: string | null }[]> = {
+  "mock-1": [
+    { file: "fabric-api-0.161.0+26.3.jar", projectId: "P7dR8mSH", dependency: true, update: "0.162.0+26.3" },
+    { file: "lithium-fabric-0.18.1+mc26.3.jar", projectId: "gvQqBUqZ", dependency: false, update: null },
+    { file: "benim-modum.jar", projectId: null, dependency: false, update: null },
+  ],
+  "mock-2": [],
+};
+const modById = (pid: string | null) => MODS.find((m) => m.projectId === pid);
+function installedView(id: string) {
+  return (modsInstalled[id] ??= []).map((m) => {
+    const mod = modById(m.projectId);
+    return {
+      file: m.file,
+      title: mod?.title ?? m.file.replace(/\.jar$/, ""),
+      projectId: m.projectId,
+      versionNumber: m.projectId ? m.file.replace(/^[a-z-]+-/, "").replace(/\.jar$/, "") : null,
+      icon: m.projectId ? `modicon/${m.projectId}` : null,
+      clientSide: mod?.clientSide ?? null,
+      dependency: m.dependency,
+      known: !!m.projectId,
+      update: m.update,
+    };
+  });
+}
+
 async function boot(id: string) {
   setStatus(id, "starting");
   logs[id] = [];
@@ -509,6 +555,81 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       return structuredClone(joined.find((j) => j.world.id === args.id));
     case "take_pending_invite":
       return null;
+    case "mods_search": {
+      await sleep(300);
+      const plugin = byId(args.id).loader === "paper";
+      const q = String(args.query).toLowerCase();
+      const have = new Set((modsInstalled[args.id] ?? []).map((m) => m.projectId));
+      const list = MODS.filter((m) => !!m.plugin === plugin)
+        .filter((m) => !q || m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q))
+        .sort((a, b) => (args.sort === "downloads" ? b.downloads - a.downloads : 0));
+      return {
+        total: list.length,
+        hits: list.slice(args.offset, args.offset + 20).map((m) => ({
+          projectId: m.projectId,
+          slug: m.slug,
+          title: m.title,
+          description: m.description,
+          downloads: m.downloads,
+          icon: `modicon/${m.projectId}`,
+          clientSide: m.clientSide,
+          installed: have.has(m.projectId),
+        })),
+      };
+    }
+    case "mods_project": {
+      await sleep(300);
+      const m = modById(args.projectId)!;
+      const have = new Set((modsInstalled[args.id] ?? []).map((x) => x.projectId));
+      return {
+        projectId: m.projectId,
+        title: m.title,
+        description: m.description,
+        body: `# ${m.title}\n\n${m.description}\n\n**Özellikler**\n- Hızlı\n- Hafif\n\n[Discord](https://example.com)`,
+        downloads: m.downloads,
+        license: "MIT License",
+        url: `https://modrinth.com/project/${m.slug}`,
+        icon: `modicon/${m.projectId}`,
+        clientSide: m.clientSide,
+        installed: have.has(m.projectId),
+        versionNumber: "1.2.0+26.3",
+        unstable: m.slug === "chunky",
+        with: (m.deps ?? []).filter((d) => !have.has(d)).map((d) => ({ projectId: d, title: modById(d)!.title })),
+        missing: [],
+        conflicts: [],
+        error: null,
+      };
+    }
+    case "mods_install": {
+      const m = modById(args.projectId)!;
+      const list = (modsInstalled[args.id] ??= []);
+      for (const pid of [m.projectId, ...(m.deps ?? [])]) {
+        if (list.some((x) => x.projectId === pid)) continue;
+        const mod = modById(pid)!;
+        for (let i = 0; i <= 8; i++) {
+          await sleep(90);
+          emit("mods://progress", { id: args.id, title: mod.title, downloaded: i * 220_000, total: 8 * 220_000 });
+        }
+        list.push({ file: `${mod.slug}-1.2.0+26.3.jar`, projectId: pid, dependency: pid !== m.projectId, update: null });
+      }
+      return installedView(args.id);
+    }
+    case "mods_installed":
+      await sleep(400);
+      return installedView(args.id);
+    case "mods_remove":
+      modsInstalled[args.id] = (modsInstalled[args.id] ?? []).filter((m) => m.file !== args.file);
+      return installedView(args.id);
+    case "mods_update":
+    case "mods_update_all":
+      for (const m of modsInstalled[args.id] ?? []) {
+        if (cmd === "mods_update" && m.file !== args.file) continue;
+        if (!m.update) continue;
+        await sleep(500);
+        m.file = m.file.replace(/\d[^-]*\.jar$/, `${m.update}.jar`);
+        m.update = null;
+      }
+      return installedView(args.id);
     case "kick_player":
       players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
       emit("server://players", { id: args.id, players: players[args.id] });

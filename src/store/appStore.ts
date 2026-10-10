@@ -5,6 +5,7 @@ import {
   type InstallProgress,
   type JoinedView,
   type JoinStatus,
+  type ModProgress,
   type Instance,
   type JavaProgress,
   type LogLine,
@@ -20,7 +21,7 @@ const MAX_LOG_LINES = 5000;
 export type View = "home" | "setup";
 
 /** Sağdan kayan paneller. */
-export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection";
+export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection" | "mods";
 
 export interface ServerRuntime {
   status: ServerStatus;
@@ -81,6 +82,10 @@ interface AppStore {
   /** Katıl penceresi: null kapalı, "" boş, dolu ise davet kodu/linki. */
   joinDialog: string | null;
   openJoin: (code: string | null) => void;
+
+  /** Süren mod indirmesi. */
+  modProgress: ModProgress | null;
+  setModProgress: (p: ModProgress | null) => void;
 
   /** Dünya başına bağlantı durumu (LAN, modem). */
   connections: Record<string, ConnectionView>;
@@ -208,6 +213,8 @@ export const useAppStore = create<AppStore>((set, get) => {
       }),
     setJoinStatus: (id, status) =>
       set((st) => ({ joined: st.joined.map((j) => (j.world.id === id ? { ...j, status } : j)) })),
+    modProgress: null,
+    setModProgress: (modProgress) => set({ modProgress }),
     joinDialog: null,
     openJoin: (joinDialog) => set({ joinDialog, sheet: null }),
 

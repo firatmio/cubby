@@ -3,7 +3,7 @@
 Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone listesi: `SPEC.md` (M1–M7). M7 = istemci "Katıl" modu (davet linki, servers.dat, mod senkronu).
 
 ## Source map
-- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`, kapak/oturumlar `mem:backend/covers_sessions`, server.properties/beyaz liste/oyuncular `mem:backend/players_access`, internet (UPnP) `mem:backend/net`, Katıl modu/doğrudan bağlantı `mem:backend/p2p_join`
+- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`, kapak/oturumlar `mem:backend/covers_sessions`, server.properties/beyaz liste/oyuncular `mem:backend/players_access`, internet (UPnP) `mem:backend/net`, Katıl modu/doğrudan bağlantı `mem:backend/p2p_join`, mod mağazası `mem:backend/mods`
 - `src/` — React UI; yalnızca `invoke` + event dinler. Ayrıntı: `mem:frontend/core`
 - `scripts/gen-textures.mjs` — 16x16 doku PNG üretici (Mojang asset'i repoya girmez; lisanslar `ASSETS.md`)
 
@@ -17,4 +17,4 @@ Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone liste
 Stack/komutlar: `mem:tech_stack`, `mem:suggested_commands`, `mem:task_completion`, stil: `mem:conventions`.
 
 ## Yol haritası (2026-10-10)
-M1–M5, M7a bitti. Sıra: **M8** (Modrinth mod/eklenti mağazası; CurseForge anahtar istediği için yok) → **M7b** (mod eşitleme M8 altyapısıyla, Fabric istemci kurulumu, web katılım sayfası) → **M6** (NeoForge/Forge/Quilt). Testler (iki bilgisayarlı uçtan uca, kurulum dosyası) en sona; kullanıcı yerelde test edebileceği şeyleri kendisi dener.
+M1–M5, M7a, M8 (Modrinth mod mağazası; CurseForge anahtar istediği için yok) bitti. Sıra: **M7b** (mod eşitleme M8 altyapısıyla, Fabric istemci kurulumu, web katılım sayfası) → **M6** (NeoForge/Forge/Quilt). Testler (iki bilgisayarlı uçtan uca, kurulum dosyası) en sona; kullanıcı yerelde test edebileceği şeyleri kendisi dener.

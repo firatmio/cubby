@@ -11,6 +11,9 @@ mod join;
 mod join_cmds;
 mod loaders;
 mod media;
+mod modrinth;
+mod mods;
+mod mods_cmds;
 mod net;
 mod net_cmds;
 mod p2p;
@@ -166,6 +169,7 @@ pub fn run() {
                 app.manage(joins);
 
                 app.manage(PendingInvite::default());
+                app.manage(mods_cmds::ModIcons::default());
                 // Kurulumda NSIS kaydeder; geliştirirken ve taşınabilir kullanımda burada kaydedilir.
                 #[cfg(any(windows, target_os = "linux"))]
                 if let Err(e) = app.deep_link().register_all() {
@@ -187,6 +191,13 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol(media::SCHEME, |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             let path = request.uri().path().to_string();
+            // Mod ikonları ağdan gelebilir (async); diğerleri dosya okuma + küçültme (blocking).
+            if let Some(project) = mods_cmds::is_icon_path(&path) {
+                tauri::async_runtime::spawn(async move {
+                    responder.respond(mods_cmds::icon_response(&app, &project).await);
+                });
+                return;
+            }
             tauri::async_runtime::spawn_blocking(move || {
                 responder.respond(media::respond(&app, &path));
             });
@@ -257,6 +268,13 @@ pub fn run() {
             join_cmds::server_entry_exists,
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
+            mods_cmds::mods_search,
+            mods_cmds::mods_project,
+            mods_cmds::mods_install,
+            mods_cmds::mods_installed,
+            mods_cmds::mods_remove,
+            mods_cmds::mods_update,
+            mods_cmds::mods_update_all,
         ])
         .build(tauri::generate_context!())
         .expect("Tauri uygulaması oluşturulamadı");

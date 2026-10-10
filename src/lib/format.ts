@@ -78,3 +78,33 @@ export function formatDuration(ms: number): string {
   const m = Math.max(1, Math.round((ms % HOUR) / MIN));
   return h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
 }
+
+/** Modrinth kategorileri (mod ve eklentiler için ortak). */
+export const MOD_CATEGORY_LABELS: Record<string, string> = {
+  optimization: "Optimizasyon",
+  utility: "Araçlar",
+  worldgen: "Dünya oluşumu",
+  technology: "Teknoloji",
+  magic: "Büyü",
+  adventure: "Macera",
+  decoration: "Dekorasyon",
+  "game-mechanics": "Oyun mekaniği",
+  mobs: "Yaratıklar",
+  equipment: "Ekipman",
+  storage: "Depolama",
+  transportation: "Ulaşım",
+  food: "Yemek",
+  economy: "Ekonomi",
+  management: "Yönetim",
+  minigame: "Mini oyun",
+  social: "Sosyal",
+  library: "Kütüphane",
+};
+
+/** "2,7 Mn", "48 B", "312" */
+export function compactCount(n: number): string {
+  const f = (v: number) => v.toLocaleString("tr-TR", { maximumFractionDigits: 1 });
+  if (n >= 1_000_000) return `${f(n / 1_000_000)} Mn`;
+  if (n >= 1_000) return `${f(n / 1_000)} B`;
+  return String(n);
+}

@@ -2,7 +2,6 @@ use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha512};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Sha256: M2 (Paper), Sha512: M7 (Modrinth mod senkronu)
 pub enum HashAlgo {
     Sha1,
     Sha256,

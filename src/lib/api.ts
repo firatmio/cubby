@@ -84,6 +84,76 @@ export interface AccessView {
   notice: string | null;
 }
 
+/** Modun oyuncu (istemci) tarafında gerekip gerekmediği. */
+export type ModSide = "required" | "optional" | "unsupported" | "unknown";
+export type ModSort = "relevance" | "downloads" | "updated";
+
+export interface ModHit {
+  projectId: string;
+  slug: string;
+  title: string;
+  description: string;
+  downloads: number;
+  /** `media` yolu (modicon/<id>) */
+  icon: string | null;
+  clientSide: ModSide;
+  installed: boolean;
+}
+
+export interface ModSearch {
+  hits: ModHit[];
+  total: number;
+}
+
+export interface ModNamed {
+  projectId: string;
+  title: string;
+}
+
+export interface ModDetail {
+  projectId: string;
+  title: string;
+  description: string;
+  /** Modrinth açıklaması (markdown) */
+  body: string;
+  downloads: number;
+  license: string | null;
+  url: string;
+  icon: string | null;
+  clientSide: ModSide;
+  installed: boolean;
+  versionNumber: string | null;
+  /** Kurulacak sürüm beta/alpha */
+  unstable: boolean;
+  /** Birlikte kurulacak bağımlılıklar */
+  with: ModNamed[];
+  missing: ModNamed[];
+  conflicts: ModNamed[];
+  error: string | null;
+}
+
+export interface InstalledMod {
+  file: string;
+  title: string;
+  projectId: string | null;
+  versionNumber: string | null;
+  icon: string | null;
+  clientSide: ModSide | null;
+  /** Başka bir mod istediği için kuruldu */
+  dependency: boolean;
+  /** Modrinth'te tanındı (değilse elle eklenmiş) */
+  known: boolean;
+  /** Daha yeni sürüm numarası */
+  update: string | null;
+}
+
+export interface ModProgress {
+  id: string;
+  title: string;
+  downloaded: number;
+  total: number | null;
+}
+
 export interface InviteLinks {
   code: string;
   link: string;
@@ -328,6 +398,14 @@ export const api = {
   serverEntryExists: (id: string) => invoke<boolean>("server_entry_exists", { id }),
   refreshJoined: (id: string) => invoke<JoinedView>("refresh_joined", { id }),
   takePendingInvite: () => invoke<string | null>("take_pending_invite"),
+  modsSearch: (id: string, query: string, category: string | null, sort: ModSort, offset: number) =>
+    invoke<ModSearch>("mods_search", { id, query, category, sort, offset }),
+  modsProject: (id: string, projectId: string) => invoke<ModDetail>("mods_project", { id, projectId }),
+  modsInstall: (id: string, projectId: string) => invoke<InstalledMod[]>("mods_install", { id, projectId }),
+  modsInstalled: (id: string) => invoke<InstalledMod[]>("mods_installed", { id }),
+  modsRemove: (id: string, file: string) => invoke<InstalledMod[]>("mods_remove", { id, file }),
+  modsUpdate: (id: string, file: string) => invoke<InstalledMod[]>("mods_update", { id, file }),
+  modsUpdateAll: (id: string) => invoke<InstalledMod[]>("mods_update_all", { id }),
 };
 
 /**

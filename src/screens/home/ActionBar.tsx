@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, ImageIcon, Play, Settings2, Square, Users, Wrench, X } from "lucide-react";
+import { AlertTriangle, ImageIcon, Play, Plug, Puzzle, Settings2, Square, Users, Wrench, X } from "lucide-react";
 import type { Instance } from "../../lib/api";
 import { spring } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
@@ -38,6 +38,13 @@ export function ActionBar({ instance }: { instance: Instance }) {
       <div className={styles.buttons}>
         <IconButton icon={Users} label="Oyuncular" onClick={() => openSheet("players")} />
         <IconButton icon={Settings2} label="Dünya ayarları" onClick={() => openSheet("world")} />
+        {instance.loader !== "vanilla" && (
+          <IconButton
+            icon={instance.loader === "paper" ? Plug : Puzzle}
+            label={instance.loader === "paper" ? "Eklentiler" : "Modlar"}
+            onClick={() => openSheet("mods")}
+          />
+        )}
         <IconButton icon={ImageIcon} label="Kapak resmi" onClick={() => openSheet("cover")} />
         <IconButton icon={Wrench} label="Gelişmiş" onClick={() => openSheet("advanced")} />
         {active ? (

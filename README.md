@@ -13,10 +13,10 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **M5** — İnternetten katılım: dünya başına "İnternete aç", modemde otomatik port açma (UPnP) ve CGNAT tespiti; modem izin vermiyorsa neden ve çözüm sade dille gösterilir
 - [ ] M6 — NeoForge/Forge/Quilt
 - [x] **M7a** — Katıl modu: davet linki/kodu (`mcsm://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
-- [ ] M8 — Mod/eklenti mağazası (Modrinth): arama, sürüme uygun kurulum, bağımlılıklar, güncelleme, kurulu modlar listesi
+- [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
 - [ ] M7b — Mod eşitleme (M8'in Modrinth altyapısıyla), Fabric istemci kurulumu, web katılım sayfası
 
-Sıradaki sıra: M8 → M7b → M6.
+Sıradaki sıra: M7b → M6.
 
 ## Geliştirme
 
