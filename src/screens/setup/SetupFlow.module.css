@@ -59,18 +59,44 @@
 }
 
 .kind {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   min-height: 220px;
   padding: var(--sp-6);
+  overflow: hidden;
   border: none;
   border-radius: var(--radius-tile);
-  background: var(--glass);
-  backdrop-filter: var(--blur);
+  background: #262626;
   text-align: left;
   cursor: pointer;
-  transition: box-shadow 200ms, background 200ms;
+  transition: box-shadow 200ms;
+}
+
+/* Türün görseli; yazılar alttaki koyu geçişin üstünde okunur. */
+.kindArt {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+
+.kindShade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(18, 18, 18, 0.96) 30%, rgba(18, 18, 18, 0.55) 65%, rgba(18, 18, 18, 0.25));
+  transition: background 200ms;
+}
+
+.kind:hover .kindShade {
+  background: linear-gradient(to top, rgba(18, 18, 18, 0.92) 30%, rgba(18, 18, 18, 0.4) 65%, rgba(18, 18, 18, 0.1));
+}
+
+.kindLogo {
+  display: flex;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }
 
 .kind:hover {
@@ -81,10 +107,6 @@
   box-shadow:
     0 0 0 3px var(--primary),
     var(--shadow-tile);
-}
-
-.kindIcon {
-  color: color-mix(in srgb, var(--kind) 60%, #ffffff);
 }
 
 .kindLabel {

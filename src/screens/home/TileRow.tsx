@@ -1,27 +1,18 @@
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Anvil, Box, Grid2x2, Hammer, LogIn, Plus, Puzzle, Users, Zap, type LucideIcon } from "lucide-react";
-import { mediaUrl, type Instance, type JoinedView, type LoaderKind } from "../../lib/api";
+import { LogIn, Plus, Users } from "lucide-react";
+import { mediaUrl, type Instance, type JoinedView } from "../../lib/api";
 import { KIND_COLORS } from "../../lib/format";
 import { spring } from "../../lib/motion";
 import { joinKey, useAppStore, useServer } from "../../store/appStore";
 import { StatusDot } from "../../ui/Badge";
+import { LoaderLogo } from "../../ui/LoaderLogo";
 import styles from "./TileRow.module.css";
-
-export const KIND_ICONS: Record<LoaderKind, LucideIcon> = {
-  fabric: Puzzle,
-  neoforge: Anvil,
-  forge: Hammer,
-  quilt: Grid2x2,
-  paper: Zap,
-  vanilla: Box,
-};
 
 function Tile({ instance, selected }: { instance: Instance; selected: boolean }) {
   const select = useAppStore((s) => s.select);
   const { status } = useServer(instance.id);
   const ref = useRef<HTMLButtonElement>(null);
-  const Icon = KIND_ICONS[instance.loader];
 
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
@@ -50,7 +41,7 @@ function Tile({ instance, selected }: { instance: Instance; selected: boolean })
             draggable={false}
           />
         ) : (
-          <Icon size={34} aria-hidden className={styles.icon} />
+          <LoaderLogo kind={instance.loader} size={40} className={styles.icon} />
         )}
         {status !== "stopped" && (
           <span className={styles.status}>
@@ -79,7 +70,6 @@ function Tile({ instance, selected }: { instance: Instance; selected: boolean })
 function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean }) {
   const select = useAppStore((s) => s.select);
   const ref = useRef<HTMLButtonElement>(null);
-  const Icon = KIND_ICONS[view.world.loader];
   const online = view.status.reachable && view.status.running;
 
   useEffect(() => {
@@ -101,7 +91,7 @@ function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean })
         transition={spring}
         onClick={() => select(joinKey(view.world.id))}
       >
-        <Icon size={34} aria-hidden className={styles.icon} />
+        <LoaderLogo kind={view.world.loader} size={40} className={styles.icon} />
         <span className={styles.friend} aria-hidden>
           <Users size={13} />
         </span>

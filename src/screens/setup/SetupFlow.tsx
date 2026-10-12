@@ -33,7 +33,7 @@ import { Progress } from "../../ui/Progress";
 import { SelectList } from "../../ui/SelectList";
 import { Slider } from "../../ui/Slider";
 import { Toggle } from "../../ui/Toggle";
-import { KIND_ICONS } from "../home/TileRow";
+import { LOADER_ART, LoaderLogo } from "../../ui/LoaderLogo";
 import styles from "./SetupFlow.module.css";
 
 type Step = "kind" | "version" | "name" | "access" | "whitelist" | "install";
@@ -230,9 +230,8 @@ export function SetupFlow() {
       <div className={styles.kinds}>
         {KINDS.map(({ id, text }) => {
           const modCard = id === "fabric";
-          // Modlu kartı seçili altyapının adını, rengini ve simgesini taşır.
-          const shown = modCard && isModded(kind) ? kind : id;
-          const Icon = KIND_ICONS[shown];
+          // Modlu kartı seçili (ya da en son seçilen) altyapının adını, logosunu ve görselini taşır.
+          const shown = modCard ? (isModded(kind) ? kind : lastModLoader) : id;
           const chosen = modCard ? isModded(kind) : id === kind;
           return (
             <motion.button
@@ -245,7 +244,28 @@ export function SetupFlow() {
               transition={spring}
               onClick={() => setKind(modCard ? lastModLoader : id)}
             >
-              <Icon size={28} aria-hidden className={styles.kindIcon} />
+              <AnimatePresence initial={false}>
+                <motion.span
+                  key={shown}
+                  className={styles.kindArt}
+                  style={LOADER_ART[shown]}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  aria-hidden
+                />
+              </AnimatePresence>
+              <span className={styles.kindShade} aria-hidden />
+              <motion.span
+                key={shown}
+                className={styles.kindLogo}
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={spring}
+              >
+                <LoaderLogo kind={shown} size={48} />
+              </motion.span>
               <span className={styles.kindLabel}>{KIND_LABELS[id]}</span>
               <span className={styles.kindTech}>{LOADER_LABELS[shown]}</span>
               <span className={styles.kindText}>{text}</span>
