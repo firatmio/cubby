@@ -1,15 +1,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, errorMessage, type InstalledMod, type ModHit, type ModInfo, type ModPlan, type ModSearch, type ModSort } from "../../lib/api";
+import {
+  api,
+  errorMessage,
+  type ContentKind,
+  type InstalledMod,
+  type ModHit,
+  type ModInfo,
+  type ModPlan,
+  type ModSearch,
+  type ModSort,
+  type PackList,
+} from "../../lib/api";
 import { fetchCached, invalidate } from "../../lib/queryCache";
 import { useAppStore } from "../../store/appStore";
 
-/** Önbellek anahtarı: raflar ve ızgara aynı aramayı paylaşır. */
-export const searchKey = (id: string, query: string, category: string | null, sort: ModSort, offset: number) =>
-  `${id}|mods|${query}|${category ?? ""}|${sort}|${offset}`;
+/**
+ * Önbellek anahtarı: raflar ve ızgara aynı aramayı paylaşır.
+ * `world`: kendi dünyanın kimliği ya da `join:<id>`.
+ */
+export const searchKey = (
+  world: string,
+  kind: ContentKind,
+  query: string,
+  category: string | null,
+  sort: ModSort,
+  offset: number,
+) => `${world}|${kind}|${query}|${category ?? ""}|${sort}|${offset}`;
 
-export function searchMods(id: string, query: string, category: string | null, sort: ModSort, offset: number) {
-  return fetchCached<ModSearch>(searchKey(id, query, category, sort, offset), () =>
-    api.modsSearch(id, query, category, sort, offset),
+/** Türe göre arama: modlar mevcut mod komutlarıyla, paketler içerik komutlarıyla. */
+export function searchItems(
+  world: string,
+  kind: ContentKind,
+  query: string,
+  category: string | null,
+  sort: ModSort,
+  offset: number,
+) {
+  return fetchCached<ModSearch>(searchKey(world, kind, query, category, sort, offset), () =>
+    kind === "mod"
+      ? api.modsSearch(world, query, category, sort, offset)
+      : api.contentSearch(world, kind, query, category, sort, offset),
   );
 }
 
@@ -19,36 +49,46 @@ export function mergeHits(prev: ModHit[], next: ModHit[]): ModHit[] {
   return [...prev, ...next.filter((h) => !seen.has(h.projectId) && seen.add(h.projectId))];
 }
 
-/** Dünyaya kurulu olanlar ve kur/güncelle/kaldır işleri. */
-export function useModActions(id: string, visible: boolean) {
+/** Dünyaya (ya da oyuncunun Minecraft'ına) kurulu olanlar ve kur/güncelle/kaldır işleri. */
+export function useContentActions(world: string, kind: ContentKind, visible: boolean) {
   const setModProgress = useAppStore((s) => s.setModProgress);
   const [installed, setInstalled] = useState<InstalledMod[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
+  const mod = kind === "mod";
 
   useEffect(() => {
     if (!visible) return;
-    api
-      .modsInstalled(id)
-      .then(setInstalled)
-      .catch((e) => setError(errorMessage(e)));
-  }, [id, visible]);
+    const load: Promise<InstalledMod[]> = mod
+      ? api.modsInstalled(world)
+      : api.contentInstalled(world, kind).then((l) => l.items);
+    load.then(setInstalled).catch((e) => setError(errorMessage(e)));
+  }, [world, kind, mod, visible]);
 
   const ids = useMemo(() => (installed ? new Set(installed.map((m) => m.projectId)) : null), [installed]);
   /** Liste geldiyse ona, gelmediyse aramanın söylediğine güvenilir. */
   const isInstalled = useCallback((hit: ModHit) => (ids ? ids.has(hit.projectId) : hit.installed), [ids]);
 
   const run = useCallback(
-    async (key: string, fn: () => Promise<InstalledMod[]>) => {
+    async (key: string, fn: () => Promise<InstalledMod[] | PackList>) => {
       setBusy(key);
       setError(null);
+      setNote(null);
       setModProgress(null);
       try {
-        setInstalled(await fn());
+        const r = await fn();
+        if (Array.isArray(r)) {
+          setInstalled(r);
+        } else {
+          setInstalled(r.items);
+          setNote(r.note);
+        }
         // Aramalardaki "kurulu" işaretleri ve planlar eskidi.
-        invalidate(`${id}|`);
-        setChanged(true);
+        invalidate(`${world}|`);
+        // Yeniden başlatma yalnız modlarda gerekir; veri paketleri `reload` ile hemen geçerli.
+        if (mod) setChanged(true);
       } catch (e) {
         setError(errorMessage(e));
       } finally {
@@ -56,41 +96,59 @@ export function useModActions(id: string, visible: boolean) {
         setModProgress(null);
       }
     },
-    [id, setModProgress],
+    [world, mod, setModProgress],
   );
 
   return {
+    kind,
     installed,
     isInstalled,
     busy,
     error,
     setError,
+    note,
+    setNote,
     changed,
     setChanged,
-    install: (projectId: string) => void run(`install:${projectId}`, () => api.modsInstall(id, projectId)),
-    update: (file: string) => void run(`update:${file}`, () => api.modsUpdate(id, file)),
-    updateAll: () => void run("update-all", () => api.modsUpdateAll(id)),
-    remove: (file: string) => void run(`remove:${file}`, () => api.modsRemove(id, file)),
+    install: (projectId: string) =>
+      void run(`install:${projectId}`, () =>
+        mod ? api.modsInstall(world, projectId) : api.contentInstall(world, kind, projectId),
+      ),
+    update: (file: string) =>
+      void run(`update:${file}`, () => (mod ? api.modsUpdate(world, file) : api.contentUpdate(world, kind, file))),
+    updateAll: () => void run("update-all", () => api.modsUpdateAll(world)),
+    remove: (file: string) =>
+      void run(`remove:${file}`, () => (mod ? api.modsRemove(world, file) : api.contentRemove(world, kind, file))),
+    activateShader: (file: string) => void run(`activate:${file}`, () => api.contentActivateShader(world, file)),
+    forcePack: (file: string | null) => void run(`force:${file ?? ""}`, () => api.contentForcePack(world, file)),
   };
 }
 
-export type ModActions = ReturnType<typeof useModActions>;
+export type ContentActions = ReturnType<typeof useContentActions>;
 
 /**
  * Sağdaki önizleme: tıklanan kutucuğun bilgisiyle hemen açılır; proje bilgisi (galeri, açıklama)
  * ve sürüm/bağımlılık planı ayrı ayrı, önbellekten ya da arkadan gelir.
  */
-export function usePreview(id: string) {
+export function usePreview(world: string, kind: ContentKind) {
   const [hit, setHit] = useState<ModHit | null>(null);
   // Kapanırken panel kayarak çıksın diye son proje bir süre daha tutulur; görünürlük ayrı.
   const [shown, setShown] = useState(false);
   const [info, setInfo] = useState<ModInfo | null>(null);
   const [plan, setPlan] = useState<ModPlan | null>(null);
   const current = useRef<string | null>(null);
+  const mod = kind === "mod";
 
   const loadInfo = useCallback(
-    (projectId: string) => fetchCached(`${id}|info|${projectId}`, () => api.modsProject(id, projectId)),
-    [id],
+    (projectId: string) =>
+      fetchCached(`${world}|${kind}|info|${projectId}`, () =>
+        mod ? api.modsProject(world, projectId) : api.contentProject(world, kind, projectId),
+      ),
+    [world, kind, mod],
+  );
+  const loadPlan = useCallback(
+    (projectId: string) => (mod ? api.modsPlan(world, projectId) : api.contentPlan(world, kind, projectId)),
+    [world, kind, mod],
   );
 
   const open = useCallback(
@@ -103,14 +161,15 @@ export function usePreview(id: string) {
       loadInfo(h.projectId)
         .then((i) => current.current === h.projectId && setInfo(i))
         .catch(console.error);
-      fetchCached(`${id}|plan|${h.projectId}`, () => api.modsPlan(id, h.projectId))
+      fetchCached(`${world}|${kind}|plan|${h.projectId}`, () => loadPlan(h.projectId))
         .then((p) => current.current === h.projectId && setPlan(p))
-        .catch((e) =>
-          current.current === h.projectId &&
-          setPlan({ versionNumber: null, unstable: false, with: [], missing: [], conflicts: [], error: errorMessage(e) }),
+        .catch(
+          (e) =>
+            current.current === h.projectId &&
+            setPlan({ versionNumber: null, unstable: false, with: [], missing: [], conflicts: [], error: errorMessage(e) }),
         );
     },
-    [id, loadInfo],
+    [world, kind, loadInfo, loadPlan],
   );
 
   const close = useCallback(() => {
@@ -125,11 +184,10 @@ export function usePreview(id: string) {
   const refreshPlan = useCallback(() => {
     const p = current.current;
     if (!p) return;
-    api
-      .modsPlan(id, p)
+    loadPlan(p)
       .then((pl) => current.current === p && setPlan(pl))
       .catch(console.error);
-  }, [id]);
+  }, [loadPlan]);
 
   return { hit, shown, info, plan, open, close, prefetch, refreshPlan };
 }

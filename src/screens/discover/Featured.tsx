@@ -12,6 +12,8 @@ import styles from "./Discover.module.css";
 type Props = {
   hits: ModHit[];
   plugin: boolean;
+  /** İhtiyaç rozeti yalnız modlarda. */
+  showNeed?: boolean;
   isInstalled: (hit: ModHit) => boolean;
   installing: string | null;
   busy: boolean;
@@ -30,7 +32,7 @@ const slide: Variants = {
  * Vitrinin başındaki geniş bant: popüler ve görselli ilk birkaç proje, elle geçilir (kendiliğinden dönmez).
  * Arkada aynı görselin bulanık kopyası bandı doldurur; geniş pencerede sağda "Sıradakiler" sütunu çıkar.
  */
-export function Featured({ hits, plugin, isInstalled, installing, busy, onInstall, onOpen }: Props) {
+export function Featured({ hits, plugin, showNeed = true, isInstalled, installing, busy, onInstall, onOpen }: Props) {
   const tt = useT();
   const t = tt.mods;
   const level = useMotionLevel();
@@ -76,7 +78,7 @@ export function Featured({ hits, plugin, isInstalled, installing, busy, onInstal
               <p className={styles.featuredDesc}>{hit.description}</p>
               <span className={styles.tileMeta}>
                 {t.downloads(compactCount(hit.downloads))}
-                <NeedBadge need={hit.clientNeed} />
+                {showNeed && <NeedBadge need={hit.clientNeed} />}
               </span>
               <div className={styles.featuredActions}>
                 {isInstalled(hit) ? (

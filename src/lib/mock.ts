@@ -324,6 +324,47 @@ const modsInstalled: Record<string, { file: string; projectId: string | null; de
   "mock-2": [],
 };
 const modById = (pid: string | null) => MODS.find((m) => m.projectId === pid);
+
+/** Sahte paketler (kaynak paketi, shader, veri paketi). */
+type MockPack = { projectId: string; title: string; description: string; downloads: number; kind: string };
+const PACKS: MockPack[] = [
+  { projectId: "RP000001", kind: "resourcePack", title: "Fresh Animations", description: "Gives entities new life with smooth animations.", downloads: 9_400_000 },
+  { projectId: "RP000002", kind: "resourcePack", title: "Faithful 32x", description: "The classic look, twice the resolution.", downloads: 6_100_000 },
+  { projectId: "RP000003", kind: "resourcePack", title: "Better Leaves", description: "Bushy leaves for every tree.", downloads: 3_200_000 },
+  { projectId: "RP000004", kind: "resourcePack", title: "Stay True", description: "A vanilla-like texture overhaul.", downloads: 2_800_000 },
+  { projectId: "RP000005", kind: "resourcePack", title: "Low On Fire", description: "Lowers the fire overlay so you can see.", downloads: 2_100_000 },
+  { projectId: "RP000006", kind: "resourcePack", title: "Default Dark Mode", description: "Dark GUI for menus and inventories.", downloads: 1_900_000 },
+  { projectId: "SH000001", kind: "shader", title: "Complementary Reimagined", description: "Vanilla-like shaders, beautifully reimagined.", downloads: 12_300_000 },
+  { projectId: "SH000002", kind: "shader", title: "BSL Shaders", description: "Bright, colorful and fast.", downloads: 10_100_000 },
+  { projectId: "SH000003", kind: "shader", title: "Bliss", description: "Realistic lighting and fog.", downloads: 3_900_000 },
+  { projectId: "SH000004", kind: "shader", title: "MakeUp Ultra Fast", description: "Shaders for low-end computers.", downloads: 3_100_000 },
+  { projectId: "SH000005", kind: "shader", title: "Solas", description: "A stylized fantasy look.", downloads: 1_200_000 },
+  { projectId: "DP000001", kind: "dataPack", title: "Terralith", description: "Explore almost 100 new biomes.", downloads: 8_800_000 },
+  { projectId: "DP000002", kind: "dataPack", title: "Dungeons and Taverns", description: "New structures to explore.", downloads: 4_400_000 },
+  { projectId: "DP000003", kind: "dataPack", title: "VeinMiner", description: "Mine a whole vein at once.", downloads: 2_500_000 },
+  { projectId: "DP000004", kind: "dataPack", title: "Incendium", description: "A Nether overhaul.", downloads: 2_200_000 },
+];
+const packById = (pid: string) => PACKS.find((p) => p.projectId === pid);
+/** Dünya → tür → kurulu paketler. */
+const packsInstalled: Record<string, { file: string; projectId: string; kind: string; active?: boolean; forced?: boolean }[]> = {};
+const packList = (world: string, kind: string, note: string | null = null) => ({
+  items: (packsInstalled[world] ?? [])
+    .filter((p) => p.kind === kind)
+    .map((p) => ({
+      file: p.file,
+      title: packById(p.projectId)?.title ?? p.file,
+      projectId: p.projectId,
+      versionNumber: "1.0.0",
+      icon: `modicon/${p.projectId}`,
+      clientNeed: null,
+      dependency: false,
+      known: true,
+      update: null,
+      active: !!p.active,
+      forced: !!p.forced,
+    })),
+  note,
+});
 function installedView(id: string) {
   return (modsInstalled[id] ??= []).map((m) => {
     const mod = modById(m.projectId);
@@ -712,6 +753,87 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "client_resync":
       await sleep(500);
       return null;
+    case "content_search": {
+      await sleep(300);
+      const q = String(args.query).toLowerCase();
+      const cat = args.category ? String(args.category) : "";
+      const have = new Set((packsInstalled[args.world] ?? []).filter((p) => p.kind === args.kind).map((p) => p.projectId));
+      const list = PACKS.filter((p) => p.kind === args.kind)
+        .filter((p) => !cat || (cat.length + p.projectId.charCodeAt(7)) % 3 !== 0)
+        .filter((p) => !q || p.title.toLowerCase().includes(q));
+      return {
+        total: list.length,
+        hits: list.slice(args.offset, args.offset + 20).map((p) => ({
+          projectId: p.projectId,
+          slug: p.projectId.toLowerCase(),
+          title: p.title,
+          description: p.description,
+          downloads: p.downloads,
+          icon: `modicon/${p.projectId}`,
+          author: "sixthsurge",
+          image: `modimg/${p.projectId}`,
+          color: "#3b5c7a",
+          clientNeed: "unknown",
+          installed: have.has(p.projectId),
+        })),
+      };
+    }
+    case "content_project": {
+      await sleep(250);
+      const p = packById(args.projectId)!;
+      const have = (packsInstalled[args.world] ?? []).some((x) => x.projectId === p.projectId);
+      return {
+        projectId: p.projectId,
+        title: p.title,
+        description: p.description,
+        body: MOCK_BODY(p.title, p.description),
+        downloads: p.downloads,
+        license: "CC-BY-NC-4.0",
+        url: `https://modrinth.com/project/${p.projectId.toLowerCase()}`,
+        icon: `modicon/${p.projectId}`,
+        gallery: [0, 1, 2].map((n) => `modimg/${p.projectId}_${n}`),
+        clientNeed: "unknown",
+        installed: have,
+      };
+    }
+    case "content_plan": {
+      await sleep(700);
+      const shaders = (packsInstalled[args.world] ?? []).some((x) => x.kind === "shader");
+      return {
+        versionNumber: "1.0.0",
+        unstable: false,
+        // İlk shader'da Iris ve Sodium da gelir.
+        with: args.kind === "shader" && !shaders ? [{ projectId: "YL57xq9U", title: "Iris Shaders" }, { projectId: "AANobbMI", title: "Sodium" }] : [],
+        missing: [],
+        conflicts: [],
+        error: null,
+      };
+    }
+    case "content_installed":
+      await sleep(250);
+      return packList(args.world, args.kind);
+    case "content_install": {
+      const p = packById(args.projectId)!;
+      for (let i = 1; i <= 4; i++) {
+        await sleep(250);
+        emit("mods://progress", { id: args.world, title: p.title, downloaded: i * 600_000, total: 2_400_000 });
+      }
+      const list = (packsInstalled[args.world] ??= []);
+      if (args.kind === "shader") list.forEach((x) => x.kind === "shader" && (x.active = false));
+      list.push({ file: `${p.title.replace(/\W+/g, "_")}.zip`, projectId: p.projectId, kind: args.kind, active: args.kind === "shader" });
+      return packList(args.world, args.kind);
+    }
+    case "content_remove":
+      packsInstalled[args.world] = (packsInstalled[args.world] ?? []).filter((x) => x.file !== args.file);
+      return packList(args.world, args.kind);
+    case "content_update":
+      return packList(args.world, args.kind);
+    case "content_activate_shader":
+      (packsInstalled[args.world] ?? []).forEach((x) => x.kind === "shader" && (x.active = x.file === args.file));
+      return packList(args.world, "shader");
+    case "content_force_pack":
+      (packsInstalled[args.world] ?? []).forEach((x) => x.kind === "resourcePack" && (x.forced = x.file === args.file));
+      return packList(args.world, "resourcePack", "Dünya yeniden açılınca geçerli olur.");
     case "mods_search": {
       await sleep(300);
       const plugin = byId(args.id).loader === "paper";

@@ -368,16 +368,27 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
 
     let server_mods = server_dir.join("mods");
     let list = manifest::build(&server_mods, &mods::load_records(&meta), inst.loader);
-    let wanted: Vec<Wanted> = list
+    let mut wanted: Vec<Wanted> = list
         .iter()
         .map(|m| Wanted {
             file: m.file.clone(),
             sha1: m.sha1.clone(),
         })
         .collect();
+    // Shader için kurulan istemci modları (Iris, Sodium…) sunucuda yok; kendi klasörlerinden gelir.
+    let (extras, extras_dir) = crate::content_cmds::extras_for(&meta);
+    for e in extras {
+        if !wanted.iter().any(|w| w.sha1 == e.sha1) {
+            wanted.push(e);
+        }
+    }
     let src = server_mods.clone();
     let result = client::sync(&mods_dir, &inst.id, &wanted, shared, move |w, dest| {
-        let from = src.join(&w.file);
+        let from = if src.join(&w.file).is_file() {
+            src.join(&w.file)
+        } else {
+            extras_dir.join(&w.file)
+        };
         async move {
             std::fs::copy(from, dest)?;
             Ok(())

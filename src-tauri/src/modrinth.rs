@@ -86,6 +86,60 @@ impl Sort {
     }
 }
 
+/// Keşfet'teki içerik türleri. Modlar sunucuya, paketler oyuncunun Minecraft'ına ya da dünyaya kurulur.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ContentKind {
+    Mod,
+    ResourcePack,
+    Shader,
+    DataPack,
+}
+
+impl ContentKind {
+    /// Modrinth'te sürümlerin yükleyicileri (sürüm sorgusu ve güncelleme kontrolü için).
+    pub fn loaders(self, world: LoaderKind) -> &'static [&'static str] {
+        match self {
+            Self::Mod => loaders_for(world),
+            Self::ResourcePack => &["minecraft"],
+            Self::Shader => &["iris", "optifine"],
+            Self::DataPack => &["datapack"],
+        }
+    }
+
+    /// İndirilecek dosyanın uzantısı.
+    pub fn ext(self) -> &'static str {
+        match self {
+            Self::Mod => "jar",
+            _ => "zip",
+        }
+    }
+}
+
+/// Paketlerin arama filtresi: türü ve sürümü uyan projeler (+ kategori).
+pub fn content_facets(
+    content: ContentKind,
+    world: LoaderKind,
+    mc: &str,
+    category: Option<&str>,
+) -> String {
+    let mut groups: Vec<Vec<String>> = match content {
+        ContentKind::Mod => return facets(world, mc, category),
+        ContentKind::ResourcePack => vec![vec!["project_type:resourcepack".into()]],
+        ContentKind::Shader => vec![
+            vec!["project_type:shader".into()],
+            // Iris, OptiFine biçimli paketleri de çalıştırır.
+            vec!["categories:iris".into(), "categories:optifine".into()],
+        ],
+        ContentKind::DataPack => vec![vec!["project_type:datapack".into()]],
+    };
+    groups.push(vec![format!("versions:{mc}")]);
+    if let Some(c) = category {
+        groups.push(vec![format!("categories:{c}")]);
+    }
+    serde_json::to_string(&groups).expect("facet serileştirilemedi")
+}
+
 /// Arama filtresi: türüne ve sürümüne uyan, sunucuda çalışabilen projeler.
 pub fn facets(kind: LoaderKind, mc: &str, category: Option<&str>) -> String {
     let mut groups = vec![
@@ -283,11 +337,26 @@ impl<'a> Modrinth<'a> {
         sort: Sort,
         offset: u32,
     ) -> AppResult<SearchResult> {
+        self.search_content(ContentKind::Mod, kind, mc, query, category, sort, offset)
+            .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn search_content(
+        &self,
+        content: ContentKind,
+        kind: LoaderKind,
+        mc: &str,
+        query: &str,
+        category: Option<&str>,
+        sort: Sort,
+        offset: u32,
+    ) -> AppResult<SearchResult> {
         self.get(
             "/search",
             &[
                 ("query", query.to_string()),
-                ("facets", facets(kind, mc, category)),
+                ("facets", content_facets(content, kind, mc, category)),
                 ("index", sort.index().to_string()),
                 ("offset", offset.to_string()),
                 ("limit", PAGE.to_string()),
@@ -333,7 +402,17 @@ impl<'a> Modrinth<'a> {
         kind: LoaderKind,
         mc: &str,
     ) -> AppResult<Vec<Version>> {
-        let loaders = serde_json::to_string(loaders_for(kind)).unwrap_or_default();
+        self.project_versions_for(id, loaders_for(kind), mc).await
+    }
+
+    /// Projenin bu yükleyicilerle ve Minecraft sürümüyle uyumlu sürümleri.
+    pub async fn project_versions_for(
+        &self,
+        id: &str,
+        loaders: &[&str],
+        mc: &str,
+    ) -> AppResult<Vec<Version>> {
+        let loaders = serde_json::to_string(loaders).unwrap_or_default();
         let versions = serde_json::to_string(&[mc]).unwrap_or_default();
         self.get(
             &format!("/project/{}/version", encode(id)),
@@ -361,12 +440,21 @@ impl<'a> Modrinth<'a> {
         kind: LoaderKind,
         mc: &str,
     ) -> AppResult<HashMap<String, Version>> {
+        self.latest_for_loaders(sha1s, loaders_for(kind), mc).await
+    }
+
+    pub async fn latest_for_loaders(
+        &self,
+        sha1s: &[String],
+        loaders: &[&str],
+        mc: &str,
+    ) -> AppResult<HashMap<String, Version>> {
         if sha1s.is_empty() {
             return Ok(HashMap::new());
         }
         self.post(
             "/version_files/update",
-            json!({ "hashes": sha1s, "algorithm": "sha1", "loaders": loaders_for(kind), "game_versions": [mc] }),
+            json!({ "hashes": sha1s, "algorithm": "sha1", "loaders": loaders, "game_versions": [mc] }),
         )
         .await
     }
@@ -410,6 +498,39 @@ mod tests {
         assert_eq!(f.len(), 4);
         assert_eq!(f[0], vec!["categories:fabric"]);
         assert_eq!(f[3], vec!["project_type:mod"]);
+    }
+
+    #[test]
+    fn facets_by_content() {
+        let f = |c, cat| -> Vec<Vec<String>> {
+            serde_json::from_str(&content_facets(c, LoaderKind::Fabric, "1.21.4", cat)).unwrap()
+        };
+        assert_eq!(
+            f(ContentKind::ResourcePack, None)[0],
+            vec!["project_type:resourcepack"]
+        );
+        assert_eq!(
+            f(ContentKind::ResourcePack, None)[1],
+            vec!["versions:1.21.4"]
+        );
+        let shader = f(ContentKind::Shader, Some("realistic"));
+        assert_eq!(shader[1], vec!["categories:iris", "categories:optifine"]);
+        assert_eq!(shader[3], vec!["categories:realistic"]);
+        assert_eq!(
+            f(ContentKind::DataPack, None)[0],
+            vec!["project_type:datapack"]
+        );
+        // Modlar bugünkü filtreyle aynı.
+        assert_eq!(f(ContentKind::Mod, None)[0], vec!["categories:fabric"]);
+        assert_eq!(
+            ContentKind::Shader.loaders(LoaderKind::Fabric),
+            ["iris", "optifine"]
+        );
+        assert_eq!(
+            ContentKind::Mod.loaders(LoaderKind::Quilt),
+            ["quilt", "fabric"]
+        );
+        assert_eq!(ContentKind::DataPack.ext(), "zip");
     }
 
     #[test]

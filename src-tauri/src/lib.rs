@@ -7,6 +7,8 @@ mod client;
 mod client_cmds;
 mod commands;
 mod consts;
+mod content;
+mod content_cmds;
 mod covers;
 mod download;
 mod error;
@@ -318,6 +320,15 @@ pub fn run() {
             mods_cmds::mods_search,
             mods_cmds::mods_project,
             mods_cmds::mods_plan,
+            content_cmds::content_search,
+            content_cmds::content_project,
+            content_cmds::content_plan,
+            content_cmds::content_installed,
+            content_cmds::content_install,
+            content_cmds::content_remove,
+            content_cmds::content_update,
+            content_cmds::content_activate_shader,
+            content_cmds::content_force_pack,
             mods_cmds::mods_install,
             mods_cmds::mods_installed,
             mods_cmds::mods_remove,

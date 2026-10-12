@@ -1,5 +1,5 @@
 import { getT, locale } from "../i18n";
-import type { Instance, LoaderKind } from "./api";
+import type { ContentKind, Instance, LoaderKind } from "./api";
 
 /** Teknik adlar (ikinci satırda, küçük). */
 export const LOADER_LABELS: Record<LoaderKind, string> = {
@@ -98,8 +98,18 @@ export function formatDuration(ms: number): string {
 }
 
 /** Modrinth kategorileri (mod ve eklentiler için ortak), etkin dilde. */
-export function categoryLabels(): Record<string, string> {
-  return getT().categories;
+/** Türün Modrinth kategorileri (çipler ve raflar için), sırayla. */
+const CATEGORY_KEYS: Record<ContentKind, string[]> = {
+  mod: ["optimization", "utility", "worldgen", "technology", "magic", "adventure", "decoration", "game-mechanics", "mobs", "equipment", "storage", "transportation", "food", "economy", "management", "minigame", "social", "library"],
+  resourcePack: ["vanilla-like", "realistic", "simplistic", "themed", "decoration", "combat", "tweaks", "utility", "gui", "fonts", "audio", "blocks", "items", "entities", "modded", "cursed"],
+  shader: ["realistic", "semi-realistic", "fantasy", "cartoon", "vanilla-like", "potato", "low", "medium", "high"],
+  dataPack: ["adventure", "worldgen", "game-mechanics", "utility", "magic", "mobs", "equipment", "decoration", "storage", "technology"],
+};
+
+/** Türün kategorileri: anahtar → görünen ad. */
+export function categoryLabels(kind: ContentKind = "mod"): Record<string, string> {
+  const all = getT().categories;
+  return Object.fromEntries(CATEGORY_KEYS[kind].map((k) => [k, all[k] ?? k]));
 }
 
 /** "2,7 Mn", "48 B", "312" */

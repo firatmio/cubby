@@ -31,21 +31,26 @@ pub struct ModRecord {
     pub need: Option<ClientNeed>,
 }
 
-/// Sürümün kurulacak dosyası: önce `primary` olan `.jar`, yoksa ilk `.jar`.
-pub fn primary_jar(v: &Version) -> Option<&VersionFile> {
-    let jars = || {
+/// Sürümün `ext` uzantılı kurulacak dosyası (modlarda `jar`, paketlerde `zip`): önce `primary`.
+pub fn primary_file<'a>(v: &'a Version, ext: &str) -> Option<&'a VersionFile> {
+    let suffix = format!(".{ext}");
+    let files = || {
         v.files
             .iter()
-            .filter(|f| f.filename.to_ascii_lowercase().ends_with(".jar"))
+            .filter(|f| f.filename.to_ascii_lowercase().ends_with(&suffix))
     };
-    jars().find(|f| f.primary).or_else(|| jars().next())
+    files().find(|f| f.primary).or_else(|| files().next())
 }
 
 /// En kararlı, sonra en yeni sürüm (release > beta > alpha). `.jar` dosyası olmayanlar elenir.
 pub fn pick_version(versions: &[Version]) -> Option<&Version> {
+    pick_version_ext(versions, "jar")
+}
+
+pub fn pick_version_ext<'a>(versions: &'a [Version], ext: &str) -> Option<&'a Version> {
     versions
         .iter()
-        .filter(|v| primary_jar(v).is_some())
+        .filter(|v| primary_file(v, ext).is_some())
         .min_by(|a, b| {
             a.version_type
                 .cmp(&b.version_type)
@@ -55,6 +60,11 @@ pub fn pick_version(versions: &[Version]) -> Option<&Version> {
 
 /// Sunucu klasörüne yazılacak dosya adı: yalnız güvenli karakterler, `.jar` sonu.
 pub fn sanitize_filename(name: &str) -> Option<String> {
+    sanitize_filename_ext(name, "jar")
+}
+
+/// `sanitize_filename` gibi; uzantı `ext` (paketlerde `zip`).
+pub fn sanitize_filename_ext(name: &str, ext: &str) -> Option<String> {
     let ok = !name.is_empty()
         && name.len() <= 128
         && name
@@ -62,8 +72,31 @@ pub fn sanitize_filename(name: &str) -> Option<String> {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '+' | '-'))
         && !name.starts_with('.')
         && !name.contains("..")
-        && name.to_ascii_lowercase().ends_with(".jar");
+        && name.to_ascii_lowercase().ends_with(&format!(".{ext}"));
     ok.then(|| name.to_string())
+}
+
+/// Paket dosyalarının adları serbest ("Faithful 32x - 1.21.zip"): reddetmek yerine güvenli
+/// karakterlere çevrilir (boşluk ve diğerleri `_`), uzantı korunur.
+pub fn safe_pack_name(name: &str, ext: &str) -> Option<String> {
+    let suffix = format!(".{ext}");
+    let lower = name.to_ascii_lowercase();
+    let stem = lower
+        .ends_with(&suffix)
+        .then(|| &name[..name.len() - suffix.len()])?;
+    let mut out = String::new();
+    for c in stem.chars() {
+        let c = if c.is_ascii_alphanumeric() || matches!(c, '_' | '+' | '-') {
+            c
+        } else {
+            '_'
+        };
+        if !(c == '_' && out.ends_with('_')) {
+            out.push(c);
+        }
+    }
+    let stem: String = out.trim_matches('_').chars().take(100).collect();
+    (!stem.is_empty()).then(|| format!("{stem}{suffix}"))
 }
 
 /// Bağımlılık çözümü için sürüm kaynağı (gerçekte Modrinth, testte sahte).
@@ -218,13 +251,31 @@ pub async fn download_into(
     replace: Option<&str>,
     on_progress: impl FnMut(u64, Option<u64>),
 ) -> AppResult<ModRecord> {
-    let file = primary_jar(version).ok_or_else(|| {
+    download_into_ext(http, meta, content, version, "jar", replace, on_progress).await
+}
+
+/// `download_into` gibi; dosya uzantısı `ext` (paketlerde `zip`).
+pub async fn download_into_ext(
+    http: &reqwest::Client,
+    meta: &Path,
+    content: &Path,
+    version: &Version,
+    ext: &str,
+    replace: Option<&str>,
+    on_progress: impl FnMut(u64, Option<u64>),
+) -> AppResult<ModRecord> {
+    let file = primary_file(version, ext).ok_or_else(|| {
         AppError::msg(tx!(
-            "Bu sürümde kurulabilir bir .jar dosyası yok.",
-            "This version has no installable .jar file."
+            "Bu sürümde kurulabilir bir dosya yok.",
+            "This version has no installable file."
         ))
     })?;
-    let name = sanitize_filename(&file.filename).ok_or_else(|| {
+    let name = if ext == "jar" {
+        sanitize_filename_ext(&file.filename, ext)
+    } else {
+        safe_pack_name(&file.filename, ext)
+    }
+    .ok_or_else(|| {
         AppError::msg(tx!(
             "Güvenli olmayan dosya adı: {}",
             "Unsafe file name: {}",
@@ -337,7 +388,26 @@ mod tests {
         zip_only.files = vec![file("pack.zip", true)];
         assert!(pick_version(&[zip_only.clone()]).is_none());
         zip_only.files.push(file("real.jar", false));
-        assert_eq!(primary_jar(&zip_only).unwrap().filename, "real.jar");
+        assert_eq!(primary_file(&zip_only, "jar").unwrap().filename, "real.jar");
+        assert_eq!(primary_file(&zip_only, "zip").unwrap().filename, "pack.zip");
+    }
+
+    #[test]
+    fn pack_names_are_made_safe() {
+        assert_eq!(
+            safe_pack_name("Faithful 32x - 1.21.zip", "zip").as_deref(),
+            Some("Faithful_32x_-_1_21.zip")
+        );
+        assert_eq!(
+            safe_pack_name("§6Fresh Animations v1.9.ZIP", "zip").as_deref(),
+            Some("6Fresh_Animations_v1_9.zip")
+        );
+        assert_eq!(
+            safe_pack_name("../../evil.zip", "zip").as_deref(),
+            Some("evil.zip")
+        );
+        assert_eq!(safe_pack_name("not-a-zip.jar", "zip"), None);
+        assert_eq!(safe_pack_name("....zip", "zip"), None);
     }
 
     #[test]

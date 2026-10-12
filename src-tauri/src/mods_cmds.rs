@@ -12,7 +12,7 @@ use crate::commands::AppState;
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
 use crate::loaders::LoaderKind;
-use crate::modrinth::{ClientNeed, Modrinth, Sort, Version, VersionType, client_need};
+use crate::modrinth::{ClientNeed, Modrinth, SearchHit, Sort, Version, VersionType, client_need};
 use crate::mods::{self, ModRecord, Source};
 use crate::paths;
 use crate::sessions::META_DIR;
@@ -29,14 +29,14 @@ const BODY_MAX: usize = 60_000;
 const GALLERY_PREVIEW: u32 = 1280;
 
 /// Aynı anda tek kurulum/güncelleme (dosya yarışlarını önler).
-static OPS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(crate) static OPS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Proje kimliği → ikon adresi (aramadan gelir; `media://modicon/<id>` bunu kullanır).
 #[derive(Default)]
 pub struct ModIcons(pub Mutex<HashMap<String, String>>);
 
 impl ModIcons {
-    fn remember(&self, id: &str, url: Option<&String>) -> Option<String> {
+    pub(crate) fn remember(&self, id: &str, url: Option<&String>) -> Option<String> {
         let url = url?;
         self.0
             .lock()
@@ -87,10 +87,10 @@ fn ctx(app: &AppHandle, state: &AppState, id: &str) -> AppResult<Ctx> {
     })
 }
 
-struct ModrinthSource<'a> {
-    api: Modrinth<'a>,
-    kind: LoaderKind,
-    mc: &'a str,
+pub(crate) struct ModrinthSource<'a> {
+    pub(crate) api: Modrinth<'a>,
+    pub(crate) kind: LoaderKind,
+    pub(crate) mc: &'a str,
 }
 
 impl Source for ModrinthSource<'_> {
@@ -129,8 +129,30 @@ pub struct HitView {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchView {
-    hits: Vec<HitView>,
-    total: u64,
+    pub(crate) hits: Vec<HitView>,
+    pub(crate) total: u64,
+}
+
+/// Arama sonucundan kutucuk bilgisi; ikon ve görsel `media` yollarına çevrilir.
+pub(crate) fn hit_view(
+    h: SearchHit,
+    installed: bool,
+    icons: &ModIcons,
+    images: &ModImages,
+) -> HitView {
+    HitView {
+        icon: icons.remember(&h.project_id, h.icon_url.as_ref()),
+        image: images.remember(&h.project_id, h.featured_gallery.as_ref()),
+        author: h.author,
+        color: h.color.map(|c| format!("#{c:06x}")),
+        client_need: client_need(&h.environment, h.client_side),
+        project_id: h.project_id,
+        slug: h.slug,
+        title: h.title,
+        description: h.description,
+        downloads: h.downloads,
+        installed,
+    }
 }
 
 #[tauri::command]
@@ -168,18 +190,9 @@ pub async fn mods_search(
             .into_iter()
             // Yalnız oyuncuda çalışan modlar sunucuya kurulmaz.
             .filter(|h| client_need(&h.environment, h.client_side) != ClientNeed::ClientOnly)
-            .map(|h| HitView {
-                icon: icons.remember(&h.project_id, h.icon_url.as_ref()),
-                image: images.remember(&h.project_id, h.featured_gallery.as_ref()),
-                author: h.author,
-                color: h.color.map(|c| format!("#{c:06x}")),
-                installed: installed.contains(&h.project_id),
-                project_id: h.project_id,
-                slug: h.slug,
-                title: h.title,
-                description: h.description,
-                downloads: h.downloads,
-                client_need: client_need(&h.environment, h.client_side),
+            .map(|h| {
+                let i = installed.contains(&h.project_id);
+                hit_view(h, i, &icons, &images)
             })
             .collect(),
     })
@@ -188,8 +201,8 @@ pub async fn mods_search(
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Named {
-    project_id: String,
-    title: String,
+    pub(crate) project_id: String,
+    pub(crate) title: String,
 }
 
 /// Önizleme panelinin hızlı parçası: tek istek (proje), galeri ve açıklama.
@@ -215,17 +228,17 @@ pub struct InfoView {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanView {
-    version_number: Option<String>,
-    unstable: bool,
+    pub(crate) version_number: Option<String>,
+    pub(crate) unstable: bool,
     /// Birlikte kurulacak bağımlılıklar.
-    with: Vec<Named>,
-    missing: Vec<Named>,
-    conflicts: Vec<Named>,
+    pub(crate) with: Vec<Named>,
+    pub(crate) missing: Vec<Named>,
+    pub(crate) conflicts: Vec<Named>,
     /// Kurulamıyorsa neden.
-    error: Option<String>,
+    pub(crate) error: Option<String>,
 }
 
-async fn names(api: &Modrinth<'_>, ids: Vec<String>) -> Vec<Named> {
+pub(crate) async fn names(api: &Modrinth<'_>, ids: Vec<String>) -> Vec<Named> {
     let projects = api.projects(&ids).await.unwrap_or_default();
     ids.into_iter()
         .map(|id| Named {
@@ -265,10 +278,23 @@ pub async fn mods_project(
     project_id: String,
 ) -> AppResult<InfoView> {
     let c = ctx(&app, &state, &id)?;
-    let p = Modrinth::new(&state.http).project(&project_id).await?;
-    let installed = mods::load_records(&c.meta)
-        .iter()
-        .any(|r| r.project_id == p.id);
+    let installed: HashSet<String> = mods::load_records(&c.meta)
+        .into_iter()
+        .map(|r| r.project_id)
+        .collect();
+    project_info(&state.http, &icons, &images, &project_id, &installed).await
+}
+
+/// Önizlemenin hızlı parçası (modlar ve paketler için ortak).
+pub(crate) async fn project_info(
+    http: &reqwest::Client,
+    icons: &ModIcons,
+    images: &ModImages,
+    project_id: &str,
+    installed: &HashSet<String>,
+) -> AppResult<InfoView> {
+    let p = Modrinth::new(http).project(project_id).await?;
+    let installed = installed.contains(&p.id);
     let mut shots = p.gallery.clone();
     // Öne çıkan önce, sonra Modrinth'teki sıra.
     shots.sort_by_key(|g| (!g.featured, g.ordering));

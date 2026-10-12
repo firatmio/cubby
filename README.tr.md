@@ -23,7 +23,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **İngilizce** — arayüz ve hata mesajları Türkçe ve İngilizce; ilk açılışta bilgisayarın diline göre, Ayarlar > Dil'den değiştirilebilir
 - [~] **M10** — Oyna / Keşfet sayfaları: başlık çubuğunun ortasında goo (slime) geçişli haplar, sayfalar esneyerek kayar. Animasyon seviyesi (Tam / Sade / Kapalı) kendiliğinden belirlenir (Windows animasyon ayarı, yazılımla çizim, düşen kareler) ve Ayarlar'dan değiştirilebilir
   - [x] **M10a** — sayfalar, animasyon seviyesi, büyütülebilir/yeniden boyutlanabilir pencere (en küçük 1200×720), kendi zemini olan ve modlarla Keşfet: dünya seçici, öne çıkan bandı ve kategori raflarıyla vitrin, galerili ve açıklaması gerçek Markdown olarak görünen yan önizleme (Modrinth görselleri küçültülüp diskte önbelleklenir), önden yükleme ve bellek önbelleği sayesinde listeler anında gelir
-  - [ ] **M10b** — kaynak paketleri (istenirse arkadaşlara zorunlu), shader'lar (Iris kendiliğinden kurulur), veri paketleri
+  - [x] **M10b** — kaynak paketleri (kendi Minecraft'ına kurulur ve açılır; istenirse sunucu üzerinden arkadaşlara zorunlu), shader'lar (Iris/Sodium — Forge'da Oculus/Embeddium — kendiliğinden kurulur ve dünyaya göre eşitlenir, shader açılır), veri paketleri (dünyaya kurulur, sunucu açıksa `reload` gider); arkadaşının dünyasında yalnız değiştirebileceğin sekmeler görünür
   - [ ] **M10c** — mod paketleri → yeni dünya
 
 Sırada M10b/M10c, sonra web katılım sayfası ve yayın hazırlığı var.

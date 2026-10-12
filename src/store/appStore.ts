@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   api,
+  type ContentKind,
   type ConnectionView,
   type InstallProgress,
   type ClientStatus,
@@ -28,8 +29,8 @@ export type View = "home" | "setup";
 /** Ana görünümdeki iki sayfa: dünyalar (Oyna) ve seçili dünya için içerik (Keşfet). */
 export type Page = "play" | "discover";
 
-/** Keşfet'in sekmeleri. */
-export type DiscoverTab = "mods";
+/** Keşfet'in sekmeleri: içerik türleri. */
+export type DiscoverTab = ContentKind;
 
 /** Sağdan kayan paneller. */
 export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection";
@@ -55,6 +56,7 @@ interface AppStore {
   page: Page;
   setPage: (page: Page) => void;
   discoverTab: DiscoverTab;
+  setDiscoverTab: (tab: DiscoverTab) => void;
   /** Keşfet'i bir sekmesiyle açar (eski "Modlar" paneli yerine). */
   openDiscover: (tab: DiscoverTab) => void;
 
@@ -141,7 +143,8 @@ export const useAppStore = create<AppStore>((set, get) => {
 
     page: "play",
     setPage: (page) => set({ page, sheet: null }),
-    discoverTab: "mods",
+    discoverTab: "mod",
+    setDiscoverTab: (discoverTab) => set({ discoverTab }),
     openDiscover: (discoverTab) => set({ page: "discover", discoverTab, sheet: null }),
 
     setupColor: "#6cc04a",

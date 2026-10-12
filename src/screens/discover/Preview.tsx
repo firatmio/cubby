@@ -1,31 +1,36 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Check, Download, ExternalLink, Info, X } from "lucide-react";
-import { mediaUrl, openExternal } from "../../lib/api";
+import { mediaUrl, openExternal, type ContentKind } from "../../lib/api";
 import { useT } from "../../i18n";
 import { compactCount } from "../../lib/format";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
 import { Markdown } from "../../ui/Markdown";
+import { Toggle } from "../../ui/Toggle";
 import { ModIcon } from "./parts";
 import { TileArt } from "./ProjectTile";
-import type { ModActions, PreviewState } from "./useBrowse";
+import type { ContentActions, PreviewState } from "./useBrowse";
 import styles from "./Discover.module.css";
 
 type Props = {
   preview: PreviewState;
+  kind: ContentKind;
   plugin: boolean;
-  actions: ModActions;
+  /** Kendi dünyan mı (zorunlu kaynak paketi yalnız orada). */
+  own: boolean;
+  actions: ContentActions;
 };
 
 /**
  * Sağdaki odak paneli (modal değil): galeri, bilgi, kurulum ve gerçek biçimiyle açıklama.
  * Kutucuğun bilgileriyle hemen açılır; galeri/açıklama ve sürüm planı arkadan dolar.
  */
-export function Preview({ preview, plugin, actions }: Props) {
+export function Preview({ preview, kind, plugin, own, actions }: Props) {
   const { hit, info, plan, close } = preview;
   const tt = useT();
   const t = tt.mods;
+  const d = tt.discover;
   const [shot, setShot] = useState(0);
 
   useEffect(() => setShot(0), [hit?.projectId]);
@@ -35,6 +40,7 @@ export function Preview({ preview, plugin, actions }: Props) {
   const current = gallery[Math.min(shot, gallery.length - 1)];
   const installed = actions.isInstalled(hit);
   const blocked = !!plan?.error || (plan?.conflicts.length ?? 0) > 0;
+  const mine = actions.installed?.find((m) => m.projectId === hit.projectId);
 
   return (
     <aside className={styles.preview} aria-label={hit.title}>
@@ -57,7 +63,7 @@ export function Preview({ preview, plugin, actions }: Props) {
                 key={g}
                 type="button"
                 className={n === shot ? styles.thumbOn : undefined}
-                aria-label={tt.discover.galleryImage(n + 1)}
+                aria-label={d.galleryImage(n + 1)}
                 onClick={() => setShot(n)}
               >
                 <img src={mediaUrl(g)} alt="" draggable={false} loading="lazy" decoding="async" />
@@ -71,7 +77,7 @@ export function Preview({ preview, plugin, actions }: Props) {
           <div className={styles.previewName}>
             <h2>{hit.title}</h2>
             <span className={styles.tileMeta}>
-              {hit.author && tt.discover.by(hit.author)}
+              {hit.author && d.by(hit.author)}
               {hit.author && " · "}
               {t.downloads(compactCount(info?.downloads ?? hit.downloads))}
               {info?.license ? ` · ${info.license}` : ""}
@@ -82,7 +88,7 @@ export function Preview({ preview, plugin, actions }: Props) {
         <div className={styles.previewActions}>
           {installed ? (
             <span className={styles.installed}>
-              <Check size={15} aria-hidden /> {t.installed}
+              <Check size={15} aria-hidden /> {mine?.active ? d.activeShader : t.installed}
             </span>
           ) : (
             <Button
@@ -95,12 +101,29 @@ export function Preview({ preview, plugin, actions }: Props) {
               {plan ? t.install : tt.common.preparing}
             </Button>
           )}
+          {kind === "shader" && installed && mine && !mine.active && (
+            <Button variant="secondary" disabled={actions.busy !== null} onClick={() => actions.activateShader(mine.file)}>
+              {d.useShader}
+            </Button>
+          )}
           {info && (
             <Button variant="ghost" icon={ExternalLink} onClick={() => openExternal(info.url)}>
               {t.openModrinth}
             </Button>
           )}
         </div>
+
+        {kind === "resourcePack" && own && mine && (
+          <div className={styles.facts}>
+            <Toggle
+              checked={!!mine.forced}
+              disabled={actions.busy !== null}
+              onChange={(on) => actions.forcePack(on ? mine.file : null)}
+              label={d.forcePack}
+              description={d.forcePackText}
+            />
+          </div>
+        )}
 
         <ul className={styles.facts}>
           {!plan ? (
@@ -141,22 +164,28 @@ export function Preview({ preview, plugin, actions }: Props) {
               )}
             </>
           )}
-          {hit.clientNeed === "required" && (
+          {kind === "mod" && hit.clientNeed === "required" && (
             <li className={styles.warn}>
               <AlertTriangle size={15} aria-hidden />
               {t.clientRequired}
             </li>
           )}
-          {hit.clientNeed === "recommended" && (
+          {kind === "mod" && hit.clientNeed === "recommended" && (
             <li>
               <Info size={15} aria-hidden />
               {t.clientRecommended}
             </li>
           )}
-          {hit.clientNeed === "none" && (
+          {kind === "mod" && hit.clientNeed === "none" && (
             <li>
               <Check size={15} aria-hidden />
               {t.clientNone}
+            </li>
+          )}
+          {kind !== "mod" && (
+            <li>
+              <Info size={15} aria-hidden />
+              {kind === "resourcePack" ? d.packInfo : kind === "shader" ? d.shaderInfo : d.dataPackInfo}
             </li>
           )}
         </ul>

@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ModHit, ModSearch, ModSort } from "../../lib/api";
+import type { ContentKind, ModHit, ModSearch, ModSort } from "../../lib/api";
 import { useT } from "../../i18n";
 import { peek } from "../../lib/queryCache";
 import { ProjectTile, SkeletonTile } from "./ProjectTile";
-import { searchKey, searchMods } from "./useBrowse";
+import { searchItems, searchKey } from "./useBrowse";
 import styles from "./Discover.module.css";
 
 export type ShelfDef = { key: string; title: string; category: string | null; sort: ModSort };
 
 type Props = {
   world: string;
+  kind: ContentKind;
   def: ShelfDef;
   plugin: boolean;
   /** Raf, bu kaydırma alanında görünür olmaya yaklaşınca yüklenir. */
@@ -24,9 +25,9 @@ type Props = {
 };
 
 /** Yatay kayan tek raf: başlık, "Tümünü gör", kutucuklar ve kenarlarda ‹ › düğmeleri. */
-export function Shelf({ world, def, plugin, scrollRoot, selectedId, isInstalled, onOpen, onPrefetch, onSeeAll, onLoaded }: Props) {
+export function Shelf({ world, kind, def, plugin, scrollRoot, selectedId, isInstalled, onOpen, onPrefetch, onSeeAll, onLoaded }: Props) {
   const t = useT().discover;
-  const key = searchKey(world, "", def.category, def.sort, 0);
+  const key = searchKey(world, kind, "", def.category, def.sort, 0);
   const [hits, setHits] = useState<ModHit[] | null>(() => peek<ModSearch>(key)?.hits ?? null);
   const [near, setNear] = useState(hits !== null);
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -47,7 +48,7 @@ export function Shelf({ world, def, plugin, scrollRoot, selectedId, isInstalled,
   useEffect(() => {
     if (!near) return;
     let live = true;
-    searchMods(world, "", def.category, def.sort, 0)
+    searchItems(world, kind, "", def.category, def.sort, 0)
       .then((r) => {
         if (!live) return;
         setHits(r.hits);
@@ -57,7 +58,7 @@ export function Shelf({ world, def, plugin, scrollRoot, selectedId, isInstalled,
     return () => {
       live = false;
     };
-  }, [near, world, def.category, def.sort, onLoaded]);
+  }, [near, world, kind, def.category, def.sort, onLoaded]);
 
   const measure = () => {
     const el = row.current;
@@ -90,6 +91,7 @@ export function Shelf({ world, def, plugin, scrollRoot, selectedId, isInstalled,
                   key={h.projectId}
                   hit={h}
                   plugin={plugin}
+                  showNeed={kind === "mod"}
                   installed={isInstalled(h)}
                   selected={h.projectId === selectedId}
                   onOpen={onOpen}

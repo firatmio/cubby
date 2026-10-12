@@ -1,5 +1,5 @@
 import { RefreshCw, Trash2 } from "lucide-react";
-import type { InstalledMod } from "../../lib/api";
+import type { ContentKind, InstalledMod } from "../../lib/api";
 import { useT } from "../../i18n";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
@@ -8,6 +8,7 @@ import { ModIcon, NeedBadge } from "./parts";
 import styles from "./Discover.module.css";
 
 type Props = {
+  kind: ContentKind;
   installed: InstalledMod[] | null;
   plugin: boolean;
   busy: string | null;
@@ -16,12 +17,16 @@ type Props = {
   onRemove: (file: string) => void;
   /** Modrinth'te tanınan satıra tıklayınca önizleme. */
   onOpen: (mod: InstalledMod) => void;
+  /** Shader'larda: bu shader'ı kullan. */
+  onActivate: (file: string) => void;
   selectedId: string | null;
 };
 
-/** Dünyaya kurulu modlar/eklentiler: güncelle, kaldır. */
-export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, onRemove, onOpen, selectedId }: Props) {
-  const t = useT().mods;
+/** Kurulu olanlar: güncelle, kaldır; shader'larda hangisinin kullanıldığı, kaynak paketlerinde zorunlu olan. */
+export function InstalledView({ kind, installed, plugin, busy, onUpdate, onUpdateAll, onRemove, onOpen, onActivate, selectedId }: Props) {
+  const tt = useT();
+  const t = tt.mods;
+  const d = tt.discover;
   if (installed === null) {
     return (
       <div className={styles.rows}>
@@ -34,12 +39,14 @@ export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, 
       </div>
     );
   }
-  if (installed.length === 0) return <p className={styles.empty}>{plugin ? t.emptyPlugins : t.emptyMods}</p>;
+  if (installed.length === 0) {
+    return <p className={styles.empty}>{kind !== "mod" ? d.emptyPacks : plugin ? t.emptyPlugins : t.emptyMods}</p>;
+  }
   const updates = installed.filter((m) => m.update).length;
 
   return (
     <div className={styles.rows}>
-      {updates > 0 && (
+      {updates > 0 && kind === "mod" && (
         <div className={styles.updateBar}>
           <span>{t.updatesAvailable(updates)}</span>
           <Button
@@ -71,6 +78,8 @@ export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, 
                 {m.title}
                 {m.dependency && <Badge>{t.dependency}</Badge>}
                 {!m.known && <Badge>{t.manual}</Badge>}
+                {m.active && <Badge tone="accent">{d.activeShader}</Badge>}
+                {m.forced && <Badge tone="warning">{d.forced}</Badge>}
                 <NeedBadge need={m.clientNeed} />
               </span>
               <span className={styles.tileMeta}>
@@ -79,6 +88,11 @@ export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, 
               </span>
             </span>
           </button>
+          {kind === "shader" && !m.active && (
+            <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => onActivate(m.file)}>
+              {d.useShader}
+            </Button>
+          )}
           {m.update && (
             <Button
               size="sm"

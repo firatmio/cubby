@@ -22,7 +22,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](
 - [x] **English** — UI and error messages in Turkish and English; follows the computer's language on first launch, changeable in Settings > Language
 - [~] **M10** — Play / Discover pages: centred pills in the title bar with a goo (slime) transition, pages slide with a stretch. Animation level (Full / Simple / Off) detected automatically (Windows animation setting, software rendering, dropped frames) and adjustable in Settings
   - [x] **M10a** — pages, animation level, resizable/maximizable window (minimum 1200×720), Discover with its own backdrop and mods: world picker, a showcase with a featured band and category shelves, a side preview with gallery and properly rendered Markdown descriptions (Modrinth images resized and cached on disk), prefetching and an in-memory cache so lists appear instantly
-  - [ ] **M10b** — resource packs (optionally required for friends), shaders (Iris installed automatically), data packs
+  - [x] **M10b** — resource packs (installed into your Minecraft and turned on; optionally required for friends via the server), shaders (Iris/Sodium — Oculus/Embeddium on Forge — installed automatically and synced per world, shader turned on), data packs (installed into the world, `reload` sent if running); on a friend's world only the tabs you can change are shown
   - [ ] **M10c** — modpacks → new world
 
 Next up: M10b/M10c, then a web join page and release preparation.

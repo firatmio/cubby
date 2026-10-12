@@ -43,6 +43,36 @@
   margin-left: auto;
 }
 
+/* Tür sekmeleri (Modlar · Kaynak paketleri · …) ve Göz at / Kurulu. */
+.kindRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.kindSingle {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+/* Arkadaşının dünyasında: neden yalnız bazı sekmeler var. */
+.friendLine {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: calc(-1 * var(--sp-2));
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.noteIcon {
+  margin-right: 4px;
+  vertical-align: -3px;
+  color: var(--accent);
+}
+
 /* ---- Dünya seçici ---- */
 
 .picker {

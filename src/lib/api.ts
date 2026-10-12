@@ -129,6 +129,8 @@ export interface AccessView {
  */
 export type ClientNeed = "required" | "recommended" | "none" | "clientOnly" | "unknown";
 export type ModSort = "relevance" | "downloads" | "updated";
+/** Keşfet'teki içerik türleri (Rust `ContentKind`). */
+export type ContentKind = "mod" | "resourcePack" | "shader" | "dataPack";
 
 export interface ModHit {
   projectId: string;
@@ -199,6 +201,16 @@ export interface InstalledMod {
   known: boolean;
   /** Daha yeni sürüm numarası */
   update: string | null;
+  /** Etkin shader (yalnız shader'larda) */
+  active?: boolean;
+  /** Sunucunun girenlere zorunlu gönderdiği kaynak paketi */
+  forced?: boolean;
+}
+
+/** Kurulu paketler + kısa bilgi notu (ör. "Minecraft açık; yeniden açınca etkin olur"). */
+export interface PackList {
+  items: InstalledMod[];
+  note: string | null;
 }
 
 export interface ModProgress {
@@ -522,6 +534,24 @@ export const api = {
   modsRemove: (id: string, file: string) => invoke<InstalledMod[]>("mods_remove", { id, file }),
   modsUpdate: (id: string, file: string) => invoke<InstalledMod[]>("mods_update", { id, file }),
   modsUpdateAll: (id: string) => invoke<InstalledMod[]>("mods_update_all", { id }),
+
+  /** Paketler (kaynak paketi, shader, veri paketi). `world`: dünya kimliği ya da `join:<id>`. */
+  contentSearch: (world: string, kind: ContentKind, query: string, category: string | null, sort: ModSort, offset: number) =>
+    invoke<ModSearch>("content_search", { world, kind, query, category, sort, offset }),
+  contentProject: (world: string, kind: ContentKind, projectId: string) =>
+    invoke<ModInfo>("content_project", { world, kind, projectId }),
+  contentPlan: (world: string, kind: ContentKind, projectId: string) =>
+    invoke<ModPlan>("content_plan", { world, kind, projectId }),
+  contentInstalled: (world: string, kind: ContentKind) => invoke<PackList>("content_installed", { world, kind }),
+  contentInstall: (world: string, kind: ContentKind, projectId: string) =>
+    invoke<PackList>("content_install", { world, kind, projectId }),
+  contentRemove: (world: string, kind: ContentKind, file: string) =>
+    invoke<PackList>("content_remove", { world, kind, file }),
+  contentUpdate: (world: string, kind: ContentKind, file: string) =>
+    invoke<PackList>("content_update", { world, kind, file }),
+  contentActivateShader: (world: string, file: string) =>
+    invoke<PackList>("content_activate_shader", { world, file }),
+  contentForcePack: (world: string, file: string | null) => invoke<PackList>("content_force_pack", { world, file }),
 };
 
 /**

@@ -169,7 +169,7 @@ pub struct ModCheck {
 }
 
 /// Katılınan dünyanın profil anahtarı/klasörü: host + dünyadan türetilir (önizlemede de aynı çıkar).
-fn join_key(host: &str, world: &str) -> String {
+pub(crate) fn join_key(host: &str, world: &str) -> String {
     crate::hash::hash_bytes(
         crate::hash::HashAlgo::Sha1,
         format!("{host}:{world}").as_bytes(),
@@ -367,13 +367,24 @@ async fn install_client_mods(
         crate::client::Launcher::TLauncher => None,
     };
 
-    let wanted: Vec<crate::client::Wanted> = wanted_mods
+    let mut wanted: Vec<crate::client::Wanted> = wanted_mods
         .iter()
         .map(|m| crate::client::Wanted {
             file: m.file.clone(),
             sha1: m.sha1.clone(),
         })
         .collect();
+    // Bu dünya için kurduğun shader modları (Iris, Sodium…) arkadaşının listesinde yok; kendi
+    // klasörlerinden kopyalanır, eşitleme onları silmez.
+    let (extras, extras_dir) = crate::content_cmds::joined_dir(app, &w.id)
+        .map(|d| crate::content_cmds::extras_for(&d))
+        .unwrap_or_default();
+    for e in &extras {
+        if !wanted.iter().any(|x| x.sha1 == e.sha1) {
+            wanted.push(e.clone());
+        }
+    }
+    let extras = Arc::new(extras);
     let http = app.state::<AppState>().http.clone();
     let p2p = app.state::<Arc<P2p>>().inner().clone();
     let host: iroh::EndpointId = w
@@ -394,9 +405,17 @@ async fn install_client_mods(
             id.clone(),
             app2.clone(),
         );
+        let extra = extras
+            .iter()
+            .any(|e| e.sha1 == want.sha1)
+            .then(|| extras_dir.join(&want.file));
         index += 1;
         let i = index;
         async move {
+            if let Some(from) = extra {
+                std::fs::copy(from, &dest)?;
+                return Ok(());
+            }
             let m = all
                 .iter()
                 .find(|m| m.sha1 == want.sha1)

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { errorMessage, type ModHit, type ModSearch, type ModSort } from "../../lib/api";
+import { errorMessage, type ContentKind, type ModHit, type ModSearch, type ModSort } from "../../lib/api";
 import { useT } from "../../i18n";
 import { peek } from "../../lib/queryCache";
 import { ProjectTile, SkeletonTile } from "./ProjectTile";
-import { mergeHits, searchKey, searchMods, type ModActions } from "./useBrowse";
+import { mergeHits, searchItems, searchKey, type ContentActions } from "./useBrowse";
 import styles from "./Discover.module.css";
 
 /** Yazarken her tuşta değil, bu kadar durunca ara. */
@@ -11,23 +11,27 @@ const TYPE_DELAY = 250;
 
 type Props = {
   world: string;
+  kind: ContentKind;
   plugin: boolean;
   query: string;
   category: string | null;
   sort: ModSort;
   scrollRoot: RefObject<HTMLElement | null>;
   selectedId: string | null;
-  actions: ModActions;
+  actions: ContentActions;
   onOpen: (hit: ModHit) => void;
   onPrefetch: (projectId: string) => void;
   onLoaded: (hits: ModHit[]) => void;
 };
 
 /** Arama ya da "Tümünü gör": kutucuk ızgarası, alta yaklaşınca sonraki sayfa. */
-export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, selectedId, actions, onOpen, onPrefetch, onLoaded }: Props) {
-  const t = useT().mods;
+export function ResultGrid({ world, kind, plugin, query, category, sort, scrollRoot, selectedId, actions, onOpen, onPrefetch, onLoaded }: Props) {
+  const tt = useT();
+  const t = tt.mods;
   const q = query.trim();
-  const [result, setResult] = useState<ModSearch | null>(() => peek<ModSearch>(searchKey(world, q, category, sort, 0)) ?? null);
+  const [result, setResult] = useState<ModSearch | null>(
+    () => peek<ModSearch>(searchKey(world, kind, q, category, sort, 0)) ?? null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const seq = useRef(0);
@@ -36,7 +40,7 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const cached = peek<ModSearch>(searchKey(world, q, category, sort, 0));
+    const cached = peek<ModSearch>(searchKey(world, kind, q, category, sort, 0));
     setResult(cached ?? null);
     setLoading(!cached);
     setError(null);
@@ -44,7 +48,7 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
     const n = ++seq.current;
     const timer = setTimeout(
       () =>
-        searchMods(world, q, category, sort, 0)
+        searchItems(world, kind, q, category, sort, 0)
           .then((r) => {
             if (n !== seq.current) return;
             setResult(r);
@@ -56,14 +60,14 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
     );
     scrollRoot.current?.scrollTo({ top: 0 });
     return () => clearTimeout(timer);
-  }, [world, q, category, sort, scrollRoot, onLoaded]);
+  }, [world, kind, q, category, sort, scrollRoot, onLoaded]);
 
   const loadMore = useCallback(() => {
     if (!result || busyMore.current || result.hits.length >= result.total) return;
     busyMore.current = true;
     const n = seq.current;
     setLoading(true);
-    searchMods(world, q, category, sort, result.hits.length)
+    searchItems(world, kind, q, category, sort, result.hits.length)
       .then((r) => {
         if (n !== seq.current) return;
         setResult((prev) => ({ hits: mergeHits(prev?.hits ?? [], r.hits), total: r.total }));
@@ -75,7 +79,7 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
         busyMore.current = false;
         setLoading(false);
       });
-  }, [result, world, q, category, sort, onLoaded]);
+  }, [result, world, kind, q, category, sort, onLoaded]);
 
   useEffect(() => {
     const el = sentinel.current;
@@ -98,6 +102,7 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
             key={h.projectId}
             hit={h}
             plugin={plugin}
+            showNeed={kind === "mod"}
             installed={actions.isInstalled(h)}
             selected={h.projectId === selectedId}
             quickInstall={{
@@ -111,7 +116,7 @@ export function ResultGrid({ world, plugin, query, category, sort, scrollRoot, s
         ))}
         {loading && Array.from({ length: hits.length ? 4 : 8 }, (_, i) => <SkeletonTile key={`s${i}`} />)}
       </div>
-      {!loading && hits.length === 0 && !error && <p className={styles.empty}>{plugin ? t.noneFoundPlugins : t.noneFoundMods}</p>}
+      {!loading && hits.length === 0 && !error && <p className={styles.empty}>{kind !== "mod" ? tt.discover.nonePacks : plugin ? t.noneFoundPlugins : t.noneFoundMods}</p>}
       <div ref={sentinel} className={styles.sentinel} />
     </>
   );

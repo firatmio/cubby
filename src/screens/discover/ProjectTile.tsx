@@ -40,6 +40,8 @@ export function TileArt({ hit, plugin, iconSize = 64 }: { hit: ModHit; plugin: b
 type Props = {
   hit: ModHit;
   plugin: boolean;
+  /** "Arkadaşın da kurmalı" gibi rozetler yalnız modlarda. */
+  showNeed?: boolean;
   installed: boolean;
   selected: boolean;
   /** Izgarada altta küçük "Kur" düğmesi; rafta yok. */
@@ -55,6 +57,7 @@ type Props = {
 export const ProjectTile = memo(function ProjectTile({
   hit,
   plugin,
+  showNeed = true,
   installed,
   selected,
   quickInstall,
@@ -94,7 +97,7 @@ export const ProjectTile = memo(function ProjectTile({
           <span className={styles.tileTitle}>{hit.title}</span>
           <span className={styles.tileMeta}>
             {t.downloads(compactCount(hit.downloads))}
-            <NeedBadge need={hit.clientNeed} />
+            {showNeed && <NeedBadge need={hit.clientNeed} />}
           </span>
         </span>
       </button>
