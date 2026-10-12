@@ -94,7 +94,7 @@ pub fn command_args(m: &Merged, spec: &LaunchSpec, env: Env) -> Vec<String> {
         ("library_directory", path(&spec.mc_dir.join("libraries"))),
         ("classpath_separator", sep().to_string()),
         ("classpath", cp.join(sep())),
-        ("launcher_name", "mc-server-launcher".to_string()),
+        ("launcher_name", "cubby".to_string()),
         ("launcher_version", env!("CARGO_PKG_VERSION").to_string()),
     ]);
     let mut args = vec![

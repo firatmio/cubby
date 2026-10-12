@@ -136,7 +136,7 @@ export function JoinDialog() {
               setCode(e.target.value);
               setError(null);
             }}
-            placeholder="mcsm://join?d=…"
+            placeholder="cubby://join?d=…"
             rows={3}
             autoFocus
             spellCheck={false}
@@ -201,7 +201,7 @@ export function JoinDialog() {
                       {LOADER_LABELS[preview.loader]} {preview.loaderVersion} kurulacak
                       {preview.mods.launcher === "tLauncher"
                         ? "; modlar TLauncher'ın mods klasörüne konacak"
-                        : ` ve Launcher'da "${preview.name} · MC Sunucu" profili oluşturulacak`}
+                        : ` ve Launcher'da "${preview.name} · Cubby" profili oluşturulacak`}
                       .
                     </Item>
                   )}

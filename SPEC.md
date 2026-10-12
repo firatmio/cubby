@@ -1,4 +1,4 @@
-# Minecraft Sunucu Yöneticisi — Spec
+# Cubby (önceki adıyla Minecraft Sunucu Yöneticisi) — Spec
 
 Kardeşimle oynamak için, terminalle uğraşmadan Minecraft Java sunucusu kurup yöneten küçük bir masaüstü uygulaması. Minecraft hissi veren, sevimli bir UI.
 

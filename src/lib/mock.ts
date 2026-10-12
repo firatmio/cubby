@@ -466,13 +466,13 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           await gameBoot();
           emit("client://launch", {
             id: args.id,
-            result: { opened: false, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, game: true, note: null, error: null },
+            result: { opened: false, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: true, note: null, error: null },
           });
           return;
         }
         emit("client://launch", {
           id: args.id,
-          result: { opened: true, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, game: false, note: null, error: null },
+          result: { opened: true, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: false, note: null, error: null },
         });
       });
       return null;
@@ -553,10 +553,10 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "create_invite":
     case "reset_invite": {
       const code = `${SAMPLE_CODE}${cmd === "reset_invite" ? Date.now().toString(36) : ""}`;
-      return { code, link: `mcsm://join?d=${code}` };
+      return { code, link: `cubby://join?d=${code}` };
     }
     case "preview_invite":
-      if (!String(args.code).trim().startsWith("mcsm") && String(args.code).trim().length < 8)
+      if (!String(args.code).trim().startsWith("cubby") && String(args.code).trim().length < 8)
         throw "Davet kodu bozuk ya da eksik. Arkadaşından yeni bir davet iste.";
       await sleep(700);
       return {
@@ -599,7 +599,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           loaderVersion: "0.19.5",
           localPort: 25600 + joined.length,
           addedAt: Date.now(),
-          profile: "Mehmet'in modlu dünyası · MC Sunucu",
+          profile: "Mehmet'in modlu dünyası · Cubby",
           gameDir: "C:\\Users\\sen\\AppData\\Roaming\\.minecraft\\mcsm\\mehmet",
           modsRev: "aaaa",
           withRecommended: !!args.installRecommended,
@@ -639,7 +639,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       return {
         opened: true,
         launcher: "official",
-        pick: `${j.world.name} · MC Sunucu`,
+        pick: `${j.world.name} · Cubby`,
         wasRunning: true,
         direct: true,
         game: false,
@@ -666,7 +666,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     }
     case "client_status":
       return byId(args.id).loader === "fabric" && settings.clientSync
-        ? { state: "ok", launcher: "official", pick: `${byId(args.id).name} · MC Sunucu`, mods: 3, blocked: [], message: null }
+        ? { state: "ok", launcher: "official", pick: `${byId(args.id).name} · Cubby`, mods: 3, blocked: [], message: null }
         : { state: "off", launcher: null, pick: null, mods: 0, blocked: [], message: null };
     case "client_resync":
       await sleep(500);

@@ -13,7 +13,7 @@ yalnız kimlik bekliyor.
 
 1. [Microsoft Entra yönetim merkezi](https://entra.microsoft.com) → **Uygulamalar → Uygulama kayıtları →
    Yeni kayıt**. (Kişisel hesapta Entra kiracısı yoksa önce ücretsiz bir Azure hesabı açman istenebilir.)
-2. **Ad:** uygulamanın adı (isim belli olunca onu yaz; şimdilik "MC Sunucu Yöneticisi").
+2. **Ad:** `Cubby`.
 3. **Desteklenen hesap türleri:** *Yalnızca kişisel Microsoft hesapları*.
    Minecraft yalnız kişisel hesaplarla çalışır.
 4. **Yeniden yönlendirme URI'si:** platform *Genel istemci/yerel (mobil ve masaüstü)*, değer
@@ -33,7 +33,7 @@ Formda istenenler ve önerilen cevaplar:
 
 - **Application (client) ID:** 1. adımda kopyaladığın kimlik.
 - **Tenant:** `consumers` (kişisel hesaplar).
-- **Uygulama adı / web sitesi:** uygulamanın adı ve GitHub sayfası
+- **Uygulama adı / web sitesi:** `Cubby` ve GitHub sayfası
   (`https://github.com/firatmio/mc-server-manager`).
 - **Ne yapıyor (İngilizce önerilen metin):**
 

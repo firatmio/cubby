@@ -23,7 +23,7 @@ export function TitleBar() {
 
   return (
     <header className={styles.bar} onMouseDown={onMouseDown}>
-      <span className={styles.name}>Sunucu Yöneticisi</span>
+      <span className={styles.name}>Cubby</span>
       <div className={styles.actions}>
         <IconButton icon={Settings} label="Ayarlar" size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
         <IconButton icon={Minus} label="Küçült" size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />

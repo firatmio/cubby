@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 
 use crate::error::{AppError, AppResult};
 
-const KEYRING_SERVICE: &str = "mc-server-launcher";
+const KEYRING_SERVICE: &str = "cubby";
 const KEYRING_USER: &str = "microsoft-refresh-token";
 /// Token'ın süresi dolmadan bu kadar önce yenilenir (oyun açılırken düşmesin).
 const EXPIRY_MARGIN: Duration = Duration::from_secs(10 * 60);

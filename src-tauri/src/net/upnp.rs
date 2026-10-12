@@ -11,7 +11,7 @@ use igd_next::{AddAnyPortError, AddPortError, PortMappingProtocol, SearchOptions
 pub const LEASE_SECS: u32 = 60 * 60;
 pub const RENEW_EVERY: Duration = Duration::from_secs(30 * 60);
 
-const DESCRIPTION: &str = "MC Sunucu Yoneticisi";
+const DESCRIPTION: &str = "Cubby";
 const PUBLIC_IP_URLS: [&str; 2] = ["https://api.ipify.org", "https://icanhazip.com"];
 
 /// Kullanıcıya gösterilecek, sade dilde neden.

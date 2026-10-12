@@ -653,7 +653,7 @@ mod tests {
         let dir = PathBuf::from(r"C:\mc\mcsm\test");
         let spec = ProfileSpec {
             key: "mcsm-1",
-            name: "Test · MC Sunucu",
+            name: "Test · Cubby",
             version_id: "fabric-loader-0.19.5-26.3",
             game_dir: Some(&dir),
             icon: "Furnace",
@@ -691,7 +691,7 @@ mod tests {
             &mut root,
             &ProfileSpec {
                 key: "mcsm-2",
-                name: "Ada · MC Sunucu",
+                name: "Ada · Cubby",
                 version_id: "mcsm-ada-12345678",
                 game_dir: None,
                 icon: "Grass",

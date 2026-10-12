@@ -95,7 +95,7 @@ pub fn profile_key(id: &str) -> String {
 }
 
 pub fn profile_name(world: &str) -> String {
-    format!("{world} · MC Sunucu")
+    format!("{world} · Cubby")
 }
 
 /// Klasör adı: okunur ad + kimliğin başı (aynı adlı iki dünya karışmasın).
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     fn names() {
         assert_eq!(profile_key("abc"), "mcsm-abc");
-        assert_eq!(profile_name("Test"), "Test · MC Sunucu");
+        assert_eq!(profile_name("Test"), "Test · Cubby");
         assert_eq!(
             dir_name("Kardeşlerle survival", "3a08f417-66fc"),
             "kardeslerle-survival-3a08f417"

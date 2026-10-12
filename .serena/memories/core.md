@@ -1,5 +1,7 @@
 # core
 
+**Ad: Cubby** (2026-10-12). Kimlik `com.quacomes.cubby`, davet şeması `cubby://` (`consts::URL_SCHEME`; eski `mcsm` de kabul: `LEGACY_URL_SCHEME`). Eski veri klasörü `com.firatmio.mc-server-launcher` ilk açılışta `migrate::app_data` ile taşınır, kayıtlardaki yollar düzeltilir. İç önekler (`mcsm-` profil/sürüm, `.minecraft/mcsm/`, `.mcsm`, iroh ALPN `mcsm/mc/1`, crate adı) veri uyumu için değişmedi. Launcher profil adı "<Dünya> · Cubby".
+
 Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone listesi: `SPEC.md` (M1–M7). M7 = istemci "Katıl" modu (davet linki, servers.dat, mod senkronu).
 
 ## Source map

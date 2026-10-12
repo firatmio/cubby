@@ -1,9 +1,12 @@
 use std::time::Duration;
 
-/// Davet linklerinin şeması (`mcsm://join?d=...`). Uygulama adı netleşince yalnızca burası değişir.
-pub const URL_SCHEME: &str = "mcsm";
+/// Davet linklerinin şeması (`cubby://join?d=...`).
+pub const URL_SCHEME: &str = "cubby";
 
-pub const USER_AGENT: &str = concat!("mc-server-launcher/", env!("CARGO_PKG_VERSION"));
+/// Ad değişmeden önceki şema; eski davet linkleri de açılsın.
+pub const LEGACY_URL_SCHEME: &str = "mcsm";
+
+pub const USER_AGENT: &str = concat!("cubby/", env!("CARGO_PKG_VERSION"));
 
 /// `stop` komutundan sonra sürecin kendiliğinden kapanması için beklenen süre; sonra kill.
 pub const STOP_TIMEOUT: Duration = Duration::from_secs(30);

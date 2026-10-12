@@ -16,6 +16,7 @@ mod join;
 mod join_cmds;
 mod loaders;
 mod media;
+mod migrate;
 mod modrinth;
 mod mods;
 mod mods_cmds;
@@ -92,7 +93,7 @@ fn keep_in_background(app: &AppHandle) -> bool {
     app.state::<AppState>().servers.any_active() || app.state::<Arc<JoinManager>>().any_now()
 }
 
-/// `mcsm://join?d=...` linki: sakla, pencereyi öne getir, arayüze haber ver.
+/// `cubby://join?d=...` linki: sakla, pencereyi öne getir, arayüze haber ver.
 fn handle_invite_urls(app: &AppHandle, urls: impl IntoIterator<Item = String>) {
     let Some(url) = urls
         .into_iter()
@@ -113,7 +114,7 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let quit = MenuItem::with_id(app, "quit", "Tamamen kapat", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip("MC Sunucu Yöneticisi")
+        .tooltip("Cubby")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, e| match e.id().as_ref() {
@@ -157,6 +158,8 @@ pub fn run() {
             let http = http.clone();
             move |app| {
                 let data = app.path().app_data_dir()?;
+                // Ad değişti: eski veri klasörü (com.firatmio.mc-server-launcher) taşınır.
+                migrate::app_data(&data);
                 app.manage(Registry::load(&data));
                 app.manage(SettingsStore::load(&data));
                 app.manage(JavaManager::new(data.join("java"), http.clone()));

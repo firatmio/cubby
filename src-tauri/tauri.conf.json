@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mc-server-launcher",
+  "productName": "Cubby",
   "version": "0.1.0",
-  "identifier": "com.firatmio.mc-server-launcher",
+  "identifier": "com.quacomes.cubby",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MC Sunucu Yöneticisi",
+        "title": "Cubby",
         "width": 1200,
         "height": 720,
         "resizable": false,
@@ -42,7 +42,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "mcsm"
+          "cubby"
         ]
       }
     }

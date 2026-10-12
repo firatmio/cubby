@@ -5,7 +5,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::{Deserialize, Serialize};
 
-use crate::consts::URL_SCHEME;
+use crate::consts::{LEGACY_URL_SCHEME, URL_SCHEME};
 use crate::error::{AppError, AppResult};
 use crate::loaders::LoaderKind;
 
@@ -46,7 +46,9 @@ impl Invite {
         let input = input.trim();
         let code = match input.split_once("://") {
             Some((scheme, rest)) => {
-                if !scheme.eq_ignore_ascii_case(URL_SCHEME) {
+                if !scheme.eq_ignore_ascii_case(URL_SCHEME)
+                    && !scheme.eq_ignore_ascii_case(LEGACY_URL_SCHEME)
+                {
                     return Err(bad());
                 }
                 let query = rest.split_once('?').map(|(_, q)| q).ok_or_else(bad)?;
