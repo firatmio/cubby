@@ -62,6 +62,10 @@ pub struct LaunchResult {
     pub was_running: bool,
     /// Oyun menüye uğramadan dünyaya bağlanacak mı (Minecraft 1.20+).
     pub direct: bool,
+    /// Oyun Launcher'sız, doğrudan açıldı (Microsoft girişiyle).
+    pub game: bool,
+    /// Doğrudan açılamadı, Launcher'a düşüldü: nedeni.
+    pub note: Option<String>,
     pub error: Option<String>,
 }
 
@@ -287,8 +291,50 @@ pub fn launch_now(launcher: Launcher, pick: String, mc_version: &str) -> LaunchR
         pick: Some(pick),
         was_running,
         direct: client::quickplay_supported(mc_version),
-        error: None,
+        ..Default::default()
     }
+}
+
+/// Oyunu Launcher'sız açar; olmazsa Launcher'ı açıp nedenini not düşer.
+pub fn start_or_fallback(
+    app: &AppHandle,
+    direct: Option<AppResult<crate::game_cmds::Prepared>>,
+    launcher: Launcher,
+    pick: String,
+    mc_version: &str,
+) -> LaunchResult {
+    let failed = match direct {
+        None => None,
+        Some(Ok(p)) => match crate::game_cmds::start(app, p) {
+            Ok(()) => {
+                return LaunchResult {
+                    launcher: Some(launcher),
+                    pick: Some(pick),
+                    direct: true,
+                    game: true,
+                    ..Default::default()
+                };
+            }
+            Err(e) => Some(e.to_string()),
+        },
+        Some(Err(e)) => Some(e.to_string()),
+    };
+    LaunchResult {
+        note: failed,
+        ..launch_now(launcher, pick, mc_version)
+    }
+}
+
+/// Doğrudan açılacak oyunun sürümü (`mcsm-<ad>`) ve oyun klasörü hazırlanır (dosyalar, Java).
+/// `game_dir` yoksa oyuncunun normal `.minecraft`'ı.
+pub async fn prepare_direct(
+    app: &AppHandle,
+    dir: &str,
+    game_dir: Option<PathBuf>,
+) -> AppResult<crate::game_cmds::Prepared> {
+    let mc = minecraft_dir(app)?;
+    let game_dir = game_dir.unwrap_or_else(|| mc.clone());
+    crate::game_cmds::prepare(app, &mc, &client::quickplay_id(dir), &game_dir).await
 }
 
 async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientStatus> {
@@ -421,6 +467,18 @@ pub fn join_after_start(app: &AppHandle, id: &str) {
             return;
         };
         let prepared = prepare_play(&app, &inst).await;
+        // Oyun Launcher'sız açılabiliyorsa dosyaları sunucu açılırken hazırlanır.
+        let direct = match &prepared {
+            Ok((launcher, _)) if crate::game_cmds::direct_available(&app, &inst.mc_version) => {
+                let dir = dir_name(&inst.name, &inst.id);
+                let game_dir = match (inst.loader.is_modded(), minecraft_dir(&app)) {
+                    (true, Ok(mc)) => Some(client::targets(&mc, *launcher, &dir).0),
+                    _ => None,
+                };
+                Some(prepare_direct(&app, &dir, game_dir).await)
+            }
+            _ => None,
+        };
         let started = std::time::Instant::now();
         loop {
             match app.state::<AppState>().servers.snapshot(&id).status {
@@ -431,7 +489,9 @@ pub fn join_after_start(app: &AppHandle, id: &str) {
             }
         }
         let result = match prepared {
-            Ok((launcher, pick)) => launch_now(launcher, pick, &inst.mc_version),
+            Ok((launcher, pick)) => {
+                start_or_fallback(&app, direct, launcher, pick, &inst.mc_version)
+            }
             Err(e) => LaunchResult {
                 error: Some(e.to_string()),
                 ..Default::default()

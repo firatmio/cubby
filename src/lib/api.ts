@@ -392,7 +392,31 @@ export interface LaunchResult {
   wasRunning: boolean;
   /** Oyun menüye uğramadan dünyaya bağlanacak (Minecraft 1.20+) */
   direct: boolean;
+  /** Oyun Launcher'sız, doğrudan açıldı (Microsoft girişiyle) */
+  game: boolean;
+  /** Doğrudan açılamadı, Launcher'a düşüldü: nedeni */
+  note: string | null;
   error: string | null;
+}
+
+export interface Account {
+  name: string;
+  uuid: string;
+  /** Skin PNG adresi */
+  skin: string | null;
+}
+
+export interface AccountStatus {
+  /** Bu sürümde Microsoft girişi var mı */
+  enabled: boolean;
+  account: Account | null;
+}
+
+/** Oyun Launcher'sız açılırken: dosyalar → Java → başlatma */
+export interface GameProgress {
+  stage: "files" | "java" | "starting";
+  done: number;
+  total: number;
 }
 
 export interface InstallProgress {
@@ -459,6 +483,10 @@ export const api = {
     invoke<JoinedView>("join_world", { code, force, installRecommended }),
   updateJoinedMods: (id: string) => invoke<JoinedView>("update_joined_mods", { id }),
   playJoined: (id: string) => invoke<LaunchResult>("play_joined", { id }),
+  accountStatus: () => invoke<AccountStatus>("account_status"),
+  accountLogin: () => invoke<Account>("account_login"),
+  accountLogout: () => invoke<void>("account_logout"),
+  openGameLog: () => invoke<void>("open_game_log"),
   clientStatus: (id: string) => invoke<ClientStatus>("client_status", { id }),
   clientResync: (id: string) => invoke<void>("client_resync", { id }),
   listJoined: () => invoke<JoinedView[]>("list_joined"),

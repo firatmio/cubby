@@ -1,26 +1,13 @@
-import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import {
-  AlertTriangle,
-  ImageIcon,
-  Info,
-  LogIn,
-  Play,
-  Plug,
-  Puzzle,
-  Settings2,
-  Square,
-  Users,
-  Wrench,
-  X,
-} from "lucide-react";
+import { ImageIcon, LogIn, Play, Plug, Puzzle, Settings2, Square, Users, Wrench } from "lucide-react";
 import type { Instance } from "../../lib/api";
 import { launchHint } from "../../lib/launch";
-import { spring } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
 import { SplitButton } from "../../ui/SplitButton";
+import { NoticeBar } from "./NoticeBar";
+import { useGameNotice, type GameNotice } from "./useGameNotice";
 import { useServerControl } from "./useServerControl";
 import styles from "./ActionBar.module.css";
 
@@ -56,45 +43,17 @@ export function ActionBar({ instance }: { instance: Instance }) {
   const control = useServerControl(instance);
   const { status, active } = control;
   const [mode, setMode] = useState<StartMode>(() => loadMode(instance.id));
-  const notice = launch ? launchHint(launch, instance.name) : null;
+  const game = useGameNotice();
+  const launchNotice = launch ? launchHint(launch, instance.name) : null;
+  // Öncelik: başlatma hatası → oyun (ilerleme/çökme) → Launcher ipucu.
+  const shown: GameNotice | null = control.error
+    ? { tone: "error", text: control.error, dismiss: control.clearError }
+    : (game ??
+      (launchNotice && { ...launchNotice, dismiss: () => setLaunchResult(instance.id, null) }));
 
   return (
     <div className={styles.bar}>
-      <AnimatePresence>
-        {!control.error && notice && (
-          <motion.div
-            className={styles.error}
-            role={notice.tone === "error" ? "alert" : "status"}
-            style={notice.tone === "info" ? { background: "var(--surface-2)", color: "var(--text)" } : undefined}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={spring}
-          >
-            {notice.tone === "error" ? <AlertTriangle size={16} aria-hidden /> : <Info size={16} aria-hidden />}
-            <span>{notice.text}</span>
-            <button type="button" aria-label="Kapat" onClick={() => setLaunchResult(instance.id, null)}>
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-        {control.error && (
-          <motion.div
-            className={styles.error}
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={spring}
-          >
-            <AlertTriangle size={16} aria-hidden />
-            <span>{control.error}</span>
-            <button type="button" aria-label="Kapat" onClick={control.clearError}>
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <NoticeBar notice={shown} />
 
       <div className={styles.buttons}>
         <IconButton icon={Users} label="Oyuncular" onClick={() => openSheet("players")} />

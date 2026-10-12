@@ -300,6 +300,22 @@ function installedView(id: string) {
   });
 }
 
+let account: { name: string; uuid: string; skin: string | null } | null = null;
+
+/** Oyunun Launcher'sız hazırlanması: dosyalar → Java → açılış. */
+async function gameBoot() {
+  const total = 3104;
+  for (let done = 0; done <= total; done += 388) {
+    emit("game://progress", { stage: "files", done: Math.min(done, total), total });
+    await sleep(250);
+  }
+  emit("game://progress", { stage: "java", done: 0, total: 0 });
+  await sleep(500);
+  emit("game://progress", { stage: "starting", done: 0, total: 0 });
+  await sleep(600);
+  emit("game://state", { state: "running", code: null });
+}
+
 async function boot(id: string) {
   setStatus(id, "starting");
   logs[id] = [];
@@ -443,12 +459,20 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "eula_status":
       return true;
     case "start_server":
-      void boot(args.id).then(() => {
+      void boot(args.id).then(async () => {
         if (!args.join) return;
         const inst = byId(args.id);
+        if (account) {
+          await gameBoot();
+          emit("client://launch", {
+            id: args.id,
+            result: { opened: false, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, game: true, note: null, error: null },
+          });
+          return;
+        }
         emit("client://launch", {
           id: args.id,
-          result: { opened: true, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, error: null },
+          result: { opened: true, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, game: false, note: null, error: null },
         });
       });
       return null;
@@ -618,9 +642,22 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         pick: `${j.world.name} · MC Sunucu`,
         wasRunning: true,
         direct: true,
+        game: false,
+        note: null,
         error: null,
       };
     }
+    case "account_status":
+      return { enabled: true, account };
+    case "account_login":
+      await sleep(1500);
+      account = { name: "firatmio", uuid: "0", skin: null };
+      return account;
+    case "account_logout":
+      account = null;
+      return null;
+    case "open_game_log":
+      return null;
     case "update_joined_mods": {
       const j = joined.find((x) => x.world.id === args.id)!;
       await sleep(900);

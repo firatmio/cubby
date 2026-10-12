@@ -3,7 +3,7 @@
 Minecraft Java sunucu yöneticisi (Tauri 2 masaüstü). Hedefler/milestone listesi: `SPEC.md` (M1–M7). M7 = istemci "Katıl" modu (davet linki, servers.dat, mod senkronu).
 
 ## Source map
-- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`, kapak/oturumlar `mem:backend/covers_sessions`, server.properties/beyaz liste/oyuncular `mem:backend/players_access`, internet (UPnP) `mem:backend/net`, Katıl modu/doğrudan bağlantı `mem:backend/p2p_join`, mod mağazası `mem:backend/mods`, modların oyuncunun Minecraft'ına kurulması `mem:backend/client`
+- `src-tauri/src/` — Rust backend; tüm ağ/indirme/süreç işleri burada. Ayrıntı: `mem:backend/core`, kapak/oturumlar `mem:backend/covers_sessions`, server.properties/beyaz liste/oyuncular `mem:backend/players_access`, internet (UPnP) `mem:backend/net`, Katıl modu/doğrudan bağlantı `mem:backend/p2p_join`, mod mağazası `mem:backend/mods`, modların oyuncunun Minecraft'ına kurulması ve "Başlat ve katıl" (Quick Play sarmalayıcı sürüm, Launcher'ı açma) `mem:backend/client`, oyunu Launcher'sız açma + Microsoft girişi (M9) `mem:backend/game_auth`
 - `src/` — React UI; yalnızca `invoke` + event dinler. Ayrıntı: `mem:frontend/core`
 - `scripts/gen-textures.mjs` — 16x16 doku PNG üretici (Mojang asset'i repoya girmez; lisanslar `ASSETS.md`)
 

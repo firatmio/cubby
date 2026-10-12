@@ -1,0 +1,38 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.head {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+/* 64×64 skin 8 kat büyütülür: yüz (8,8), şapka (40,8). */
+.face,
+.hat {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 320px 320px;
+  image-rendering: pixelated;
+}
+
+.face {
+  background-position: -40px -40px;
+}
+
+.hat {
+  background-position: -200px -40px;
+}
+
+.name {
+  flex: 1;
+  font-weight: 600;
+}

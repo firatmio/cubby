@@ -15,6 +15,7 @@ import {
   type ServerSnapshot,
   type ServerStatus,
   type LaunchResult,
+  type GameProgress,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -92,6 +93,12 @@ interface AppStore {
   /** "Başlat ve katıl" sonrası Launcher sonucu (dünya başına; kapatılınca null). */
   launchResults: Record<string, LaunchResult | null>;
   setLaunchResult: (id: string, r: LaunchResult | null) => void;
+  /** Oyun Launcher'sız açılırken ilerleme (açılınca null). */
+  gameProgress: GameProgress | null;
+  setGameProgress: (p: GameProgress | null) => void;
+  /** Oyun hatayla kapandı: çıkış kodu (mesaj kapatılınca null). */
+  gameCrash: number | null;
+  setGameCrash: (code: number | null) => void;
   /** Katılırken oyuncunun Minecraft'ına mod kurulumu. */
   joinProgress: JoinProgress | null;
   setJoinProgress: (p: JoinProgress | null) => void;
@@ -230,6 +237,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     setClientStatus: (id, s) => set((st) => ({ clientStatus: { ...st.clientStatus, [id]: s } })),
     launchResults: {},
     setLaunchResult: (id, r) => set((st) => ({ launchResults: { ...st.launchResults, [id]: r } })),
+    gameProgress: null,
+    setGameProgress: (gameProgress) => set({ gameProgress }),
+    gameCrash: null,
+    setGameCrash: (gameCrash) => set({ gameCrash }),
     joinProgress: null,
     setJoinProgress: (joinProgress) => set({ joinProgress }),
     modProgress: null,

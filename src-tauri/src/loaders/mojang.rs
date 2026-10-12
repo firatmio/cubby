@@ -115,8 +115,8 @@ impl MojangApi {
         Ok(m)
     }
 
-    /// Sürüm JSON'unu indirir ve manifest'teki sha1 ile doğrular.
-    async fn version_detail(&self, mc_version: &str) -> AppResult<VersionDetail> {
+    /// Sürüm JSON'unu indirir ve manifest'teki sha1 ile doğrular (ham hali; istemci başlatma için).
+    pub async fn version_json(&self, mc_version: &str) -> AppResult<Vec<u8>> {
         let m = self.manifest().await?;
         let entry = m
             .entry(mc_version)
@@ -137,7 +137,13 @@ impl MojangApi {
                 actual,
             });
         }
-        Ok(serde_json::from_slice(&bytes)?)
+        Ok(bytes.to_vec())
+    }
+
+    async fn version_detail(&self, mc_version: &str) -> AppResult<VersionDetail> {
+        Ok(serde_json::from_slice(
+            &self.version_json(mc_version).await?,
+        )?)
     }
 
     pub async fn java_major(&self, mc_version: &str) -> AppResult<u32> {

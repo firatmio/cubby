@@ -50,3 +50,12 @@
 .error button:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+.error button.noticeAction {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}

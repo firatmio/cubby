@@ -18,3 +18,7 @@ pub const STATS_INTERVAL: Duration = Duration::from_secs(2);
 pub const MANIFEST_TTL: Duration = Duration::from_secs(10 * 60);
 
 pub const DEFAULT_PORT: u16 = 25565;
+
+/// Microsoft girişi için Azure uygulama kimliği; derlemede `MCSM_MS_CLIENT_ID` ile verilir
+/// (bkz. docs/MICROSOFT_GIRIS.md). Yoksa oyun Launcher'la açılır.
+pub const MS_CLIENT_ID: Option<&str> = option_env!("MCSM_MS_CLIENT_ID");

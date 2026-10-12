@@ -6,6 +6,7 @@ import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
+import { AccountCard } from "./AccountCard";
 import styles from "../instance/sections.module.css";
 import own from "./AppSettingsSheet.module.css";
 
@@ -41,6 +42,7 @@ export function AppSettingsSheet() {
     <Sheet open={open} title="Ayarlar" onClose={() => openSheet(null)}>
       {view && (
         <div className={styles.stack}>
+          <AccountCard />
           <Card>
             <Toggle
               checked={view.settings.useScreenshots}

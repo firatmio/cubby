@@ -14,6 +14,7 @@ import {
   type ClientStatus,
   type JoinProgress,
   type LaunchResult,
+  type GameProgress,
 } from "./api";
 
 type Unlisten = () => void;
@@ -42,6 +43,8 @@ const EVENT_MODS_PROGRESS = "mods://progress";
 const EVENT_CLIENT_STATUS = "client://status";
 const EVENT_JOIN_PROGRESS = "join://progress";
 const EVENT_CLIENT_LAUNCH = "client://launch";
+const EVENT_GAME_PROGRESS = "game://progress";
+const EVENT_GAME_STATE = "game://state";
 const EVENT_INVITE = "join://invite";
 
 type WithId<T> = T & { id: string };
@@ -104,6 +107,13 @@ export async function bindBackendEvents(): Promise<() => void> {
     ),
     listen<{ id: string; result: LaunchResult }>(EVENT_CLIENT_LAUNCH, ({ payload }) =>
       store().setLaunchResult(payload.id, payload.result),
+    ),
+    listen<GameProgress>(EVENT_GAME_PROGRESS, ({ payload }) => store().setGameProgress(payload)),
+    listen<{ state: "running" | "exited"; code: number | null }>(EVENT_GAME_STATE, ({ payload }) => {
+      store().setGameProgress(null);
+      // 0: oyuncu kapattı; başka kod: çöktü.
+      if (payload.state === "exited" && payload.code !== null && payload.code !== 0) store().setGameCrash(payload.code);
+    }
     ),
     listen<JoinProgress>(EVENT_JOIN_PROGRESS, ({ payload }) => store().setJoinProgress(payload)),
     listen<{ id: string; status: JoinStatus }>(EVENT_JOIN_STATUS, ({ payload }) => {

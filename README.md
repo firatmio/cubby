@@ -16,6 +16,7 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
 - [x] **M7b** — Modlar oyuncunun Minecraft'ına da: modlu dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
 - [x] **Başlat ve katıl** — Başlat'ın yanındaki menüden: sunucu açılınca Minecraft Launcher dünyanın profili seçili açılır, Oyna'ya basınca oyun doğrudan dünyaya bağlanır (Quick Play, 1.20+); arkadaşın tarafındaki "Oyna" da aynı
+- [~] **M9** — Oyunu Launcher'sız açma: Microsoft girişi (PKCE, tarayıcıda; yenileme anahtarı Windows Kimlik Bilgisi Yöneticisi'nde), oyunun dosyaları `.minecraft`'la paylaşılarak hash doğrulamalı indirilir, oyun Quick Play ile doğrudan dünyada açılır (vanilla ve NeoForge 26.3'te canlı doğrulandı). Microsoft girişinin son adımı **Mojang onayı bekliyor**: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md). Onaya kadar ve girişsiz oyuncularda Launcher'lı akış çalışır
 
 Bütün milestone'lar bitti; sırada isim, web katılım sayfası ve yayın hazırlığı var.
 

@@ -1,3 +1,4 @@
+mod auth;
 mod client;
 mod client_cmds;
 mod commands;
@@ -5,6 +6,8 @@ mod consts;
 mod covers;
 mod download;
 mod error;
+mod game;
+mod game_cmds;
 mod hash;
 mod instance;
 mod invite;
@@ -157,6 +160,8 @@ pub fn run() {
                 app.manage(Registry::load(&data));
                 app.manage(SettingsStore::load(&data));
                 app.manage(JavaManager::new(data.join("java"), http.clone()));
+                app.manage(auth::AuthManager::new(http.clone(), data.clone()));
+                app.manage(game_cmds::GameState::default());
                 let net = Arc::new(NetManager::new(http));
                 net::install(app.handle(), net.clone());
                 app.manage(net);
@@ -274,6 +279,11 @@ pub fn run() {
             join_cmds::take_pending_invite,
             join_cmds::update_joined_mods,
             join_cmds::play_joined,
+            game_cmds::account_status,
+            game_cmds::account_login,
+            game_cmds::account_logout,
+            game_cmds::open_game_log,
+            game_cmds::game_running,
             mods_cmds::mods_search,
             mods_cmds::mods_project,
             mods_cmds::mods_install,

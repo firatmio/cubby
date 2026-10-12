@@ -221,6 +221,11 @@ impl Loaders {
         }
     }
 
+    /// Mojang'ın sha1 doğrulamalı sürüm JSON'u (oyunu Launcher'sız başlatmak için).
+    pub async fn version_json(&self, mc_version: &str) -> AppResult<Vec<u8>> {
+        self.mojang.version_json(mc_version).await
+    }
+
     /// Sürümün istediği Java major sürümü (Mojang sürüm JSON'undan).
     pub async fn java_major(&self, mc_version: &str) -> AppResult<u32> {
         self.mojang.java_major(mc_version).await

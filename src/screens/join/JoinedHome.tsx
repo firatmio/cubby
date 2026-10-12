@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Check, Copy, Download, Info, ListPlus, Play, RefreshCw, Trash2, X } from "lucide-react";
+import { motion } from "motion/react";
+import { Check, Copy, Download, ListPlus, Play, RefreshCw, Trash2 } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
 import { KIND_LABELS, isModded } from "../../lib/format";
 import { launchHint } from "../../lib/launch";
-import { rise, spring, stagger } from "../../lib/motion";
+import { rise, stagger } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
@@ -12,6 +12,8 @@ import { IconButton } from "../../ui/IconButton";
 import hero from "../home/Hero.module.css";
 import cards from "../home/InfoCards.module.css";
 import bar from "../home/ActionBar.module.css";
+import { NoticeBar } from "../home/NoticeBar";
+import { useGameNotice, type GameNotice } from "../home/useGameNotice";
 
 type State = "running" | "stopped" | "starting" | "crashed";
 
@@ -110,6 +112,9 @@ export function JoinedActions({ view }: { view: JoinedView }) {
       setMessage(launchHint(await api.playJoined(id), view.world.name));
     });
 
+  const game = useGameNotice();
+  const shown: GameNotice | null = game ?? (message && { ...message, dismiss: () => setMessage(null) });
+
   // Arkadaşın mod ekledi/güncelledi: oyuncunun profilindeki modlar eski kaldı.
   const modsChanged =
     isModded(view.world.loader) &&
@@ -119,25 +124,7 @@ export function JoinedActions({ view }: { view: JoinedView }) {
 
   return (
     <div className={bar.bar}>
-      <AnimatePresence>
-        {message && (
-          <motion.div
-            className={bar.error}
-            role={message.tone === "error" ? "alert" : "status"}
-            style={message.tone === "info" ? { background: "var(--surface-2)", color: "var(--text)" } : undefined}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={spring}
-          >
-            {message.tone === "error" ? <AlertTriangle size={16} aria-hidden /> : <Info size={16} aria-hidden />}
-            <span>{message.text}</span>
-            <button type="button" aria-label="Kapat" onClick={() => setMessage(null)}>
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <NoticeBar notice={shown} />
 
       <div className={bar.buttons}>
         <IconButton

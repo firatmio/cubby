@@ -576,7 +576,9 @@ pub async fn play_joined(
     joins: Joins<'_>,
     id: String,
 ) -> AppResult<crate::client_cmds::LaunchResult> {
-    use crate::client_cmds::{dir_name, launch_now, play_version, prepare_plain, write_profile};
+    use crate::client_cmds::{
+        dir_name, play_version, prepare_direct, prepare_plain, start_or_fallback, write_profile,
+    };
     let w = joins.get(&id).await?;
     if let Some(dir) = entry_dir(&app, &w) {
         let mut root = servers_dat::read(&dir)?;
@@ -618,7 +620,20 @@ pub async fn play_joined(
             &w.address(),
         )?,
     };
-    Ok(launch_now(launcher, pick, &w.mc_version))
+    // Giriş varsa oyun Launcher'sız, doğrudan dünyaya bağlanarak açılır.
+    let direct = if crate::game_cmds::direct_available(&app, &w.mc_version) {
+        let game_dir = w.game_dir.as_ref().map(std::path::PathBuf::from);
+        Some(prepare_direct(&app, &dir, game_dir).await)
+    } else {
+        None
+    };
+    Ok(start_or_fallback(
+        &app,
+        direct,
+        launcher,
+        pick,
+        &w.mc_version,
+    ))
 }
 
 #[tauri::command]
