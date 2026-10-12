@@ -24,16 +24,18 @@ pub fn minecraft_running() -> bool {
             a.contains("net.minecraft.client")
                 || a.contains("--gameDir")
                 || a.contains("net.fabricmc.loader.impl.launch")
+                || a.contains("org.quiltmc.loader.impl.launch")
+                || a.contains("net.neoforged.fml")
+                || a.contains("net.minecraftforge.bootstrap")
         })
     })
 }
 
 /// Oyuncunun bu dünyaya girebilmesi için launcher'da kurulu olması gereken sürüm klasörü.
 pub fn required_version(loader: LoaderKind, mc: &str, loader_version: Option<&str>) -> String {
-    match (loader, loader_version) {
-        (LoaderKind::Fabric, Some(lv)) => format!("fabric-loader-{lv}-{mc}"),
-        _ => mc.to_string(),
-    }
+    loader_version
+        .and_then(|lv| crate::client::version_id(loader, mc, lv))
+        .unwrap_or_else(|| mc.to_string())
 }
 
 /// `.minecraft/versions/<sürüm>/<sürüm>.json` var mı? (Launcher sürümü bir kez açınca oluşur.)
@@ -59,6 +61,18 @@ mod tests {
         assert_eq!(
             required_version(LoaderKind::Fabric, "26.3", Some("0.19.5")),
             "fabric-loader-0.19.5-26.3"
+        );
+        assert_eq!(
+            required_version(LoaderKind::Quilt, "26.3", Some("0.30.1")),
+            "quilt-loader-0.30.1-26.3"
+        );
+        assert_eq!(
+            required_version(LoaderKind::NeoForge, "26.3", Some("26.3.0.76")),
+            "neoforge-26.3.0.76"
+        );
+        assert_eq!(
+            required_version(LoaderKind::Forge, "26.3", Some("66.0.10")),
+            "26.3-forge-66.0.10"
         );
     }
 

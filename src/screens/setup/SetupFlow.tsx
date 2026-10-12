@@ -12,13 +12,23 @@ import {
   type LoaderVersionList,
   type SystemInfo,
 } from "../../lib/api";
-import { KIND_COLORS, KIND_LABELS, LOADER_LABELS, formatBytesMb, formatDate, formatRam } from "../../lib/format";
+import {
+  KIND_COLORS,
+  KIND_LABELS,
+  LOADER_LABELS,
+  MOD_LOADERS,
+  formatBytesMb,
+  formatDate,
+  formatRam,
+  isModded,
+} from "../../lib/format";
 import { crossfade, slide, spring } from "../../lib/motion";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
 import { useAppStore } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Field, Input } from "../../ui/Input";
+import { PillTabs } from "../../ui/PillTabs";
 import { Progress } from "../../ui/Progress";
 import { SelectList } from "../../ui/SelectList";
 import { Slider } from "../../ui/Slider";
@@ -28,23 +38,33 @@ import styles from "./SetupFlow.module.css";
 
 type Step = "kind" | "version" | "name" | "access" | "whitelist" | "install";
 
+/** İlk adımın kartları; "Modlu" kartı seçili mod altyapısını (Fabric, NeoForge, …) temsil eder. */
 const KINDS: { id: LoaderKind; text: string }[] = [
   { id: "fabric", text: "Mod kurabilirsin. Çoğu kişi için en iyi başlangıç." },
   { id: "paper", text: "Hızlı ve hafif. Eklentilerle oyun kuralları değişir." },
   { id: "vanilla", text: "Hiçbir ekleme yok, Minecraft olduğu gibi." },
 ];
 
+const MOD_LOADER_TEXT: Record<string, string> = {
+  fabric: "Hafif, en çok mod burada.",
+  neoforge: "Create gibi büyük modlar ve mod paketleri.",
+  forge: "Eski ve köklü mod paketleri.",
+  quilt: "Fabric modlarını da çalıştırır.",
+};
+
 const DOWNLOAD_LABELS: Record<NonNullable<InstallProgress["file"]>, string> = {
   server: "Minecraft indiriliyor",
   fabric: "Mod desteği hazırlanıyor",
   paper: "Paper indiriliyor",
+  installer: "Kurulum aracı indiriliyor",
   java: "Java indiriliyor",
 };
 
 const MAX_NAME_LEN = 48;
 
-function progressText(p: InstallProgress | null): string {
+function progressText(p: InstallProgress | null, kind: LoaderKind): string {
   if (p?.stage === "extract") return "Java hazırlanıyor…";
+  if (p?.stage === "installer") return `${LOADER_LABELS[kind]} kuruluyor · ${p.line ?? ""}`;
   if (p?.stage !== "download" || !p.file) return "Hazırlanıyor…";
   const total = p.total ? ` / ${formatBytesMb(p.total)} MB` : " MB";
   return `${DOWNLOAD_LABELS[p.file]} · ${formatBytesMb(p.downloaded)}${total}`;
@@ -61,6 +81,8 @@ export function SetupFlow() {
   /** dir: son geçişin yönü (1 ileri, -1 geri); kayma animasyonu buna göre. */
   const [{ step, dir }, setNav] = useState<{ step: Step; dir: 1 | -1 }>({ step: "kind", dir: 1 });
   const [kind, setKind] = useState<LoaderKind>("fabric");
+  /** Modlu kartına dönülünce son seçilen altyapı kalsın. */
+  const [lastModLoader, setLastModLoader] = useState<LoaderKind>("fabric");
 
   const [includeSnapshots, setIncludeSnapshots] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
@@ -207,27 +229,45 @@ export function SetupFlow() {
     content = (
       <div className={styles.kinds}>
         {KINDS.map(({ id, text }) => {
-          const Icon = KIND_ICONS[id];
-          const chosen = id === kind;
+          const modCard = id === "fabric";
+          // Modlu kartı seçili altyapının adını, rengini ve simgesini taşır.
+          const shown = modCard && isModded(kind) ? kind : id;
+          const Icon = KIND_ICONS[shown];
+          const chosen = modCard ? isModded(kind) : id === kind;
           return (
             <motion.button
               key={id}
               type="button"
               className={[styles.kind, chosen && styles.chosen].filter(Boolean).join(" ")}
-              style={{ "--kind": KIND_COLORS[id] } as React.CSSProperties}
+              style={{ "--kind": KIND_COLORS[shown] } as React.CSSProperties}
               animate={{ scale: chosen ? 1.02 : 1 }}
               whileTap={{ scale: 0.98 }}
               transition={spring}
-              onClick={() => setKind(id)}
+              onClick={() => setKind(modCard ? lastModLoader : id)}
             >
               <Icon size={28} aria-hidden className={styles.kindIcon} />
               <span className={styles.kindLabel}>{KIND_LABELS[id]}</span>
-              <span className={styles.kindTech}>{LOADER_LABELS[id]}</span>
+              <span className={styles.kindTech}>{LOADER_LABELS[shown]}</span>
               <span className={styles.kindText}>{text}</span>
             </motion.button>
           );
         })}
-        <p className={styles.soon}>NeoForge, Forge ve Quilt yakında.</p>
+        <div className={[styles.modLoaders, !isModded(kind) && styles.hiddenRow].filter(Boolean).join(" ")}>
+          <span className={styles.modLoadersLabel}>Mod altyapısı</span>
+          <PillTabs
+            tabs={MOD_LOADERS.map((l) => ({ id: l, label: LOADER_LABELS[l] }))}
+            active={isModded(kind) ? kind : lastModLoader}
+            onChange={(l) => {
+              setLastModLoader(l);
+              setKind(l);
+            }}
+            layoutId="mod-loader"
+          />
+          <span className={styles.modLoadersText}>
+            {MOD_LOADER_TEXT[isModded(kind) ? kind : lastModLoader]}
+            {(isModded(kind) ? kind : lastModLoader) === "fabric" && " (Önerilen)"}
+          </span>
+        </div>
       </div>
     );
   } else if (step === "version") {
@@ -353,7 +393,7 @@ export function SetupFlow() {
                 />
                 {kind !== "vanilla" && loaderItems && (
                   <div className={styles.loaderField}>
-                    <Field label={kind === "paper" ? "Paper build'i" : "Fabric Loader sürümü"}>
+                    <Field label={kind === "paper" ? "Paper build'i" : `${LOADER_LABELS[kind]} sürümü`}>
                       <SelectList
                         maxHeight={150}
                         value={loaderVersion ?? loaderVersions?.recommended ?? null}
@@ -480,11 +520,13 @@ export function SetupFlow() {
         ? created.loader === "fabric"
           ? "İlk açılışta mod desteği için birkaç küçük dosya daha iner."
           : "Başlat'a bastığında arkadaşın katılabilir."
-        : "Birkaç dakika sürebilir; gereken her şeyi indiriyorum.";
+        : kind === "neoforge" || kind === "forge" || kind === "quilt"
+          ? `${LOADER_LABELS[kind]} kendi kurulum aracıyla kuruluyor; birkaç dakika sürebilir.`
+          : "Birkaç dakika sürebilir; gereken her şeyi indiriyorum.";
     content = installError || created ? null : (
       <div className={styles.installing}>
         <Progress value={progress?.stage === "download" && progress.total ? progress.downloaded / progress.total : null} />
-        <p className={styles.progressText}>{progressText(progress)}</p>
+        <p className={styles.progressText}>{progressText(progress, kind)}</p>
       </div>
     );
   }

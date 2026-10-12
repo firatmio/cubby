@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Check, Copy, Download, Info, ListPlus, Play, RefreshCw, Trash2, X } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
-import { KIND_LABELS } from "../../lib/format";
+import { KIND_LABELS, isModded } from "../../lib/format";
 import { rise, spring, stagger } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -88,7 +88,8 @@ function playHint(view: JoinedView): string {
   const p = view.world.profile;
   const where = `Çok Oyunculu → ${view.world.name}`;
   if (!p) return `Minecraft'ı aç → ${where}`;
-  if (p.startsWith("fabric-loader-")) return `TLauncher'da "${p}" sürümünü seç → ${where}`;
+  // Resmi Launcher'da profil adı "<Dünya> · MC Sunucu"; TLauncher'da ise sürüm adı (ör. fabric-loader-…).
+  if (!p.endsWith("· MC Sunucu")) return `TLauncher'da "${p}" sürümünü seç → ${where}`;
   return `Launcher'da "${p}" profilini seç → ${where}`;
 }
 
@@ -121,7 +122,7 @@ export function JoinedActions({ view }: { view: JoinedView }) {
 
   // Arkadaşın mod ekledi/güncelledi: oyuncunun profilindeki modlar eski kaldı.
   const modsChanged =
-    view.world.loader === "fabric" &&
+    isModded(view.world.loader) &&
     !!view.status.modsRev &&
     !!view.world.modsRev &&
     view.status.modsRev !== view.world.modsRev;

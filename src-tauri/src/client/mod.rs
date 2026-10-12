@@ -1,4 +1,5 @@
-//! Oyuncunun kendi Minecraft'ı: Fabric sürümü, dünyaya özel Launcher profili ve modların eşitlenmesi.
+//! Oyuncunun kendi Minecraft'ı: mod altyapısının (Fabric, Quilt, NeoForge, Forge) istemci sürümü,
+//! dünyaya özel Launcher profili ve modların eşitlenmesi.
 //! Host (kendi dünyası) ve katılımcı (arkadaşının dünyası) aynı kodu kullanır.
 //!
 //! - Resmi Launcher: her dünya `launcher_profiles.json`'da kendi profili ve `.minecraft/mcsm/<ad>` oyun klasörüyle.
@@ -15,6 +16,7 @@ use serde_json::{Value, json};
 
 use crate::error::{AppError, AppResult};
 use crate::hash::{HashAlgo, hash_bytes};
+use crate::loaders::{self, LoaderKind};
 
 /// Dünya profillerinin oyun klasörlerinin kökü: `.minecraft/mcsm/<ad>`.
 pub const PROFILES_DIR: &str = "mcsm";
@@ -22,6 +24,7 @@ const PROFILES_FILE: &str = "launcher_profiles.json";
 const RECORD_FILE: &str = ".mcsm.json";
 const DISABLED_DIR: &str = "_disabled";
 const FABRIC_META: &str = "https://meta.fabricmc.net/v2/versions/loader";
+const QUILT_META: &str = "https://meta.quiltmc.org/v3/versions/loader";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -78,39 +81,144 @@ pub fn slug(name: &str) -> String {
     s
 }
 
-pub fn fabric_version_id(mc: &str, loader: &str) -> String {
-    format!("fabric-loader-{loader}-{mc}")
+/// Launcher'daki sürüm klasörünün adı (modsuz türlerde `None`).
+pub fn version_id(kind: LoaderKind, mc: &str, loader: &str) -> Option<String> {
+    Some(match kind {
+        LoaderKind::Fabric => format!("fabric-loader-{loader}-{mc}"),
+        LoaderKind::Quilt => format!("quilt-loader-{loader}-{mc}"),
+        LoaderKind::NeoForge => format!("neoforge-{loader}"),
+        LoaderKind::Forge => format!("{mc}-forge-{loader}"),
+        LoaderKind::Vanilla | LoaderKind::Paper => return None,
+    })
 }
 
-/// Launcher'ın görmesi için `versions/<id>/<id>.json`. Kütüphaneleri ve vanilla'yı Launcher kendisi indirir.
-pub async fn ensure_fabric_version(
+fn version_file(mc_dir: &Path, id: &str) -> PathBuf {
+    mc_dir.join("versions").join(id).join(format!("{id}.json"))
+}
+
+pub fn version_exists(mc_dir: &Path, id: &str) -> bool {
+    version_file(mc_dir, id).is_file()
+}
+
+/// Fabric/Quilt: Launcher'ın görmesi için `versions/<id>/<id>.json`. Kütüphaneleri ve vanilla'yı
+/// Launcher kendisi indirir.
+pub async fn ensure_meta_version(
     http: &reqwest::Client,
     mc_dir: &Path,
+    kind: LoaderKind,
     mc: &str,
     loader: &str,
 ) -> AppResult<String> {
-    let id = fabric_version_id(mc, loader);
-    let file = mc_dir.join("versions").join(&id).join(format!("{id}.json"));
+    let id = version_id(kind, mc, loader)
+        .ok_or_else(|| AppError::msg("Bu dünya türü için istemci sürümü yok."))?;
+    let file = version_file(mc_dir, &id);
     if file.is_file() {
         return Ok(id);
     }
-    let url = format!("{FABRIC_META}/{mc}/{loader}/profile/json");
+    let meta = match kind {
+        LoaderKind::Quilt => QUILT_META,
+        _ => FABRIC_META,
+    };
+    let name = kind.label();
+    let url = format!("{meta}/{mc}/{loader}/profile/json");
     let profile: Value = http
         .get(&url)
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| AppError::msg(format!("Fabric istemci profili alınamadı: {e}")))?
+        .map_err(|e| AppError::msg(format!("{name} istemci profili alınamadı: {e}")))?
         .json()
         .await
-        .map_err(|e| AppError::msg(format!("Fabric istemci profili okunamadı: {e}")))?;
+        .map_err(|e| AppError::msg(format!("{name} istemci profili okunamadı: {e}")))?;
     if profile.get("id").and_then(Value::as_str) != Some(id.as_str()) {
-        return Err(AppError::msg(
-            "Fabric istemci profili beklenmedik bir sürüm döndürdü.",
-        ));
+        return Err(AppError::msg(format!(
+            "{name} istemci profili beklenmedik bir sürüm döndürdü."
+        )));
     }
     std::fs::create_dir_all(file.parent().unwrap_or(mc_dir))?;
     write_atomic(&file, &serde_json::to_vec_pretty(&profile)?)?;
+    Ok(id)
+}
+
+fn profile_keys(mc_dir: &Path) -> HashSet<String> {
+    std::fs::read(mc_dir.join(PROFILES_FILE))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+        .and_then(|v| {
+            v.get("profiles")
+                .and_then(Value::as_object)
+                .map(|m| m.keys().cloned().collect())
+        })
+        .unwrap_or_default()
+}
+
+/// NeoForge/Forge: resmi installer'ı istemci kipinde çalıştırır (kütüphaneler + `versions/<id>`).
+/// Installer'ın kendi eklediği "forge"/"NeoForge" profili geri alınır; dünya profili ayrıca yazılır.
+#[allow(clippy::too_many_arguments)]
+pub async fn install_forge_client(
+    http: &reqwest::Client,
+    mc_dir: &Path,
+    kind: LoaderKind,
+    mc: &str,
+    loader: &str,
+    java: &Path,
+    work: &Path,
+    on_line: &mut (impl FnMut(String) + Send),
+) -> AppResult<String> {
+    let id = version_id(kind, mc, loader)
+        .ok_or_else(|| AppError::msg("Bu dünya türü için istemci sürümü yok."))?;
+    if version_exists(mc_dir, &id) {
+        return Ok(id);
+    }
+    let flag = match kind {
+        LoaderKind::NeoForge => "--install-client",
+        _ => "--installClient",
+    };
+    let url = loaders::installer_url(kind, mc, loader)
+        .ok_or_else(|| AppError::msg("Bu dünya türü installer kullanmıyor."))?;
+    std::fs::create_dir_all(work)?;
+    let jar = work.join("mcsm-installer.jar");
+    loaders::download_maven(http, &url, &jar, |_, _| {}).await?;
+    let result = async {
+        let real = loaders::installer_version_id(&jar)?;
+        if real != id {
+            return Err(AppError::msg(format!(
+                "Installer beklenmedik bir sürüm kuruyor ({real})."
+            )));
+        }
+        // Forge installer'ı bu dosya olmadan çalışmıyor (TLauncher'da olmayabilir).
+        if !mc_dir.join(PROFILES_FILE).is_file() {
+            edit_profiles(mc_dir, |_| {})?;
+        }
+        let before = profile_keys(mc_dir);
+        let run = loaders::run_installer(
+            java,
+            &jar,
+            &[flag.into(), mc_dir.as_os_str().to_owned()],
+            work,
+            on_line,
+        )
+        .await;
+        let added: Vec<String> = profile_keys(mc_dir).difference(&before).cloned().collect();
+        if !added.is_empty() {
+            edit_profiles(mc_dir, |root| {
+                for k in &added {
+                    remove_profile(root, k);
+                }
+            })?;
+        }
+        run
+    }
+    .await;
+    loaders::installer_cleanup(work, &jar).await;
+    let _ = std::fs::remove_dir(work);
+    result?;
+    if !version_exists(mc_dir, &id) {
+        return Err(AppError::msg(format!(
+            "{} istemci kurulumu tamamlanamadı.",
+            kind.label()
+        )));
+    }
     Ok(id)
 }
 
@@ -200,31 +308,41 @@ pub fn prepare_game_dir(mc_dir: &Path, game_dir: &Path) -> AppResult<()> {
     Ok(())
 }
 
-// ---- fabric.mod.json ----
+// ---- fabric.mod.json / quilt.mod.json ----
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FabricEnv {
+pub enum ModEnv {
     Both,
     Client,
     Server,
 }
 
-/// Jar içindeki `fabric.mod.json`'ın `environment` alanı (yoksa ya da okunamazsa "her ikisi").
-pub fn fabric_env(jar: &Path) -> FabricEnv {
+/// Jar'ın kendi tanımındaki ortam: `fabric.mod.json` `environment` ya da `quilt.mod.json`
+/// `minecraft.environment`. NeoForge/Forge'da böyle bir alan yok; bulunamazsa "her ikisi".
+pub fn mod_env(jar: &Path) -> ModEnv {
     let read = || -> Option<String> {
         let mut zip = zip::ZipArchive::new(std::fs::File::open(jar).ok()?).ok()?;
-        let entry = zip.by_name("fabric.mod.json").ok()?;
-        let mut text = String::new();
-        entry.take(1024 * 1024).read_to_string(&mut text).ok()?;
-        let v: Value = serde_json::from_str(&text).ok()?;
-        v.get("environment")
+        let mut json = |name: &str| -> Option<Value> {
+            let entry = zip.by_name(name).ok()?;
+            let mut text = String::new();
+            entry.take(1024 * 1024).read_to_string(&mut text).ok()?;
+            serde_json::from_str(&text).ok()
+        };
+        if let Some(v) = json("fabric.mod.json") {
+            return v
+                .get("environment")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+        }
+        json("quilt.mod.json")?
+            .pointer("/minecraft/environment")
             .and_then(Value::as_str)
             .map(str::to_string)
     };
     match read().as_deref() {
-        Some("server") => FabricEnv::Server,
-        Some("client") => FabricEnv::Client,
-        _ => FabricEnv::Both,
+        Some("server" | "dedicated_server") => ModEnv::Server,
+        Some("client") => ModEnv::Client,
+        _ => ModEnv::Both,
     }
 }
 
@@ -597,27 +715,44 @@ mod tests {
     }
 
     #[test]
-    fn reads_fabric_environment() {
+    fn reads_mod_environment() {
         let d = tmp("fmj");
-        let make = |name: &str, json: &str| {
+        let make_as = |name: &str, entry: &str, json: &str| {
             let p = d.join(name);
             let mut zw = zip::ZipWriter::new(std::fs::File::create(&p).unwrap());
-            zw.start_file("fabric.mod.json", zip::write::SimpleFileOptions::default())
+            zw.start_file(entry, zip::write::SimpleFileOptions::default())
                 .unwrap();
             std::io::Write::write_all(&mut zw, json.as_bytes()).unwrap();
             zw.finish().unwrap();
             p
         };
+        let make = |name: &str, json: &str| make_as(name, "fabric.mod.json", json);
         assert_eq!(
-            fabric_env(&make("s.jar", r#"{"environment":"server"}"#)),
-            FabricEnv::Server
+            mod_env(&make_as(
+                "q.jar",
+                "quilt.mod.json",
+                r#"{"quilt_loader":{},"minecraft":{"environment":"dedicated_server"}}"#
+            )),
+            ModEnv::Server
         );
         assert_eq!(
-            fabric_env(&make("c.jar", r#"{"environment":"client"}"#)),
-            FabricEnv::Client
+            mod_env(&make_as(
+                "n.jar",
+                "META-INF/neoforge.mods.toml",
+                "modLoader=\"javafml\""
+            )),
+            ModEnv::Both
         );
-        assert_eq!(fabric_env(&make("b.jar", r#"{"id":"x"}"#)), FabricEnv::Both);
-        assert_eq!(fabric_env(&d.join("yok.jar")), FabricEnv::Both);
+        assert_eq!(
+            mod_env(&make("s.jar", r#"{"environment":"server"}"#)),
+            ModEnv::Server
+        );
+        assert_eq!(
+            mod_env(&make("c.jar", r#"{"environment":"client"}"#)),
+            ModEnv::Client
+        );
+        assert_eq!(mod_env(&make("b.jar", r#"{"id":"x"}"#)), ModEnv::Both);
+        assert_eq!(mod_env(&d.join("yok.jar")), ModEnv::Both);
     }
 
     #[tokio::test]
@@ -628,15 +763,57 @@ mod tests {
             .build()
             .unwrap();
         let mc = tmp("mc");
-        let id = ensure_fabric_version(&http, &mc, "26.3", "0.19.5")
+        let id = ensure_meta_version(&http, &mc, LoaderKind::Fabric, "26.3", "0.19.5")
             .await
             .unwrap();
         assert_eq!(id, "fabric-loader-0.19.5-26.3");
-        assert!(
-            mc.join("versions")
-                .join(&id)
-                .join(format!("{id}.json"))
-                .is_file()
-        );
+        assert!(version_exists(&mc, &id));
+        let id = ensure_meta_version(&http, &mc, LoaderKind::Quilt, "26.3", "0.30.1")
+            .await
+            .unwrap();
+        assert_eq!(id, "quilt-loader-0.30.1-26.3");
+        assert!(version_exists(&mc, &id));
+    }
+
+    /// Geçici bir `.minecraft`'a NeoForge istemcisi; installer'ın kendi profili geri alınmalı.
+    #[tokio::test]
+    #[ignore = "ağ erişimi ve Java gerekir"]
+    async fn live_neoforge_client() {
+        let http = reqwest::Client::builder()
+            .user_agent(crate::consts::USER_AGENT)
+            .build()
+            .unwrap();
+        let mc = tmp("mc-neo");
+        edit_profiles(&mc, |root| {
+            upsert_profile(
+                root,
+                &ProfileSpec {
+                    key: "mine",
+                    name: "Benim",
+                    version_id: "26.3",
+                    game_dir: &mc,
+                    icon: "Grass",
+                    now: "2026-10-12T00:00:00.000Z",
+                },
+            )
+        })
+        .unwrap();
+        let java = crate::java::test_java(25).await;
+        let id = install_forge_client(
+            &http,
+            &mc,
+            LoaderKind::NeoForge,
+            "26.3",
+            "26.3.0.76",
+            &java,
+            &mc.join("work"),
+            &mut |l| println!("  {l}"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(id, "neoforge-26.3.0.76");
+        assert!(version_exists(&mc, &id));
+        assert_eq!(profile_keys(&mc), HashSet::from(["mine".to_string()]));
+        assert!(!mc.join("work").exists());
     }
 }

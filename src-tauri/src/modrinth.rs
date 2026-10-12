@@ -16,6 +16,10 @@ pub fn loaders_for(kind: LoaderKind) -> &'static [&'static str] {
     match kind {
         LoaderKind::Fabric => &["fabric"],
         LoaderKind::Paper => &["paper", "bukkit", "spigot", "purpur"],
+        LoaderKind::NeoForge => &["neoforge"],
+        LoaderKind::Forge => &["forge"],
+        // Quilt, Fabric modlarını da çalıştırır.
+        LoaderKind::Quilt => &["quilt", "fabric"],
         LoaderKind::Vanilla => &[],
     }
 }

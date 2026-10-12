@@ -18,7 +18,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 
 // Rust tarafındaki serde tiplerinin aynası (camelCase).
 
-export type LoaderKind = "vanilla" | "fabric" | "paper";
+export type LoaderKind = "vanilla" | "fabric" | "paper" | "neoforge" | "forge" | "quilt";
 
 export interface Instance {
   id: string;
@@ -249,7 +249,7 @@ export interface InvitePreview {
   minecraftRunning: boolean;
   requiredVersion: string;
   versionInstalled: boolean;
-  /** Fabric dünyada oyuncuda eksik modlar (arkadaşına ulaşılabildiyse) */
+  /** Modlu dünyada oyuncuda eksik modlar (arkadaşına ulaşılabildiyse) */
   mods: ModCheck | null;
   modsError: string | null;
 }
@@ -384,11 +384,13 @@ export interface UpdateInstanceRequest {
 
 export interface InstallProgress {
   id: string;
-  stage: "meta" | "download" | "extract" | "done";
+  stage: "meta" | "download" | "extract" | "installer" | "done";
   /** download/extract aşamasında hangi dosya */
-  file: "server" | "fabric" | "paper" | "java" | null;
+  file: "server" | "fabric" | "paper" | "installer" | "java" | null;
   downloaded: number;
   total: number | null;
+  /** installer aşamasında installer çıktısının son satırı */
+  line: string | null;
 }
 
 export const api = {

@@ -11,12 +11,12 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [x] **Konsol tarzı arayüz** — özel başlık çubuğu, sabit 1200×720 pencere, koyu tema, dünya kutucukları; her dünyanın arka planı o dünyada çekilen oyun içi ekran görüntüsü (F2), oyuncu listesi, LAN davet adresi
 - [x] **M4** — Dünya ayarları (önemli alanlar + tüm `server.properties` tablosu), tek seferlik EULA, TLauncher (premium olmayan) modu, beyaz liste (kurulumda da), yetkililer, oyuncu atma, giremeyenlere tek tıkla izin, kapak = sunucu simgesi, MOTD = dünya adı
 - [x] **M5** — İnternetten katılım: dünya başına "İnternete aç", modemde otomatik port açma (UPnP) ve CGNAT tespiti; modem izin vermiyorsa neden ve çözüm sade dille gösterilir
-- [ ] M6 — NeoForge/Forge/Quilt
+- [x] **M6** — NeoForge, Forge (1.17+) ve Quilt: resmi installer'lar Java ile çalıştırılır (hash doğrulamalı), sürüm listeleri ve önerilen sürümler, mod mağazası her altyapı için; "Modlar oyuncunun Minecraft'ına da" akışı NeoForge/Forge istemcisini de kurar
 - [x] **M7a** — Katıl modu: davet linki/kodu (`mcsm://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
 - [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
-- [x] **M7b** — Modlar oyuncunun Minecraft'ına da: Fabric dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
+- [x] **M7b** — Modlar oyuncunun Minecraft'ına da: modlu dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
 
-Sıradaki: M6.
+Bütün milestone'lar bitti; sırada isim, web katılım sayfası ve yayın hazırlığı var.
 
 **Sonra:**
 - Web katılım sayfası (uygulamanın adı belli olunca, yayın hazırlığıyla birlikte)
@@ -45,7 +45,7 @@ cd src-tauri && cargo test && cargo clippy --all-targets
 bun run build
 ```
 
-Canlı testler (Mojang, Fabric, Paper, Adoptium JRE): `cargo test -- --ignored live_install`; bu makinedeki Java'ları listelemek için `cargo test -- --ignored live_scan --nocapture`
+Canlı testler (Mojang, Fabric, Paper, NeoForge, Forge, Quilt, Adoptium JRE): `cargo test -- --ignored live_install`; bu makinedeki Java'ları listelemek için `cargo test -- --ignored live_scan --nocapture`
 
 ## Veri konumu
 

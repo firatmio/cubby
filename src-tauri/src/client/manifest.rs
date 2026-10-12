@@ -4,8 +4,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use super::{FabricEnv, fabric_env};
+use super::{ModEnv, mod_env};
 use crate::hash::{HashAlgo, hash_bytes};
+use crate::loaders::LoaderKind;
 use crate::modrinth::ClientNeed;
 use crate::mods::{self, ModRecord};
 
@@ -31,28 +32,37 @@ pub struct ClientMod {
     pub need: Need,
 }
 
-/// Modrinth bilgisi (kayıtta) ve jar'ın kendi `fabric.mod.json`'ı birlikte değerlendirilir.
-pub fn need_for(record: Option<ClientNeed>, env: FabricEnv) -> Option<Need> {
+/// Modrinth bilgisi (kayıtta) ve jar'ın kendi tanımı (`fabric.mod.json`/`quilt.mod.json`) birlikte
+/// değerlendirilir. `strict`: NeoForge/Forge'da hakkında bilgi olmayan mod olmadan sunucuya
+/// genelde girilemez (kayıt eşlemesi), bu yüzden zorunlu sayılır.
+pub fn need_for(record: Option<ClientNeed>, env: ModEnv, strict: bool) -> Option<Need> {
     match (record, env) {
-        (_, FabricEnv::Server) | (Some(ClientNeed::None), _) => None,
+        (_, ModEnv::Server) | (Some(ClientNeed::None), _) => None,
         (Some(ClientNeed::Required), _) => Some(Need::Required),
+        (None, ModEnv::Both) if strict => Some(Need::Required),
         _ => Some(Need::Recommended),
     }
 }
 
 /// Sunucunun `mods` klasöründen oyuncuya gidecek modlar (dosya adına göre sıralı).
-pub fn build(server_mods: &Path, records: &[ModRecord]) -> Vec<ClientMod> {
-    build_with(server_mods, records, true)
+pub fn build(server_mods: &Path, records: &[ModRecord], kind: LoaderKind) -> Vec<ClientMod> {
+    build_with(server_mods, records, kind, true)
 }
 
 /// `full: false` → sha512 hesaplanmaz (yalnız `rev` ve dosya adı kontrolü için, ucuz).
-pub fn build_with(server_mods: &Path, records: &[ModRecord], full: bool) -> Vec<ClientMod> {
+pub fn build_with(
+    server_mods: &Path,
+    records: &[ModRecord],
+    kind: LoaderKind,
+    full: bool,
+) -> Vec<ClientMod> {
+    let strict = matches!(kind, LoaderKind::NeoForge | LoaderKind::Forge);
     mods::scan(server_mods)
         .into_iter()
         .filter_map(|(file, sha1)| {
             let path = server_mods.join(&file);
             let rec = records.iter().find(|r| r.sha1 == sha1);
-            let need = need_for(rec.and_then(|r| r.need), fabric_env(&path))?;
+            let need = need_for(rec.and_then(|r| r.need), mod_env(&path), strict)?;
             let (sha512, size) = if full {
                 let bytes = std::fs::read(&path).ok()?;
                 (hash_bytes(HashAlgo::Sha512, &bytes), bytes.len() as u64)
@@ -91,18 +101,25 @@ mod tests {
     #[test]
     fn need_rules() {
         assert_eq!(
-            need_for(Some(ClientNeed::Required), FabricEnv::Both),
+            need_for(Some(ClientNeed::Required), ModEnv::Both, false),
             Some(Need::Required)
         );
         assert_eq!(
-            need_for(Some(ClientNeed::Recommended), FabricEnv::Both),
+            need_for(Some(ClientNeed::Recommended), ModEnv::Both, false),
             Some(Need::Recommended)
         );
-        assert_eq!(need_for(Some(ClientNeed::None), FabricEnv::Both), None);
-        assert_eq!(need_for(None, FabricEnv::Server), None);
-        assert_eq!(need_for(None, FabricEnv::Both), Some(Need::Recommended));
+        assert_eq!(need_for(Some(ClientNeed::None), ModEnv::Both, false), None);
+        assert_eq!(need_for(None, ModEnv::Server, false), None);
+        assert_eq!(need_for(None, ModEnv::Both, false), Some(Need::Recommended));
+        // NeoForge/Forge: bilinmeyen mod zorunlu, sunucu tarafı yine atlanır.
+        assert_eq!(need_for(None, ModEnv::Both, true), Some(Need::Required));
+        assert_eq!(need_for(None, ModEnv::Server, true), None);
         assert_eq!(
-            need_for(Some(ClientNeed::Required), FabricEnv::Server),
+            need_for(Some(ClientNeed::Recommended), ModEnv::Both, true),
+            Some(Need::Recommended)
+        );
+        assert_eq!(
+            need_for(Some(ClientNeed::Required), ModEnv::Server, false),
             None
         );
     }
@@ -121,10 +138,12 @@ mod tests {
         };
         make("server-only.jar", "server");
         make("both.jar", "*");
-        let list = build(&d, &[]);
+        let list = build(&d, &[], LoaderKind::Fabric);
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].file, "both.jar");
         assert_eq!(list[0].need, Need::Recommended);
+        // NeoForge'da bilinmeyen mod zorunlu.
+        assert_eq!(build(&d, &[], LoaderKind::NeoForge)[0].need, Need::Required);
         assert_eq!(rev(&list).len(), 16);
         assert_ne!(rev(&list), rev(&[]));
     }

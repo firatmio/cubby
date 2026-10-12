@@ -123,10 +123,12 @@ pub struct CreateInstanceRequest {
 struct InstallProgress<'a> {
     id: &'a str,
     stage: &'static str,
-    /// "server" | "fabric" | "paper" | "java" (`download` / `extract` aşamasında)
+    /// "server" | "fabric" | "paper" | "installer" | "java" (`download` / `extract` aşamasında)
     file: Option<&'static str>,
     downloaded: u64,
     total: Option<u64>,
+    /// `installer` aşamasında installer çıktısının son satırı.
+    line: Option<String>,
 }
 
 /// Klasörü oluşturur, sunucu dosyalarını kurar; başarılı olursa `instance.json` yazar ve kayda ekler.
@@ -165,43 +167,72 @@ pub async fn create_instance(
                     file,
                     downloaded,
                     total,
+                    line: None,
                 },
             );
         };
+    let emit_line = |line: String| {
+        let _ = app.emit(
+            EVENT_INSTALL_PROGRESS,
+            InstallProgress {
+                id: &id,
+                stage: "installer",
+                file: None,
+                downloaded: 0,
+                total: None,
+                line: Some(line),
+            },
+        );
+    };
+    let java_stage = |stage: JavaStage| match stage {
+        JavaStage::Download { downloaded, total } => {
+            emit("download", Some("java"), downloaded, total)
+        }
+        JavaStage::Extract => emit("extract", Some("java"), 0, None),
+    };
 
-    let installed = state
-        .loaders
-        .install(
-            req.loader,
-            &InstallRequest {
-                mc_version: &req.mc_version,
-                loader_version: req.loader_version.as_deref(),
-            },
-            &server_dir,
-            &mut |stage| match stage {
-                InstallStage::Meta => emit("meta", None, 0, None),
-                InstallStage::Download {
-                    file,
-                    downloaded,
-                    total,
-                } => emit("download", Some(file), downloaded, total),
-            },
-        )
-        .await;
+    let installed = async {
+        // NeoForge/Forge/Quilt installer'ı Java ile çalışır: Java önce hazırlanır.
+        let installer_java = if req.loader.uses_installer() {
+            emit("meta", None, 0, None);
+            let major = state.loaders.java_major(&req.mc_version).await?;
+            let found = match java.resolve(None, major).await? {
+                Some(j) => j,
+                None => java.install(major, java_stage).await?,
+            };
+            Some(PathBuf::from(found.path))
+        } else {
+            None
+        };
+        state
+            .loaders
+            .install(
+                req.loader,
+                &InstallRequest {
+                    mc_version: &req.mc_version,
+                    loader_version: req.loader_version.as_deref(),
+                    java: installer_java.as_deref(),
+                },
+                &server_dir,
+                &mut |stage| match stage {
+                    InstallStage::Meta => emit("meta", None, 0, None),
+                    InstallStage::Download {
+                        file,
+                        downloaded,
+                        total,
+                    } => emit("download", Some(file), downloaded, total),
+                    InstallStage::Installer { line } => emit_line(line),
+                },
+            )
+            .await
+    }
+    .await;
 
     let result: AppResult<Instance> = async {
         let installed = installed?;
         // Uygun Java yoksa indirilip sunucuya bağlanır. Başarısız olursa kurulum yine biter;
         // başlatırken arayüz Java'yı tekrar önerir.
-        let java_path = match java
-            .ensure(installed.java_major, |stage| match stage {
-                JavaStage::Download { downloaded, total } => {
-                    emit("download", Some("java"), downloaded, total)
-                }
-                JavaStage::Extract => emit("extract", Some("java"), 0, None),
-            })
-            .await
-        {
+        let java_path = match java.ensure(installed.java_major, java_stage).await {
             Ok(downloaded) => downloaded.map(|j| j.path),
             Err(e) => {
                 eprintln!("Java indirilemedi: {e}");
@@ -389,7 +420,11 @@ pub async fn start_server(
         "-Dstdout.encoding=UTF-8".into(),
         "-Dstderr.encoding=UTF-8".into(),
     ];
-    args.extend(state.loaders.launch_args(inst.loader));
+    args.extend(state.loaders.launch_args(
+        inst.loader,
+        &inst.mc_version,
+        inst.loader_version.as_deref(),
+    ));
     state
         .servers
         .start(

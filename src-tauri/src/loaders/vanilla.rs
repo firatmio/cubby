@@ -45,7 +45,7 @@ impl Loader for VanillaLoader {
         })
     }
 
-    fn launch_args(&self) -> Vec<String> {
+    fn launch_args(&self, _mc: &str, _loader: Option<&str>) -> Vec<String> {
         vec!["-jar".into(), SERVER_JAR.into(), "nogui".into()]
     }
 
@@ -72,6 +72,7 @@ mod tests {
                 &InstallRequest {
                     mc_version: &list.latest_release,
                     loader_version: None,
+                    java: None,
                 },
                 &dir,
                 &mut |s| {

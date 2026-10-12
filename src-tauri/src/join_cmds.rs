@@ -42,12 +42,12 @@ pub fn host_decider(app: AppHandle) -> Decide {
         };
         let running =
             app.state::<AppState>().servers.snapshot(&h.world).status == ServerStatus::Running;
-        let fabric = inst.loader == LoaderKind::Fabric;
+        let modded = inst.loader.is_modded();
         let server_mods = server_dir.join("mods");
         let records = || mods::load_records(&inst_dir.join(META_DIR));
         let light = || {
-            if fabric {
-                manifest::build_with(&server_mods, &records(), false)
+            if modded {
+                manifest::build_with(&server_mods, &records(), inst.loader, false)
             } else {
                 Vec::new()
             }
@@ -58,14 +58,14 @@ pub fn host_decider(app: AppHandle) -> Decide {
             mods_rev,
         };
         match h.kind {
-            StreamKind::Ping => Decision::Reply(ok(fabric.then(|| manifest::rev(&light())))),
+            StreamKind::Ping => Decision::Reply(ok(modded.then(|| manifest::rev(&light())))),
             StreamKind::Tcp if running => {
                 Decision::Tcp(ok(None), server_port(&server_dir, inst.port))
             }
             StreamKind::Tcp => Decision::Reply(Reply::Offline),
             StreamKind::Manifest => {
-                let list = if fabric {
-                    manifest::build(&server_mods, &records())
+                let list = if modded {
+                    manifest::build(&server_mods, &records(), inst.loader)
                 } else {
                     Vec::new()
                 };
@@ -146,7 +146,7 @@ pub struct InvitePreview {
     minecraft_running: bool,
     required_version: String,
     version_installed: bool,
-    /// Fabric dünyada oyuncuda eksik modlar (arkadaşına ulaşılabildiyse).
+    /// Modlu dünyada oyuncuda eksik modlar (arkadaşına ulaşılabildiyse).
     mods: Option<ModCheck>,
     mods_error: Option<String>,
 }
@@ -245,28 +245,28 @@ pub async fn preview_invite(
             .map_err(|_| AppError::msg("Davet bozuk."))?;
         crate::join::status_from(p2p.ping(host, &invite.world, &invite.token).await)
     };
-    let (mods, mods_error) =
-        if !own && invite.loader == LoaderKind::Fabric && status.reachable == Some(true) {
-            let host = invite
-                .host
-                .parse()
-                .map_err(|_| AppError::msg("Davet bozuk."))?;
-            match p2p.manifest(host, &invite.world, &invite.token).await {
-                Ok(list) => (
-                    Some(missing_mods(
-                        &app,
-                        &invite.name,
-                        &invite.host,
-                        &invite.world,
-                        &list,
-                    )),
-                    None,
-                ),
-                Err(e) => (None, Some(e.to_string())),
-            }
-        } else {
-            (None, None)
-        };
+    let (mods, mods_error) = if !own && invite.loader.is_modded() && status.reachable == Some(true)
+    {
+        let host = invite
+            .host
+            .parse()
+            .map_err(|_| AppError::msg("Davet bozuk."))?;
+        match p2p.manifest(host, &invite.world, &invite.token).await {
+            Ok(list) => (
+                Some(missing_mods(
+                    &app,
+                    &invite.name,
+                    &invite.host,
+                    &invite.world,
+                    &list,
+                )),
+                None,
+            ),
+            Err(e) => (None, Some(e.to_string())),
+        }
+    } else {
+        (None, None)
+    };
     let mc = minecraft_dir(&app);
     let required = client::required_version(
         invite.loader,
@@ -312,7 +312,7 @@ struct ProgressPayload<'a> {
 
 pub const EVENT_PROGRESS: &str = "join://progress";
 
-/// Arkadaşın dünyasının modlarını oyuncunun Minecraft'ına kurar: Fabric + profil + modlar.
+/// Arkadaşın dünyasının modlarını oyuncunun Minecraft'ına kurar: mod altyapısı + profil + modlar.
 /// Önce Modrinth'ten (sha512 listeyle eşleşmeli), yoksa arkadaşın bilgisayarından indirilir.
 async fn install_client_mods(
     app: &AppHandle,
@@ -325,13 +325,18 @@ async fn install_client_mods(
         .filter(|m| m.need == Need::Required || with_recommended)
         .cloned()
         .collect();
-    let lv = w
-        .loader_version
-        .clone()
-        .ok_or_else(|| AppError::msg("Arkadaşının Fabric sürümü bilinmiyor."))?;
+    let lv = w.loader_version.clone().ok_or_else(|| {
+        AppError::msg(format!(
+            "Arkadaşının {} sürümü bilinmiyor.",
+            w.loader.label()
+        ))
+    })?;
     let key = join_key(&w.host, &w.world);
+    let count = wanted_mods.len();
+    let mut announced = false;
     let (launcher, mods_dir, shared, pick) = crate::client_cmds::prepare_client(
         app,
+        w.loader,
         &format!("mcsm-join-{key}"),
         &w.name,
         &crate::client_cmds::dir_name(&w.name, &key),
@@ -339,6 +344,21 @@ async fn install_client_mods(
         &lv,
         "Furnace".into(),
         Some((&w.address(), &w.name)),
+        // NeoForge/Forge installer'ı çalışırken (birkaç dakika) pencere boş kalmasın.
+        &mut |_| {
+            if !announced {
+                announced = true;
+                let _ = app.emit(
+                    EVENT_PROGRESS,
+                    ProgressPayload {
+                        id: &w.id,
+                        title: w.loader.label(),
+                        index: 0,
+                        count,
+                    },
+                );
+            }
+        },
     )
     .await?;
     let game_dir = match launcher {
@@ -358,7 +378,6 @@ async fn install_client_mods(
     let host: iroh::EndpointId = w.host.parse().map_err(|_| AppError::msg("Davet bozuk."))?;
     let (world, token, id) = (w.world.clone(), w.token.clone(), w.id.clone());
     let all = Arc::new(wanted_mods);
-    let count = all.len();
     let mut index = 0usize;
     let app2 = app.clone();
     crate::client::sync(&mods_dir, &key, &wanted, shared, move |want, dest| {
@@ -486,7 +505,7 @@ pub async fn join_world(
     }
     let mut joined = joins.inner().join(&app, &invite).await?;
     // Modlu dünya: oyuncuda gereken modlar varsa profile kur (yoksa sunucu listesi ana klasöre).
-    if invite.loader == LoaderKind::Fabric {
+    if invite.loader.is_modded() {
         let p2p = app.state::<Arc<P2p>>().inner().clone();
         let host = invite
             .host

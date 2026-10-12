@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
-import { KIND_LABELS, formatBytesMb } from "../../lib/format";
+import { KIND_LABELS, LOADER_LABELS, formatBytesMb, isModded } from "../../lib/format";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
@@ -171,13 +171,13 @@ export function JoinDialog() {
                   </button>
                 </Item>
               )}
-              {preview.loader !== "fabric" &&
+              {!isModded(preview.loader) &&
                 (preview.versionInstalled ? (
                   <Item ok>Gereken sürüm kurulu ({preview.requiredVersion})</Item>
                 ) : (
                   <Item ok={false}>Minecraft {preview.mcVersion} sürümünü Launcher bir kez indirecek; ilk açılış biraz sürebilir.</Item>
                 ))}
-              {preview.loader === "fabric" && preview.mods && (
+              {isModded(preview.loader) && preview.mods && (
                 <>
                   {preview.mods.required.length > 0 && (
                     <Item ok={false}>
@@ -198,7 +198,7 @@ export function JoinDialog() {
                   )}
                   {(preview.mods.required.length > 0 || (withRecommended && preview.mods.recommended.length > 0)) && (
                     <Item ok>
-                      Fabric {preview.loaderVersion} kurulacak
+                      {LOADER_LABELS[preview.loader]} {preview.loaderVersion} kurulacak
                       {preview.mods.launcher === "tLauncher"
                         ? "; modlar TLauncher'ın mods klasörüne konacak"
                         : ` ve Launcher'da "${preview.name} · MC Sunucu" profili oluşturulacak`}
@@ -210,7 +210,7 @@ export function JoinDialog() {
                   )}
                 </>
               )}
-              {preview.loader === "fabric" && !preview.mods && (
+              {isModded(preview.loader) && !preview.mods && (
                 <Item ok={false}>
                   {preview.modsError
                     ? `Mod listesi alınamadı: ${preview.modsError}`
@@ -226,7 +226,9 @@ export function JoinDialog() {
             <div className={styles.installing}>
               <Progress value={progress.count ? (progress.index - 1) / progress.count : null} />
               <span>
-                {progress.title} kuruluyor · {progress.index}/{progress.count}
+                {progress.index === 0
+                  ? `${progress.title} kuruluyor; birkaç dakika sürebilir…`
+                  : `${progress.title} kuruluyor · ${progress.index}/${progress.count}`}
               </span>
             </div>
           )}

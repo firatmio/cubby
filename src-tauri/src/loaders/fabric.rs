@@ -170,7 +170,7 @@ impl Loader for FabricLoader {
         })
     }
 
-    fn launch_args(&self) -> Vec<String> {
+    fn launch_args(&self, _mc: &str, _loader: Option<&str>) -> Vec<String> {
         vec!["-jar".into(), LAUNCHER_JAR.into(), "nogui".into()]
     }
 
@@ -234,6 +234,7 @@ mod tests {
                 &InstallRequest {
                     mc_version: &list.latest_release,
                     loader_version: None,
+                    java: None,
                 },
                 &dir,
                 &mut |_| {},

@@ -1,6 +1,10 @@
 mod fabric;
+mod forge;
+mod installer;
 mod mojang;
+mod neoforge;
 mod paper;
+mod quilt;
 mod vanilla;
 
 use std::path::Path;
@@ -10,8 +14,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppResult;
 use fabric::FabricLoader;
+use forge::ForgeLoader;
+pub use installer::{
+    cleanup as installer_cleanup, download_maven, run as run_installer,
+    version_id as installer_version_id,
+};
 use mojang::MojangApi;
+use neoforge::NeoForgeLoader;
 use paper::PaperLoader;
+use quilt::QuiltLoader;
 use vanilla::VanillaLoader;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,6 +31,37 @@ pub enum LoaderKind {
     Vanilla,
     Fabric,
     Paper,
+    #[serde(rename = "neoforge")]
+    NeoForge,
+    Forge,
+    Quilt,
+}
+
+impl LoaderKind {
+    /// Oyuncunun da aynı modları kurması gereken türler (`mods/` klasörü olanlar).
+    pub fn is_modded(self) -> bool {
+        matches!(
+            self,
+            Self::Fabric | Self::NeoForge | Self::Forge | Self::Quilt
+        )
+    }
+
+    /// Kurulumu resmi installer'ı Java ile çalıştırarak yapılanlar.
+    pub fn uses_installer(self) -> bool {
+        matches!(self, Self::NeoForge | Self::Forge | Self::Quilt)
+    }
+
+    /// Mesajlarda görünen ad.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Vanilla => "Vanilla",
+            Self::Fabric => "Fabric",
+            Self::Paper => "Paper",
+            Self::NeoForge => "NeoForge",
+            Self::Forge => "Forge",
+            Self::Quilt => "Quilt",
+        }
+    }
 }
 
 /// Arayüzde gösterilen oyun sürümü.
@@ -78,6 +120,8 @@ pub struct InstallRequest<'a> {
     pub mc_version: &'a str,
     /// `None` ise önerilen sürüm kullanılır.
     pub loader_version: Option<&'a str>,
+    /// Installer'ı çalıştıracak Java (yalnız `uses_installer` türleri için gerekli).
+    pub java: Option<&'a Path>,
 }
 
 pub struct Installed {
@@ -87,11 +131,15 @@ pub struct Installed {
 
 pub enum InstallStage {
     Meta,
-    /// `file`: "server" (vanilla jar) | "fabric" (başlatıcı) | "paper"
+    /// `file`: "server" (vanilla jar) | "fabric" (başlatıcı) | "paper" | "installer"
     Download {
         file: &'static str,
         downloaded: u64,
         total: Option<u64>,
+    },
+    /// Installer çalışıyor; çıktısının son satırı.
+    Installer {
+        line: String,
     },
 }
 
@@ -112,16 +160,20 @@ pub trait Loader {
     ) -> AppResult<Installed>;
 
     /// JVM ayarlarından sonraki kısım: `-jar <jar> nogui`.
-    fn launch_args(&self) -> Vec<String>;
+    fn launch_args(&self, mc_version: &str, loader_version: Option<&str>) -> Vec<String>;
 
     /// `mods` / `plugins`; yoksa `None`.
     fn content_dir(&self) -> Option<&'static str>;
 }
 
 pub struct Loaders {
+    mojang: Arc<MojangApi>,
     vanilla: VanillaLoader,
     fabric: FabricLoader,
     paper: PaperLoader,
+    neoforge: NeoForgeLoader,
+    forge: ForgeLoader,
+    quilt: QuiltLoader,
 }
 
 macro_rules! dispatch {
@@ -139,6 +191,18 @@ macro_rules! dispatch {
                 let $loader = &$self.paper;
                 $body
             }
+            LoaderKind::NeoForge => {
+                let $loader = &$self.neoforge;
+                $body
+            }
+            LoaderKind::Forge => {
+                let $loader = &$self.forge;
+                $body
+            }
+            LoaderKind::Quilt => {
+                let $loader = &$self.quilt;
+                $body
+            }
         }
     };
 }
@@ -149,8 +213,17 @@ impl Loaders {
         Self {
             vanilla: VanillaLoader::new(mojang.clone()),
             fabric: FabricLoader::new(http.clone(), mojang.clone()),
-            paper: PaperLoader::new(http, mojang),
+            paper: PaperLoader::new(http.clone(), mojang.clone()),
+            neoforge: NeoForgeLoader::new(http.clone(), mojang.clone()),
+            forge: ForgeLoader::new(http.clone(), mojang.clone()),
+            quilt: QuiltLoader::new(http, mojang.clone()),
+            mojang,
         }
+    }
+
+    /// Sürümün istediği Java major sürümü (Mojang sürüm JSON'undan).
+    pub async fn java_major(&self, mc_version: &str) -> AppResult<u32> {
+        self.mojang.java_major(mc_version).await
     }
 
     pub async fn list_game_versions(
@@ -179,13 +252,98 @@ impl Loaders {
         dispatch!(self, kind, l => l.install(req, server_dir, on_stage).await)
     }
 
-    pub fn launch_args(&self, kind: LoaderKind) -> Vec<String> {
-        dispatch!(self, kind, l => l.launch_args())
+    pub fn launch_args(
+        &self,
+        kind: LoaderKind,
+        mc_version: &str,
+        loader_version: Option<&str>,
+    ) -> Vec<String> {
+        dispatch!(self, kind, l => l.launch_args(mc_version, loader_version))
     }
 
     pub fn content_dir(&self, kind: LoaderKind) -> Option<&'static str> {
         dispatch!(self, kind, l => l.content_dir())
     }
+}
+
+/// NeoForge/Forge installer'ının adresi (installer kullanmayan türlerde `None`).
+pub fn installer_url(kind: LoaderKind, mc: &str, loader: &str) -> Option<String> {
+    match kind {
+        LoaderKind::NeoForge => Some(neoforge::installer_url(loader)),
+        LoaderKind::Forge => Some(forge::installer_url(mc, loader)),
+        _ => None,
+    }
+}
+
+/// Sürüm adlarını sayısal karşılaştırır: `0.30.1` > `0.30.0` > `0.30.0-beta.10` > `0.30.0-beta.9`.
+pub(crate) fn cmp_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    fn split(v: &str) -> (Vec<u64>, Option<&str>) {
+        let (base, pre) = match v.split_once(['-', '+']) {
+            Some((b, p)) => (b, Some(p)),
+            None => (v, None),
+        };
+        (
+            base.split('.').map(|p| p.parse().unwrap_or(0)).collect(),
+            pre,
+        )
+    }
+    /// "beta.10" → [("beta", 0), ("", 10)] gibi parçalar; sayılar sayı olarak karşılaştırılır.
+    fn natural(s: &str) -> Vec<(String, u64)> {
+        let mut out = Vec::new();
+        let mut text = String::new();
+        let mut num = String::new();
+        for c in s.chars() {
+            if c.is_ascii_digit() {
+                num.push(c);
+            } else {
+                if !num.is_empty() {
+                    out.push((std::mem::take(&mut text), num.parse().unwrap_or(0)));
+                    num.clear();
+                }
+                text.push(c);
+            }
+        }
+        out.push((text, num.parse().unwrap_or(0)));
+        out
+    }
+    let ((ab, ap), (bb, bp)) = (split(a), split(b));
+    let len = ab.len().max(bb.len());
+    for i in 0..len {
+        let (x, y) = (
+            ab.get(i).copied().unwrap_or(0),
+            bb.get(i).copied().unwrap_or(0),
+        );
+        if x != y {
+            return x.cmp(&y);
+        }
+    }
+    match (ap, bp) {
+        (None, None) => std::cmp::Ordering::Equal,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (Some(x), Some(y)) => natural(x).cmp(&natural(y)),
+    }
+}
+
+/// Mojang listesinde olan sürümler, Mojang sırasıyla (tür ve tarih oradan).
+fn intersect_manifest(
+    manifest: &mojang::Manifest,
+    supported: &std::collections::HashSet<String>,
+    include_snapshots: bool,
+) -> GameVersionList {
+    let versions: Vec<GameVersion> = manifest
+        .versions
+        .iter()
+        .filter(|v| {
+            supported.contains(v.id.as_str()) && mojang::is_listed(&v.kind, include_snapshots)
+        })
+        .map(|v| GameVersion {
+            id: v.id.clone(),
+            kind: v.kind.clone(),
+            release_time: v.release_time.clone(),
+        })
+        .collect();
+    GameVersionList::new(&manifest.latest.release, versions)
 }
 
 /// URL yol parçası için yüzde kodlama (ör. "1.14 Pre-Release 5").
@@ -244,6 +402,17 @@ mod tests {
         assert_eq!(l.latest_release, "26.2");
         let l = GameVersionList::new("26.3", vec![]);
         assert_eq!(l.latest_release, "");
+    }
+
+    #[test]
+    fn compares_versions() {
+        use std::cmp::Ordering::*;
+        assert_eq!(cmp_versions("0.30.1", "0.30.0"), Greater);
+        assert_eq!(cmp_versions("0.30.0", "0.30.0-beta.10"), Greater);
+        assert_eq!(cmp_versions("0.30.0-beta.10", "0.30.0-beta.9"), Greater);
+        assert_eq!(cmp_versions("21.10.3", "21.2.9"), Greater);
+        assert_eq!(cmp_versions("26.3.0.76", "26.3.0.75-beta"), Greater);
+        assert_eq!(cmp_versions("66.0.10", "66.0.10"), Equal);
     }
 
     #[test]

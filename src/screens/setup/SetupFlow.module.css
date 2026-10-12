@@ -107,8 +107,27 @@
   font-size: var(--fs-sm);
 }
 
-.soon {
+.modLoaders {
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  transition: opacity 200ms;
+}
+
+/* Yer tutar: Modlu dışındaki kartlar seçilince satır kaybolur ama sayfa zıplamaz. */
+.hiddenRow {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modLoadersLabel {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.modLoadersText {
   color: var(--text-3);
   font-size: var(--fs-sm);
 }
@@ -238,6 +257,10 @@
 }
 
 .progressText {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-2);
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;

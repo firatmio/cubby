@@ -55,7 +55,7 @@ export function AppSettingsSheet() {
               checked={view.settings.clientSync}
               onChange={(clientSync) => save({ ...view.settings, clientSync })}
               label="Modları kendi Minecraft'ıma da kur"
-              description="Modlu dünyalarda oyuncuda gereken ve önerilen modlar, Fabric ile birlikte senin Minecraft'ına da kurulur. Resmi Launcher'da her dünyanın kendi profili olur, böylece modlar karışmaz."
+              description="Modlu dünyalarda oyuncuda gereken ve önerilen modlar, mod altyapısıyla (Fabric, NeoForge, Forge, Quilt) birlikte senin Minecraft'ına da kurulur. Resmi Launcher'da her dünyanın kendi profili olur, böylece modlar karışmaz."
             />
           </Card>
 

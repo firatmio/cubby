@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, LogIn, Plus, Puzzle, Users, Zap, type LucideIcon } from "lucide-react";
+import { Anvil, Box, Grid2x2, Hammer, LogIn, Plus, Puzzle, Users, Zap, type LucideIcon } from "lucide-react";
 import { mediaUrl, type Instance, type JoinedView, type LoaderKind } from "../../lib/api";
 import { KIND_COLORS } from "../../lib/format";
 import { spring } from "../../lib/motion";
@@ -10,6 +10,9 @@ import styles from "./TileRow.module.css";
 
 export const KIND_ICONS: Record<LoaderKind, LucideIcon> = {
   fabric: Puzzle,
+  neoforge: Anvil,
+  forge: Hammer,
+  quilt: Grid2x2,
   paper: Zap,
   vanilla: Box,
 };

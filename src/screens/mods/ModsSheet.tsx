@@ -80,7 +80,7 @@ function InstallProgress() {
   );
 }
 
-/** Kendi Minecraft'ına mod eşitlemesinin durumu (yalnız Fabric). */
+/** Kendi Minecraft'ına mod eşitlemesinin durumu (yalnız modlu dünyalar). */
 function ClientLine({ id }: { id: string }) {
   const status = useAppStore((s) => s.clientStatus[id]);
   const setClientStatus = useAppStore((s) => s.setClientStatus);
@@ -502,13 +502,13 @@ function DetailView({
         {detail.clientNeed === "required" && (
           <li className={styles.warn}>
             <AlertTriangle size={15} aria-hidden /> Oyuna yeni içerik ekliyor: hem senin hem arkadaşının kendi
-            Minecraft'ına (Fabric ile) kurması gerekir, yoksa dünyaya girilemez.
+            Minecraft'ına kurması gerekir, yoksa dünyaya girilemez. Uygulama bunu kendisi yapar.
           </li>
         )}
         {detail.clientNeed === "recommended" && (
           <li>
             <Info size={15} aria-hidden /> Sunucuda tek başına çalışır, ama ekranlar, tuşlar ya da tarif listesi gibi
-            özellikleri yalnız oyuncunun kendi Minecraft'ında (Fabric ile) da kuruluysa görünür.
+            özellikleri yalnız oyuncunun kendi Minecraft'ında da kuruluysa görünür.
           </li>
         )}
         {detail.clientNeed === "none" && (

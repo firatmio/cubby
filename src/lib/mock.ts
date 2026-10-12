@@ -362,14 +362,25 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
               channel: i === 3 ? "alpha" : "beta",
             })),
           }
-        : {
-            recommended: "0.19.5",
-            versions: [
-              { version: "0.20.0-beta.1", stable: false, channel: null },
-              { version: "0.19.5", stable: true, channel: null },
-              { version: "0.19.4", stable: true, channel: null },
-            ],
-          };
+        : args.loader === "neoforge"
+          ? {
+              recommended: "26.3.0.76",
+              versions: [
+                { version: "26.3.0.76", stable: true, channel: null },
+                { version: "26.3.0.75-beta", stable: false, channel: null },
+              ],
+            }
+          : args.loader === "forge"
+            ? {
+                recommended: "66.0.10",
+                versions: ["66.0.10", "66.0.9", "66.0.8"].map((version) => ({ version, stable: true, channel: null })),
+              }
+            : {
+                recommended: args.loader === "quilt" ? "0.30.1" : "0.19.5",
+                versions: (args.loader === "quilt" ? ["0.31.0-beta.4", "0.30.1", "0.30.0"] : ["0.20.0-beta.1", "0.19.5", "0.19.4"]).map(
+                  (version) => ({ version, stable: !version.includes("-"), channel: null }),
+                ),
+              };
     case "list_instances":
       return [...instances];
     case "get_instance":
@@ -380,6 +391,19 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       emit("install://progress", { id, stage: "meta", file: null, downloaded: 0, total: null });
       await progress("install://progress", { id, file: "server" }, 12);
       if (req.loader === "fabric") await progress("install://progress", { id, file: "fabric" }, 3);
+      if (["neoforge", "forge", "quilt"].includes(req.loader)) {
+        await progress("install://progress", { id, file: "installer" }, 4);
+        for (const line of [
+          "Considering Minecraft server jar",
+          "Considering library net.neoforged:fancymodloader:10.0.3",
+          "Download completed: Checksum validated.",
+          "Task: PROCESS_MINECRAFT_JAR",
+          "applying patches [275ms]",
+        ]) {
+          await sleep(500);
+          emit("install://progress", { id, stage: "installer", file: null, downloaded: 0, total: null, line });
+        }
+      }
       const inst: Instance = {
         id,
         name: req.name,

@@ -8,4 +8,4 @@
 - `join_cmds.rs` — `host_decider` (instance.invite_token eşleşmeli; running değilse tcp → offline), `create_invite`/`reset_invite`, `preview_invite` (ping + kontroller, own), `join_world(code, force)` (Minecraft açıksa hata), `list_joined`, `remove_joined` (servers.dat kaydını da siler), `readd_server_entry`, `server_entry_exists`, `refresh_joined`, `take_pending_invite`.
 - `lib.rs` — deep-link plugin (`tauri.conf.json` plugins.deep-link.desktop.schemes ["mcsm"], `register_all()` HKCU'ya dev exe'yi yazar), single-instance `deep-link` özelliği, `handle_invite_urls` → `PendingInvite` + `join://invite`. Tray (`tray-icon`): "Aç" / "Tamamen kapat"(begin_shutdown). CloseRequested: sunucu çalışıyorsa ya da katılınan dünya varsa `hide()`; begin_shutdown sonunda `P2p::close()`.
 - Canlı test: `cargo test --lib -- --ignored live_p2p_pipe --nocapture` (aynı makinede iki endpoint, yol "Direct").
-- M7b (sonra): mod eşitleme, Fabric istemci kurulumu, web katılım sayfası, launcher'ı açma.
+- M7b: manifest/file akışları, mods_rev, mod kurulumu → `mem:backend/client`. Web katılım sayfası isim belli olunca.

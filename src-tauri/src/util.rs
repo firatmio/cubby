@@ -41,6 +41,15 @@ pub fn hide_console(cmd: &mut tokio::process::Command) {
     let _ = cmd;
 }
 
+/// Dosya/klasör adı olarak güvenli sürüm adı: harf, rakam, `.`, `-`, `_`, `+`; nokta ile başlamaz.
+pub fn is_safe_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 128
+        && !s.starts_with('.')
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
+}
+
 /// Canlı (`#[ignore]`) testlerin indirme klasörü: `MCSM_TEST_DIR` yoksa temp.
 #[cfg(test)]
 pub fn live_test_dir(name: &str) -> std::path::PathBuf {

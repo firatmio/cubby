@@ -14,6 +14,7 @@ use crate::commands::{AppState, server_port};
 use crate::covers::SERVER_ICON;
 use crate::error::{AppError, AppResult};
 use crate::instance::{self, Instance};
+use crate::java::JavaManager;
 use crate::join::servers_dat;
 use crate::loaders::LoaderKind;
 use crate::mods;
@@ -96,10 +97,56 @@ pub fn minecraft_dir(app: &AppHandle) -> AppResult<PathBuf> {
         })
 }
 
-/// Fabric sürümü + (resmi Launcher'da) profil + `servers.dat`. Dönen: (Launcher, mods klasörü, ortak mı, seçilecek ad).
+/// Mod altyapısının istemci sürümü: Fabric/Quilt meta'dan, NeoForge/Forge resmi installer'la
+/// (Java gerekirse bulunur ya da indirilir).
+async fn ensure_client_version(
+    app: &AppHandle,
+    mc: &Path,
+    kind: LoaderKind,
+    mc_version: &str,
+    loader_version: &str,
+    on_line: &mut (impl FnMut(String) + Send),
+) -> AppResult<String> {
+    let state = app.state::<AppState>();
+    let http = state.http.clone();
+    if matches!(kind, LoaderKind::Fabric | LoaderKind::Quilt) {
+        return client::ensure_meta_version(&http, mc, kind, mc_version, loader_version).await;
+    }
+    if let Some(id) = client::version_id(kind, mc_version, loader_version)
+        .filter(|id| client::version_exists(mc, id))
+    {
+        return Ok(id);
+    }
+    let major = state.loaders.java_major(mc_version).await?;
+    let java = app.state::<JavaManager>();
+    let found = match java.resolve(None, major).await? {
+        Some(j) => j,
+        None => java.install(major, |_| {}).await?,
+    };
+    let work = app
+        .path()
+        .app_data_dir()?
+        .join("cache")
+        .join(format!("installer-{}", uuid::Uuid::new_v4().simple()));
+    client::install_forge_client(
+        &http,
+        mc,
+        kind,
+        mc_version,
+        loader_version,
+        Path::new(&found.path),
+        &work,
+        on_line,
+    )
+    .await
+}
+
+/// Mod altyapısının istemci sürümü + (resmi Launcher'da) profil + `servers.dat`.
+/// Dönen: (Launcher, mods klasörü, ortak mı, seçilecek ad).
 #[allow(clippy::too_many_arguments)]
 pub async fn prepare_client(
     app: &AppHandle,
+    kind: LoaderKind,
     key: &str,
     world_name: &str,
     dir: &str,
@@ -107,13 +154,14 @@ pub async fn prepare_client(
     loader_version: &str,
     icon: String,
     server_entry: Option<(&str, &str)>,
+    on_line: &mut (impl FnMut(String) + Send),
 ) -> AppResult<(Launcher, PathBuf, bool, String)> {
     let mc = minecraft_dir(app)?;
     let launcher = client::detect_launcher(&mc).ok_or_else(|| {
         AppError::msg("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.")
     })?;
-    let http = app.state::<AppState>().http.clone();
-    let version_id = client::ensure_fabric_version(&http, &mc, mc_version, loader_version).await?;
+    let version_id =
+        ensure_client_version(app, &mc, kind, mc_version, loader_version, on_line).await?;
     let (game_dir, mods_dir) = client::targets(&mc, launcher, dir);
     let pick = match launcher {
         Launcher::Official => {
@@ -151,11 +199,12 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
     let lv = inst
         .loader_version
         .clone()
-        .ok_or_else(|| AppError::msg("Fabric Loader sürümü bilinmiyor."))?;
+        .ok_or_else(|| AppError::msg(format!("{} sürümü bilinmiyor.", inst.loader.label())))?;
     let port = server_port(&server_dir, inst.port);
     let ip = format!("localhost:{port}");
     let (launcher, mods_dir, shared, pick) = prepare_client(
         app,
+        inst.loader,
         &profile_key(&inst.id),
         &inst.name,
         &dir_name(&inst.name, &inst.id),
@@ -163,11 +212,12 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
         &lv,
         profile_icon(&server_dir),
         Some((&ip, &inst.name)),
+        &mut |_| {},
     )
     .await?;
 
     let server_mods = server_dir.join("mods");
-    let list = manifest::build(&server_mods, &mods::load_records(&meta));
+    let list = manifest::build(&server_mods, &mods::load_records(&meta), inst.loader);
     let wanted: Vec<Wanted> = list
         .iter()
         .map(|m| Wanted {
@@ -194,12 +244,12 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
     })
 }
 
-/// Ayar açıksa ve dünya Fabric ise eşitler; hata dünya işlemlerini bozmaz, durum olarak bildirilir.
+/// Ayar açıksa ve dünya modluysa eşitler; hata dünya işlemlerini bozmaz, durum olarak bildirilir.
 pub async fn sync_host(app: &AppHandle, id: &str) {
     let Ok(inst) = instance::get(app, id) else {
         return;
     };
-    if inst.loader != LoaderKind::Fabric || !app.state::<SettingsStore>().get().client_sync {
+    if !inst.loader.is_modded() || !app.state::<SettingsStore>().get().client_sync {
         set(
             app,
             id,

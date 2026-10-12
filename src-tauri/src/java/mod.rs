@@ -133,6 +133,22 @@ impl JavaManager {
     }
 }
 
+/// Canlı testler için: sistemde uygun Java, yoksa test klasörüne indirilir.
+#[cfg(test)]
+pub async fn test_java(required: u32) -> PathBuf {
+    let http = reqwest::Client::builder()
+        .user_agent(crate::consts::USER_AGENT)
+        .build()
+        .unwrap();
+    let manager = JavaManager::new(crate::util::live_test_dir("java"), http);
+    let java = match manager.resolve(None, required).await.unwrap() {
+        Some(j) => j,
+        None => manager.install(required, |_| {}).await.unwrap(),
+    };
+    println!("java {} -> {}", java.major, java.path);
+    PathBuf::from(java.path)
+}
+
 /// Tam eşleşen major tercih edilir; yoksa gerekenden büyük olanların en küçüğü
 /// (çok yeni Java eski Minecraft'ı bozabilir).
 pub fn pick(list: &[JavaInfo], required: u32) -> Option<&JavaInfo> {
