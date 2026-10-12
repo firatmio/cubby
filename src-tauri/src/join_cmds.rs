@@ -545,25 +545,80 @@ pub async fn remove_joined(app: AppHandle, joins: Joins<'_>, id: String) -> AppR
             servers_dat::write(&dir, &root)?;
         }
     }
-    // Profil (resmi Launcher) ya da ortak klasördeki bu dünyanın modları (TLauncher) kaldırılır.
-    if removed.profile.is_some()
-        && let Some(mc) = minecraft_dir(&app)
-    {
+    // Profil ve doğrudan bağlanan sürüm (resmi Launcher) ya da ortak klasördeki bu dünyanın
+    // modları (TLauncher) kaldırılır.
+    if let Some(mc) = minecraft_dir(&app) {
         let key = join_key(&removed.host, &removed.world);
+        crate::client::remove_version(
+            &mc,
+            &crate::client::quickplay_id(&crate::client_cmds::dir_name(&removed.name, &key)),
+        );
         match crate::client::detect_launcher(&mc) {
             Some(crate::client::Launcher::Official) => {
                 crate::client::edit_profiles(&mc, |root| {
                     crate::client::remove_profile(root, &format!("mcsm-join-{key}"));
                 })?;
             }
-            Some(crate::client::Launcher::TLauncher) => {
+            Some(crate::client::Launcher::TLauncher) if removed.profile.is_some() => {
                 crate::client::sync(&mc.join("mods"), &key, &[], true, |_, _| async { Ok(()) })
                     .await?;
             }
-            None => {}
+            _ => {}
         }
     }
     Ok(())
+}
+
+/// "Oyna": sunucu listesi kaydı, dünyanın profili (doğrudan bağlanan sürümle) ve Launcher'ı açma.
+#[tauri::command]
+pub async fn play_joined(
+    app: AppHandle,
+    joins: Joins<'_>,
+    id: String,
+) -> AppResult<crate::client_cmds::LaunchResult> {
+    use crate::client_cmds::{dir_name, launch_now, play_version, prepare_plain, write_profile};
+    let w = joins.get(&id).await?;
+    if let Some(dir) = entry_dir(&app, &w) {
+        let mut root = servers_dat::read(&dir)?;
+        if !servers_dat::contains(&mut root, &w.address()) {
+            add_server_entry(&app, &w, false)?;
+        }
+    }
+    let key = join_key(&w.host, &w.world);
+    let profile_key = format!("mcsm-join-{key}");
+    let dir = dir_name(&w.name, &key);
+    let (launcher, pick) = match (&w.profile, &w.loader_version) {
+        // Modlar kuruldu: profil ve mod altyapısının sürümü zaten var.
+        (Some(_), Some(lv)) if w.loader.is_modded() => {
+            let mc = crate::client_cmds::minecraft_dir(&app)?;
+            let launcher = crate::client::detect_launcher(&mc)
+                .ok_or_else(|| AppError::msg("Minecraft Launcher bulunamadı."))?;
+            let base = crate::client::version_id(w.loader, &w.mc_version, lv)
+                .ok_or_else(|| AppError::msg("Dünyanın sürümü bilinmiyor."))?;
+            let version = play_version(&mc, &dir, &w.mc_version, &base, Some(&w.address()))?;
+            let game_dir = w.game_dir.as_deref().map(std::path::Path::new);
+            let pick = write_profile(
+                &mc,
+                launcher,
+                &profile_key,
+                &w.name,
+                &version,
+                game_dir,
+                "Furnace",
+            )?;
+            (launcher, pick)
+        }
+        _ => prepare_plain(
+            &app,
+            &profile_key,
+            &w.name,
+            &dir,
+            &w.mc_version,
+            "Furnace",
+            &w.address(),
+        )?,
+    };
+    Ok(launch_now(launcher, pick, &w.mc_version))
 }
 
 #[tauri::command]

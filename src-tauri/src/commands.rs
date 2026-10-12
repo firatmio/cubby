@@ -328,6 +328,9 @@ pub async fn delete_instance(
         return Err(AppError::msg("Çalışan sunucu silinemez, önce durdur"));
     }
     let dir = paths::instance_dir(&app, &id)?;
+    if let Ok(inst) = instance::get(&app, &id) {
+        crate::client_cmds::forget_world(&app, &inst);
+    }
     if dir.exists() {
         let target = dir.clone();
         tokio::task::spawn_blocking(move || trash::delete(target))
@@ -396,6 +399,7 @@ pub async fn start_server(
     state: State<'_, AppState>,
     java: State<'_, JavaManager>,
     id: String,
+    join: Option<bool>,
 ) -> AppResult<()> {
     let inst = instance::get(&app, &id)?;
     let server_dir = paths::server_dir(&app, &id)?;
@@ -436,7 +440,12 @@ pub async fn start_server(
                 cwd: server_dir,
             },
         )
-        .await
+        .await?;
+    // "Başlat ve katıl": sunucu hazır olunca Launcher açılır.
+    if join == Some(true) {
+        crate::client_cmds::join_after_start(&app, &id);
+    }
+    Ok(())
 }
 
 #[tauri::command]

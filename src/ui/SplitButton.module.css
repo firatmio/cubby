@@ -1,0 +1,104 @@
+.split {
+  position: relative;
+  display: inline-flex;
+  height: var(--h-lg);
+}
+
+.main,
+.more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    opacity 160ms;
+}
+
+.main:hover:not(:disabled),
+.more:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+.main:disabled,
+.more:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.main {
+  flex: 1;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-5) 0 var(--sp-6);
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
+}
+
+/* Ana butondan ince bir çizgiyle ayrılan ▾. Sağ ucu yuvarlak olduğu için ok gözle ortalansın
+   diye biraz sola alınır. */
+.more {
+  width: 48px;
+  padding: 0 6px 0 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+}
+
+.chevron {
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--sp-2));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  padding: var(--sp-1);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-tile);
+  transform-origin: bottom right;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--hover);
+}
+
+.check {
+  margin-left: auto;
+  padding-left: var(--sp-2);
+  box-sizing: content-box;
+  color: var(--text-2);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

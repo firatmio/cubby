@@ -5,6 +5,7 @@
 //! - Resmi Launcher: her dünya `launcher_profiles.json`'da kendi profili ve `.minecraft/mcsm/<ad>` oyun klasörüyle.
 //! - Yalnız TLauncher: ortak `.minecraft/mods`; bizim koyduklarımız dünya değişince `mods/_disabled`'a alınır.
 
+pub mod launch;
 pub mod manifest;
 
 use std::collections::{HashMap, HashSet};
@@ -140,6 +141,77 @@ pub async fn ensure_meta_version(
     Ok(id)
 }
 
+// ---- Doğrudan dünyaya bağlanan sürüm (Quick Play) ----
+
+/// Minecraft 1.20 (23w14a) ve sonrası `--quickPlayMultiplayer` ile doğrudan sunucuya bağlanır.
+pub fn quickplay_supported(mc: &str) -> bool {
+    let base = mc.split(['-', ' ']).next().unwrap_or("");
+    let mut parts = base.split('.').map(|p| p.parse::<u32>().ok());
+    match (parts.next().flatten(), parts.next().flatten()) {
+        (Some(1), Some(minor)) => minor >= 20,
+        (Some(major), _) if major >= 26 => true,
+        _ => {
+            // Eski haftalık snapshot'lar: "23w14a"
+            let (year, week) = base.split_once('w').unwrap_or(("", ""));
+            match (
+                year.parse::<u32>(),
+                week.get(..2).and_then(|w| w.parse::<u32>().ok()),
+            ) {
+                (Ok(y), Some(w)) => y * 100 + w >= 2314,
+                _ => false,
+            }
+        }
+    }
+}
+
+/// Dünyanın Launcher sürümünün adı: `mcsm-<klasör adı>`.
+pub fn quickplay_id(dir: &str) -> String {
+    format!("mcsm-{dir}")
+}
+
+/// Asıl sürümü (`base`) devralan ve oyunu `addr`'e doğrudan bağlayan küçük sürüm JSON'u.
+/// Kütüphaneler ve oyun dosyası asıl sürümden gelir; içerik aynıysa dosyaya dokunulmaz.
+pub fn ensure_quickplay_version(
+    mc_dir: &Path,
+    id: &str,
+    base: &str,
+    addr: &str,
+) -> AppResult<String> {
+    if !crate::util::is_safe_name(id) {
+        return Err(AppError::msg("Geçersiz sürüm adı."));
+    }
+    let file = version_file(mc_dir, id);
+    let old: Option<Value> = std::fs::read(&file)
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok());
+    let same = old.as_ref().is_some_and(|v| {
+        v.get("inheritsFrom").and_then(Value::as_str) == Some(base)
+            && v.pointer("/arguments/game/1").and_then(Value::as_str) == Some(addr)
+    });
+    if !same {
+        let now = crate::util::iso_utc(crate::util::now_ms());
+        let json = json!({
+            "id": id,
+            "inheritsFrom": base,
+            "type": "release",
+            "time": now,
+            "releaseTime": now,
+            "arguments": { "game": ["--quickPlayMultiplayer", addr], "jvm": [] },
+            "libraries": [],
+        });
+        std::fs::create_dir_all(file.parent().unwrap_or(mc_dir))?;
+        write_atomic(&file, &serde_json::to_vec_pretty(&json)?)?;
+    }
+    Ok(id.to_string())
+}
+
+/// Yalnız bizim yazdığımız (`mcsm-`) sürüm klasörünü kaldırır.
+pub fn remove_version(mc_dir: &Path, id: &str) {
+    if id.starts_with("mcsm-") && crate::util::is_safe_name(id) {
+        let _ = std::fs::remove_dir_all(mc_dir.join("versions").join(id));
+    }
+}
+
 fn profile_keys(mc_dir: &Path) -> HashSet<String> {
     std::fs::read(mc_dir.join(PROFILES_FILE))
         .ok()
@@ -226,7 +298,8 @@ pub struct ProfileSpec<'a> {
     pub key: &'a str,
     pub name: &'a str,
     pub version_id: &'a str,
-    pub game_dir: &'a Path,
+    /// `None`: oyuncunun normal `.minecraft`'ı (modsuz dünyalar).
+    pub game_dir: Option<&'a Path>,
     pub icon: &'a str,
     pub now: &'a str,
 }
@@ -260,7 +333,10 @@ pub fn upsert_profile(root: &mut Value, spec: &ProfileSpec) {
     p.insert("name".into(), json!(spec.name));
     p.insert("type".into(), json!("custom"));
     p.insert("lastVersionId".into(), json!(spec.version_id));
-    p.insert("gameDir".into(), json!(spec.game_dir.to_string_lossy()));
+    match spec.game_dir {
+        Some(dir) => p.insert("gameDir".into(), json!(dir.to_string_lossy())),
+        None => p.remove("gameDir"),
+    };
     p.insert("icon".into(), json!(spec.icon));
     p.insert("lastUsed".into(), json!(spec.now));
     map.insert(spec.key.to_string(), profile);
@@ -579,7 +655,7 @@ mod tests {
             key: "mcsm-1",
             name: "Test · MC Sunucu",
             version_id: "fabric-loader-0.19.5-26.3",
-            game_dir: &dir,
+            game_dir: Some(&dir),
             icon: "Furnace",
             now: "2026-10-10T10:00:00.000Z",
         };
@@ -606,6 +682,57 @@ mod tests {
         );
         assert!(remove_profile(&mut root, "mcsm-1"));
         assert!(root["profiles"].get("mcsm-1").is_none());
+    }
+
+    #[test]
+    fn plain_profile_has_no_game_dir() {
+        let mut root = json!({ "profiles": { "mcsm-2": { "gameDir": "eski" } } });
+        upsert_profile(
+            &mut root,
+            &ProfileSpec {
+                key: "mcsm-2",
+                name: "Ada · MC Sunucu",
+                version_id: "mcsm-ada-12345678",
+                game_dir: None,
+                icon: "Grass",
+                now: "2026-10-12T10:00:00.000Z",
+            },
+        );
+        assert!(root["profiles"]["mcsm-2"].get("gameDir").is_none());
+    }
+
+    #[test]
+    fn quickplay_versions() {
+        assert!(!quickplay_supported("1.19.4"));
+        assert!(quickplay_supported("1.20"));
+        assert!(quickplay_supported("1.21.11"));
+        assert!(quickplay_supported("26.3"));
+        assert!(quickplay_supported("26.1-snapshot-4"));
+        assert!(quickplay_supported("23w14a"));
+        assert!(!quickplay_supported("23w13a"));
+        assert!(!quickplay_supported("b1.7.3"));
+
+        let mc = tmp("qp");
+        let id = quickplay_id("test-3a08f417");
+        ensure_quickplay_version(&mc, &id, "fabric-loader-0.19.5-26.3", "localhost:25565").unwrap();
+        let v: Value =
+            serde_json::from_slice(&std::fs::read(version_file(&mc, &id)).unwrap()).unwrap();
+        assert_eq!(v["id"], json!("mcsm-test-3a08f417"));
+        assert_eq!(v["inheritsFrom"], json!("fabric-loader-0.19.5-26.3"));
+        assert_eq!(
+            v["arguments"]["game"],
+            json!(["--quickPlayMultiplayer", "localhost:25565"])
+        );
+        // Port değişince güncellenir.
+        ensure_quickplay_version(&mc, &id, "fabric-loader-0.19.5-26.3", "localhost:25570").unwrap();
+        let v: Value =
+            serde_json::from_slice(&std::fs::read(version_file(&mc, &id)).unwrap()).unwrap();
+        assert_eq!(v["arguments"]["game"][1], json!("localhost:25570"));
+
+        assert!(ensure_quickplay_version(&mc, "../x", "26.3", "a:1").is_err());
+        remove_version(&mc, "26.3");
+        remove_version(&mc, &id);
+        assert!(!mc.join("versions").join(&id).exists());
     }
 
     fn w(file: &str, sha: &str) -> Wanted {
@@ -791,7 +918,7 @@ mod tests {
                     key: "mine",
                     name: "Benim",
                     version_id: "26.3",
-                    game_dir: &mc,
+                    game_dir: Some(&mc),
                     icon: "Grass",
                     now: "2026-10-12T00:00:00.000Z",
                 },

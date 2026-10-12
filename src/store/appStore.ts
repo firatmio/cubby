@@ -14,6 +14,7 @@ import {
   type ProcessStats,
   type ServerSnapshot,
   type ServerStatus,
+  type LaunchResult,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -88,6 +89,9 @@ interface AppStore {
   /** Dünya başına kendi Minecraft'ına mod eşitlemesi. */
   clientStatus: Record<string, ClientStatus>;
   setClientStatus: (id: string, s: ClientStatus) => void;
+  /** "Başlat ve katıl" sonrası Launcher sonucu (dünya başına; kapatılınca null). */
+  launchResults: Record<string, LaunchResult | null>;
+  setLaunchResult: (id: string, r: LaunchResult | null) => void;
   /** Katılırken oyuncunun Minecraft'ına mod kurulumu. */
   joinProgress: JoinProgress | null;
   setJoinProgress: (p: JoinProgress | null) => void;
@@ -224,6 +228,8 @@ export const useAppStore = create<AppStore>((set, get) => {
       set((st) => ({ joined: st.joined.map((j) => (j.world.id === id ? { ...j, status } : j)) })),
     clientStatus: {},
     setClientStatus: (id, s) => set((st) => ({ clientStatus: { ...st.clientStatus, [id]: s } })),
+    launchResults: {},
+    setLaunchResult: (id, r) => set((st) => ({ launchResults: { ...st.launchResults, [id]: r } })),
     joinProgress: null,
     setJoinProgress: (joinProgress) => set({ joinProgress }),
     modProgress: null,

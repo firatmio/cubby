@@ -1,4 +1,5 @@
 //! Host: kendi dünyasının oyuncuda gereken modları kendi Minecraft'ına (dünyaya özel profile) kurulur.
+//! "Başlat ve katıl": profil hazırlanır, sunucu açılınca Launcher açılır; oyun doğrudan dünyaya bağlanır.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -9,7 +10,7 @@ use base64::engine::general_purpose::STANDARD;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
 
-use crate::client::{self, Launcher, ProfileSpec, Wanted, manifest};
+use crate::client::{self, Launcher, ProfileSpec, Wanted, launch, manifest};
 use crate::commands::{AppState, server_port};
 use crate::covers::SERVER_ICON;
 use crate::error::{AppError, AppResult};
@@ -19,12 +20,16 @@ use crate::join::servers_dat;
 use crate::loaders::LoaderKind;
 use crate::mods;
 use crate::paths;
-use crate::server::EVENT_STATUS;
+use crate::server::{EVENT_STATUS, ServerStatus};
 use crate::sessions::META_DIR;
 use crate::settings::SettingsStore;
 use crate::util::{iso_utc, now_ms};
 
 pub const EVENT_STATUS_CLIENT: &str = "client://status";
+pub const EVENT_LAUNCH: &str = "client://launch";
+
+/// "Başlat ve katıl" sunucunun açılmasını en fazla bu kadar bekler (büyük mod paketleri yavaş açılır).
+const JOIN_WAIT: std::time::Duration = std::time::Duration::from_secs(15 * 60);
 
 /// Aynı anda tek eşitleme (Launcher dosyası ve ortak mods klasörü yarışmasın).
 static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -44,6 +49,21 @@ pub struct ClientStatus {
 
 #[derive(Default)]
 pub struct ClientStates(pub Mutex<HashMap<String, ClientStatus>>);
+
+/// Launcher'ı açma sonucu; arayüz buna göre ipucu gösterir.
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchResult {
+    pub opened: bool,
+    pub launcher: Option<Launcher>,
+    /// Launcher'da seçilecek profil (resmi Launcher) ya da sürüm (TLauncher).
+    pub pick: Option<String>,
+    /// Launcher zaten açıktı: profil seçimini yeni dosyadan okumamış olabilir.
+    pub was_running: bool,
+    /// Oyun menüye uğramadan dünyaya bağlanacak mı (Minecraft 1.20+).
+    pub direct: bool,
+    pub error: Option<String>,
+}
 
 #[derive(Serialize, Clone)]
 struct Payload<'a> {
@@ -162,35 +182,113 @@ pub async fn prepare_client(
     })?;
     let version_id =
         ensure_client_version(app, &mc, kind, mc_version, loader_version, on_line).await?;
+    let version = play_version(
+        &mc,
+        dir,
+        mc_version,
+        &version_id,
+        server_entry.map(|(ip, _)| ip),
+    )?;
     let (game_dir, mods_dir) = client::targets(&mc, launcher, dir);
-    let pick = match launcher {
-        Launcher::Official => {
-            client::prepare_game_dir(&mc, &game_dir)?;
-            let now = iso_utc(now_ms());
-            let name = profile_name(world_name);
-            client::edit_profiles(&mc, |root| {
-                client::upsert_profile(
-                    root,
-                    &ProfileSpec {
-                        key,
-                        name: &name,
-                        version_id: &version_id,
-                        game_dir: &game_dir,
-                        icon: &icon,
-                        now: &now,
-                    },
-                )
-            })?;
-            name
-        }
-        Launcher::TLauncher => version_id,
-    };
+    if launcher == Launcher::Official {
+        client::prepare_game_dir(&mc, &game_dir)?;
+    }
+    let pick = write_profile(
+        &mc,
+        launcher,
+        key,
+        world_name,
+        &version,
+        Some(&game_dir),
+        &icon,
+    )?;
     if let Some((ip, name)) = server_entry {
         let mut root = servers_dat::read(&game_dir)?;
         servers_dat::upsert(&mut root, ip, name);
         servers_dat::write(&game_dir, &root)?;
     }
     Ok((launcher, mods_dir, launcher == Launcher::TLauncher, pick))
+}
+
+/// Oyunu doğrudan dünyaya bağlayan sürüm (1.20+), yoksa asıl sürüm.
+pub fn play_version(
+    mc: &Path,
+    dir: &str,
+    mc_version: &str,
+    base: &str,
+    addr: Option<&str>,
+) -> AppResult<String> {
+    match addr {
+        Some(addr) if client::quickplay_supported(mc_version) => {
+            client::ensure_quickplay_version(mc, &client::quickplay_id(dir), base, addr)
+        }
+        _ => Ok(base.to_string()),
+    }
+}
+
+/// Resmi Launcher'da dünyanın profilini yazar (seçili açılsın); TLauncher'da seçilecek sürümü döner.
+pub fn write_profile(
+    mc: &Path,
+    launcher: Launcher,
+    key: &str,
+    world_name: &str,
+    version: &str,
+    game_dir: Option<&Path>,
+    icon: &str,
+) -> AppResult<String> {
+    match launcher {
+        Launcher::Official => {
+            let now = iso_utc(now_ms());
+            let name = profile_name(world_name);
+            client::edit_profiles(mc, |root| {
+                client::upsert_profile(
+                    root,
+                    &ProfileSpec {
+                        key,
+                        name: &name,
+                        version_id: version,
+                        game_dir,
+                        icon,
+                        now: &now,
+                    },
+                )
+            })?;
+            Ok(name)
+        }
+        Launcher::TLauncher => Ok(version.to_string()),
+    }
+}
+
+/// Modsuz dünya: oyuncunun normal `.minecraft`'ıyla açılan, doğrudan `addr`'e bağlanan profil.
+pub fn prepare_plain(
+    app: &AppHandle,
+    key: &str,
+    world_name: &str,
+    dir: &str,
+    mc_version: &str,
+    icon: &str,
+    addr: &str,
+) -> AppResult<(Launcher, String)> {
+    let mc = minecraft_dir(app)?;
+    let launcher = client::detect_launcher(&mc).ok_or_else(|| {
+        AppError::msg("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.")
+    })?;
+    let version = play_version(&mc, dir, mc_version, mc_version, Some(addr))?;
+    let pick = write_profile(&mc, launcher, key, world_name, &version, None, icon)?;
+    Ok((launcher, pick))
+}
+
+/// Launcher'ı açar ve sonucu döner.
+pub fn launch_now(launcher: Launcher, pick: String, mc_version: &str) -> LaunchResult {
+    let was_running = launch::launcher_running();
+    LaunchResult {
+        opened: launch::open_launcher(launcher),
+        launcher: Some(launcher),
+        pick: Some(pick),
+        was_running,
+        direct: client::quickplay_supported(mc_version),
+        error: None,
+    }
 }
 
 async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientStatus> {
@@ -246,19 +344,21 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
 
 /// Ayar açıksa ve dünya modluysa eşitler; hata dünya işlemlerini bozmaz, durum olarak bildirilir.
 pub async fn sync_host(app: &AppHandle, id: &str) {
+    sync_host_with(app, id, false).await;
+}
+
+/// `force`: ayar kapalı olsa da (oyuncu "Başlat ve katıl" dedi). Son durumu döner.
+async fn sync_host_with(app: &AppHandle, id: &str, force: bool) -> ClientStatus {
     let Ok(inst) = instance::get(app, id) else {
-        return;
+        return ClientStatus::default();
     };
-    if !inst.loader.is_modded() || !app.state::<SettingsStore>().get().client_sync {
-        set(
-            app,
-            id,
-            ClientStatus {
-                state: "off",
-                ..Default::default()
-            },
-        );
-        return;
+    if !inst.loader.is_modded() || !(force || app.state::<SettingsStore>().get().client_sync) {
+        let off = ClientStatus {
+            state: "off",
+            ..Default::default()
+        };
+        set(app, id, off.clone());
+        return off;
     }
     let _guard = SYNC.lock().await;
     set(
@@ -277,7 +377,87 @@ pub async fn sync_host(app: &AppHandle, id: &str) {
             ..Default::default()
         },
     };
-    set(app, id, status);
+    set(app, id, status.clone());
+    status
+}
+
+/// Host'un kendi dünyasına girmesi için profil: modluda eşitleme, modsuzda düz profil.
+async fn prepare_play(app: &AppHandle, inst: &Instance) -> AppResult<(Launcher, String)> {
+    if inst.loader.is_modded() {
+        let s = sync_host_with(app, &inst.id, true).await;
+        return match (s.state, s.launcher, s.pick) {
+            ("ok", Some(l), Some(p)) => Ok((l, p)),
+            _ => Err(AppError::msg(
+                s.message
+                    .unwrap_or_else(|| "Minecraft'ın hazırlanamadı.".into()),
+            )),
+        };
+    }
+    let server_dir = paths::server_dir(app, &inst.id)?;
+    let port = server_port(&server_dir, inst.port);
+    prepare_plain(
+        app,
+        &profile_key(&inst.id),
+        &inst.name,
+        &dir_name(&inst.name, &inst.id),
+        &inst.mc_version,
+        &profile_icon(&server_dir),
+        &format!("localhost:{port}"),
+    )
+}
+
+#[derive(Serialize, Clone)]
+struct LaunchPayload<'a> {
+    id: &'a str,
+    result: &'a LaunchResult,
+}
+
+/// "Başlat ve katıl": profil sunucu açılırken hazırlanır; sunucu hazır olunca (Done) Launcher açılır.
+/// Sunucu durur ya da çökerse vazgeçilir.
+pub fn join_after_start(app: &AppHandle, id: &str) {
+    let (app, id) = (app.clone(), id.to_string());
+    tauri::async_runtime::spawn(async move {
+        let Ok(inst) = instance::get(&app, &id) else {
+            return;
+        };
+        let prepared = prepare_play(&app, &inst).await;
+        let started = std::time::Instant::now();
+        loop {
+            match app.state::<AppState>().servers.snapshot(&id).status {
+                ServerStatus::Running => break,
+                ServerStatus::Stopped | ServerStatus::Crashed => return,
+                _ if started.elapsed() > JOIN_WAIT => return,
+                _ => tokio::time::sleep(std::time::Duration::from_millis(500)).await,
+            }
+        }
+        let result = match prepared {
+            Ok((launcher, pick)) => launch_now(launcher, pick, &inst.mc_version),
+            Err(e) => LaunchResult {
+                error: Some(e.to_string()),
+                ..Default::default()
+            },
+        };
+        let _ = app.emit(
+            EVENT_LAUNCH,
+            LaunchPayload {
+                id: &id,
+                result: &result,
+            },
+        );
+    });
+}
+
+/// Dünya silinince profili ve doğrudan bağlanan sürümü kaldırır (oyun klasörüne dokunulmaz).
+pub fn forget_world(app: &AppHandle, inst: &Instance) {
+    let Ok(mc) = minecraft_dir(app) else {
+        return;
+    };
+    client::remove_version(&mc, &client::quickplay_id(&dir_name(&inst.name, &inst.id)));
+    if client::detect_launcher(&mc) == Some(Launcher::Official) {
+        let _ = client::edit_profiles(&mc, |root| {
+            client::remove_profile(root, &profile_key(&inst.id));
+        });
+    }
 }
 
 pub fn spawn_sync(app: &AppHandle, id: &str) {

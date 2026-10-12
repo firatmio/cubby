@@ -382,6 +382,19 @@ export interface UpdateInstanceRequest {
   ramMaxMb?: number;
 }
 
+/** Launcher'ı açma sonucu ("Başlat ve katıl", arkadaşın dünyasında "Oyna"). */
+export interface LaunchResult {
+  opened: boolean;
+  launcher: Launcher | null;
+  /** Launcher'da seçilecek profil (resmi) ya da sürüm (TLauncher) */
+  pick: string | null;
+  /** Launcher zaten açıktı; profil seçimini görmemiş olabilir */
+  wasRunning: boolean;
+  /** Oyun menüye uğramadan dünyaya bağlanacak (Minecraft 1.20+) */
+  direct: boolean;
+  error: string | null;
+}
+
 export interface InstallProgress {
   id: string;
   stage: "meta" | "download" | "extract" | "installer" | "done";
@@ -407,7 +420,8 @@ export const api = {
   deleteInstance: (id: string) => invoke<void>("delete_instance", { id }),
   eulaStatus: (id: string) => invoke<boolean>("eula_status", { id }),
   acceptEula: (id: string) => invoke<void>("accept_eula", { id }),
-  startServer: (id: string) => invoke<void>("start_server", { id }),
+  /** `join`: sunucu açılınca Launcher da açılsın ("Başlat ve katıl"). */
+  startServer: (id: string, join = false) => invoke<void>("start_server", { id, join }),
   stopServer: (id: string) => invoke<void>("stop_server", { id }),
   sendCommand: (id: string, command: string) => invoke<void>("send_command", { id, command }),
   serverSnapshot: (id: string) => invoke<ServerSnapshot>("server_snapshot", { id }),
@@ -444,6 +458,7 @@ export const api = {
   joinWorld: (code: string, force: boolean, installRecommended: boolean) =>
     invoke<JoinedView>("join_world", { code, force, installRecommended }),
   updateJoinedMods: (id: string) => invoke<JoinedView>("update_joined_mods", { id }),
+  playJoined: (id: string) => invoke<LaunchResult>("play_joined", { id }),
   clientStatus: (id: string) => invoke<ClientStatus>("client_status", { id }),
   clientResync: (id: string) => invoke<void>("client_resync", { id }),
   listJoined: () => invoke<JoinedView[]>("list_joined"),

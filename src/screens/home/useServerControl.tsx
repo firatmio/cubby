@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { api, errorMessage, openExternal, type Instance } from "../../lib/api";
 import { useAppStore, useServer } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -19,9 +19,13 @@ export function useServerControl(instance: Instance) {
   const [eulaOpen, setEulaOpen] = useState(false);
   const [javaPrompt, setJavaPrompt] = useState<number | null>(null);
   const [javaInstalling, setJavaInstalling] = useState(false);
+  /** EULA/Java diyaloğundan sonra yeniden başlatılırken "katıl" seçimi korunsun. */
+  const joinRef = useRef(false);
 
-  const start = async () => {
+  const start = async (join = joinRef.current) => {
+    joinRef.current = join;
     setError(null);
+    useAppStore.getState().setLaunchResult(id, null);
     setStarting(true);
     try {
       if (!(await api.eulaStatus(id))) {
@@ -37,7 +41,7 @@ export function useServerControl(instance: Instance) {
         setJavaPrompt(java.required);
         return;
       }
-      await api.startServer(id);
+      await api.startServer(id, join);
     } catch (e) {
       setError(errorMessage(e));
     } finally {

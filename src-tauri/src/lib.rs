@@ -273,6 +273,7 @@ pub fn run() {
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
             join_cmds::update_joined_mods,
+            join_cmds::play_joined,
             mods_cmds::mods_search,
             mods_cmds::mods_project,
             mods_cmds::mods_install,

@@ -443,7 +443,14 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "eula_status":
       return true;
     case "start_server":
-      void boot(args.id);
+      void boot(args.id).then(() => {
+        if (!args.join) return;
+        const inst = byId(args.id);
+        emit("client://launch", {
+          id: args.id,
+          result: { opened: true, launcher: "official", pick: `${inst.name} · MC Sunucu`, wasRunning: false, direct: true, error: null },
+        });
+      });
       return null;
     case "stop_server":
       await stop(args.id);
@@ -602,6 +609,18 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       return structuredClone(joined.find((j) => j.world.id === args.id));
     case "take_pending_invite":
       return null;
+    case "play_joined": {
+      const j = joined.find((x) => x.world.id === args.id)!;
+      await sleep(400);
+      return {
+        opened: true,
+        launcher: "official",
+        pick: `${j.world.name} · MC Sunucu`,
+        wasRunning: true,
+        direct: true,
+        error: null,
+      };
+    }
     case "update_joined_mods": {
       const j = joined.find((x) => x.world.id === args.id)!;
       await sleep(900);
