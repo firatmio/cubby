@@ -25,12 +25,3 @@
     radial-gradient(ellipse 42% 52% at -4% 104%, color-mix(in srgb, var(--glow) 12%, transparent), transparent 72%),
     linear-gradient(to bottom, #1e1e1e, #171717);
 }
-
-/* Silik nokta deseni; aşağı doğru kaybolur. */
-.dots {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1.5px);
-  background-size: 22px 22px;
-  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 90%);
-}

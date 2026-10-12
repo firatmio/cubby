@@ -23,7 +23,10 @@ const ICON_MAX: usize = 1024 * 1024;
 const IMAGE_MAX: usize = 16 * 1024 * 1024;
 /// Kart görselinin önizleme genişliği (3 sütunlu ızgarada ~2x keskinlik).
 const IMAGE_PREVIEW: u32 = 640;
-const BODY_MAX: usize = 6000;
+/// Çok uzun açıklamalar paragraf sonundan kırpılır (Markdown/HTML yarım kalıp bozulmasın).
+const BODY_MAX: usize = 60_000;
+/// Galerinin büyük görseli (önizleme panelinde) bu genişliğe küçültülür.
+const GALLERY_PREVIEW: u32 = 1280;
 
 /// Aynı anda tek kurulum/güncelleme (dosya yarışlarını önler).
 static OPS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -48,13 +51,14 @@ impl ModIcons {
 pub struct ModImages(pub Mutex<HashMap<String, String>>);
 
 impl ModImages {
-    fn remember(&self, id: &str, url: Option<&String>) -> Option<String> {
+    /// `key`: proje kimliği (kart görseli) ya da `<kimlik>_<n>` (galerinin n. resmi).
+    fn remember(&self, key: &str, url: Option<&String>) -> Option<String> {
         let url = url.filter(|u| u.starts_with("https://cdn.modrinth.com/"))?;
         self.0
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .insert(id.to_string(), url.clone());
-        Some(format!("modimg/{id}"))
+            .insert(key.to_string(), url.clone());
+        Some(format!("modimg/{key}"))
     }
 }
 
@@ -113,6 +117,7 @@ pub struct HitView {
     description: String,
     downloads: u64,
     icon: Option<String>,
+    author: String,
     /// Kartın büyük görseli (`media` yolu).
     image: Option<String>,
     /// Görsel yokken zemin rengi (`#rrggbb`).
@@ -166,6 +171,7 @@ pub async fn mods_search(
             .map(|h| HitView {
                 icon: icons.remember(&h.project_id, h.icon_url.as_ref()),
                 image: images.remember(&h.project_id, h.featured_gallery.as_ref()),
+                author: h.author,
                 color: h.color.map(|c| format!("#{c:06x}")),
                 installed: installed.contains(&h.project_id),
                 project_id: h.project_id,
@@ -186,19 +192,29 @@ pub struct Named {
     title: String,
 }
 
+/// Önizleme panelinin hızlı parçası: tek istek (proje), galeri ve açıklama.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DetailView {
+pub struct InfoView {
     project_id: String,
     title: String,
     description: String,
+    /// Modrinth açıklaması (Markdown, içinde HTML olabilir).
     body: String,
     downloads: u64,
     license: Option<String>,
     url: String,
     icon: Option<String>,
+    /// Galeri resimleri (`media` yolları), öne çıkan önce.
+    gallery: Vec<String>,
     client_need: ClientNeed,
     installed: bool,
+}
+
+/// Önizleme panelinin yavaş parçası: sürüm ve bağımlılık çözümü (birkaç istek).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanView {
     version_number: Option<String>,
     unstable: bool,
     /// Birlikte kurulacak bağımlılıklar.
@@ -222,17 +238,72 @@ async fn names(api: &Modrinth<'_>, ids: Vec<String>) -> Vec<Named> {
         .collect()
 }
 
+/// En fazla `max` bayt; mümkünse son paragraf sonundan, değilse karakter sınırından kırpar.
+fn clip_body(mut body: String, max: usize) -> String {
+    if body.len() <= max {
+        return body;
+    }
+    let mut cut = (0..=max)
+        .rev()
+        .find(|i| body.is_char_boundary(*i))
+        .unwrap_or(0);
+    if let Some(p) = body[..cut].rfind("\n\n") {
+        cut = p;
+    }
+    body.truncate(cut);
+    body.push_str("\n\n…");
+    body
+}
+
 #[tauri::command]
 pub async fn mods_project(
     app: AppHandle,
     state: State<'_, AppState>,
     icons: State<'_, ModIcons>,
+    images: State<'_, ModImages>,
     id: String,
     project_id: String,
-) -> AppResult<DetailView> {
+) -> AppResult<InfoView> {
+    let c = ctx(&app, &state, &id)?;
+    let p = Modrinth::new(&state.http).project(&project_id).await?;
+    let installed = mods::load_records(&c.meta)
+        .iter()
+        .any(|r| r.project_id == p.id);
+    let mut shots = p.gallery.clone();
+    // Öne çıkan önce, sonra Modrinth'teki sıra.
+    shots.sort_by_key(|g| (!g.featured, g.ordering));
+    let gallery = shots
+        .iter()
+        .take(8)
+        .enumerate()
+        .filter_map(|(n, g)| images.remember(&format!("{}_{n}", p.id), Some(&g.url)))
+        .collect();
+    Ok(InfoView {
+        icon: icons.remember(&p.id, p.icon_url.as_ref()),
+        url: format!("https://modrinth.com/project/{}", p.slug),
+        license: p
+            .license
+            .map(|l| if l.name.is_empty() { l.id } else { l.name }),
+        body: clip_body(p.body, BODY_MAX),
+        client_need: client_need(&p.environment, p.client_side),
+        project_id: p.id,
+        title: p.title,
+        description: p.description,
+        downloads: p.downloads,
+        gallery,
+        installed,
+    })
+}
+
+#[tauri::command]
+pub async fn mods_plan(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    project_id: String,
+) -> AppResult<PlanView> {
     let c = ctx(&app, &state, &id)?;
     let api = Modrinth::new(&state.http);
-    let p = api.project(&project_id).await?;
     let installed: HashSet<String> = mods::load_records(&c.meta)
         .into_iter()
         .map(|r| r.project_id)
@@ -242,61 +313,28 @@ pub async fn mods_project(
         kind: c.inst.loader,
         mc: &c.inst.mc_version,
     };
-    let (plan, error) = match mods::resolve(&src, &p.id, &installed).await {
+    let (plan, error) = match mods::resolve(&src, &project_id, &installed).await {
         Ok(plan) => (Some(plan), None),
         Err(e) => (None, Some(e.to_string())),
     };
     let root = plan.as_ref().and_then(|pl| pl.install.first());
-    let deps: Vec<String> = plan
-        .as_ref()
-        .map(|pl| {
-            pl.install
-                .iter()
-                .skip(1)
-                .map(|x| x.version.project_id.clone())
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let mut body = p.body.clone();
-    if body.len() > BODY_MAX {
-        let cut = (0..=BODY_MAX)
-            .rev()
-            .find(|i| body.is_char_boundary(*i))
-            .unwrap_or(0);
-        body.truncate(cut);
-        body.push('…');
-    }
-    Ok(DetailView {
-        icon: icons.remember(&p.id, p.icon_url.as_ref()),
-        installed: installed.contains(&p.id),
+    let pick = |f: fn(&mods::Plan) -> Vec<String>| plan.as_ref().map(f).unwrap_or_default();
+    Ok(PlanView {
         version_number: root.map(|r| r.version.version_number.clone()),
         unstable: root.is_some_and(|r| r.version.version_type != VersionType::Release),
-        with: names(&api, deps).await,
-        missing: names(
+        with: names(
             &api,
-            plan.as_ref()
-                .map(|pl| pl.missing.clone())
-                .unwrap_or_default(),
+            pick(|pl| {
+                pl.install
+                    .iter()
+                    .skip(1)
+                    .map(|x| x.version.project_id.clone())
+                    .collect()
+            }),
         )
         .await,
-        conflicts: names(
-            &api,
-            plan.as_ref()
-                .map(|pl| pl.conflicts.clone())
-                .unwrap_or_default(),
-        )
-        .await,
-        url: format!("https://modrinth.com/project/{}", p.slug),
-        license: p
-            .license
-            .map(|l| if l.name.is_empty() { l.id } else { l.name }),
-        project_id: p.id,
-        title: p.title,
-        description: p.description,
-        body,
-        downloads: p.downloads,
-        client_need: client_need(&p.environment, p.client_side),
+        missing: names(&api, pick(|pl| pl.missing.clone())).await,
+        conflicts: names(&api, pick(|pl| pl.conflicts.clone())).await,
         error,
     })
 }
@@ -711,7 +749,7 @@ pub async fn icon_response(app: &AppHandle, project_id: &str) -> Response<Vec<u8
 
 pub fn is_image_path(path: &str) -> Option<String> {
     let id = path.strip_prefix("/modimg/")?;
-    (!id.is_empty() && id.len() <= 32 && id.chars().all(|c| c.is_ascii_alphanumeric()))
+    (!id.is_empty() && id.len() <= 40 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
         .then(|| id.to_string())
 }
 
@@ -761,8 +799,14 @@ pub async fn gallery_response(app: &AppHandle, project_id: &str) -> Response<Vec
         return not_found();
     }
     let out = file.clone();
+    // Galeri resimleri panelde büyük gösterilir; kart görselleri küçük.
+    let max = if project_id.contains('_') {
+        GALLERY_PREVIEW
+    } else {
+        IMAGE_PREVIEW
+    };
     let made = tauri::async_runtime::spawn_blocking(move || {
-        crate::covers::render_preview(&bytes, &out, IMAGE_PREVIEW)
+        crate::covers::render_preview(&bytes, &out, max)
     })
     .await;
     match (made, std::fs::read(&file)) {
@@ -792,6 +836,11 @@ mod tests {
         assert!(is_image_path("/modimg/../x").is_none());
         assert!(is_image_path("/modimg/").is_none());
         assert!(is_image_path("/modicon/AANobbMI").is_none());
+        assert_eq!(
+            is_image_path("/modimg/AANobbMI_2").as_deref(),
+            Some("AANobbMI_2")
+        );
+        assert!(is_image_path("/modimg/a%2Fb").is_none());
         let images = ModImages::default();
         assert_eq!(
             images.remember(
@@ -805,6 +854,17 @@ mod tests {
             images.remember("a2", Some(&"https://example.com/x.png".into())),
             None
         );
+    }
+
+    #[test]
+    fn clips_body_at_paragraph() {
+        assert_eq!(clip_body("kısa".into(), 100), "kısa");
+        let body = "Birinci paragraf.\n\nİkinci paragraf çok uzun bir metin.".to_string();
+        let clipped = clip_body(body, 30);
+        assert_eq!(clipped, "Birinci paragraf.\n\n…");
+        // Paragraf yoksa karakter sınırından (çok baytlı harfin ortasından değil).
+        let clipped = clip_body("ğğğğğ".into(), 5);
+        assert!(clipped.starts_with("ğğ"));
     }
 
     #[test]

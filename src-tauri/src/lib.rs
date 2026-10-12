@@ -317,6 +317,7 @@ pub fn run() {
             game_cmds::game_running,
             mods_cmds::mods_search,
             mods_cmds::mods_project,
+            mods_cmds::mods_plan,
             mods_cmds::mods_install,
             mods_cmds::mods_installed,
             mods_cmds::mods_remove,

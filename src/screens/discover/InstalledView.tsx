@@ -14,10 +14,13 @@ type Props = {
   onUpdate: (file: string) => void;
   onUpdateAll: () => void;
   onRemove: (file: string) => void;
+  /** Modrinth'te tanınan satıra tıklayınca önizleme. */
+  onOpen: (mod: InstalledMod) => void;
+  selectedId: string | null;
 };
 
 /** Dünyaya kurulu modlar/eklentiler: güncelle, kaldır. */
-export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, onRemove }: Props) {
+export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, onRemove, onOpen, selectedId }: Props) {
   const t = useT().mods;
   if (installed === null) {
     return (
@@ -52,20 +55,30 @@ export function InstalledView({ installed, plugin, busy, onUpdate, onUpdateAll, 
         </div>
       )}
       {installed.map((m) => (
-        <div key={m.file} className={styles.row}>
-          <ModIcon icon={m.icon} plugin={plugin} />
-          <span className={styles.rowText}>
-            <span className={styles.rowTitle}>
-              {m.title}
-              {m.dependency && <Badge>{t.dependency}</Badge>}
-              {!m.known && <Badge>{t.manual}</Badge>}
-              <NeedBadge need={m.clientNeed} />
+        <div
+          key={m.file}
+          className={[styles.row, m.projectId && m.projectId === selectedId && styles.rowSelected].filter(Boolean).join(" ")}
+        >
+          <button
+            type="button"
+            className={styles.rowMain}
+            disabled={!m.projectId}
+            onClick={() => onOpen(m)}
+          >
+            <ModIcon icon={m.icon} plugin={plugin} />
+            <span className={styles.rowText}>
+              <span className={styles.rowTitle}>
+                {m.title}
+                {m.dependency && <Badge>{t.dependency}</Badge>}
+                {!m.known && <Badge>{t.manual}</Badge>}
+                <NeedBadge need={m.clientNeed} />
+              </span>
+              <span className={styles.tileMeta}>
+                {m.versionNumber ?? m.file}
+                {m.update && <span className={styles.update}>{t.updateReady(m.update)}</span>}
+              </span>
             </span>
-            <span className={styles.cardMeta}>
-              {m.versionNumber ?? m.file}
-              {m.update && <span className={styles.update}>{t.updateReady(m.update)}</span>}
-            </span>
-          </span>
+          </button>
           {m.update && (
             <Button
               size="sm"

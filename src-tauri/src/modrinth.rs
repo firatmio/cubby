@@ -128,6 +128,17 @@ pub struct SearchHit {
     /// İkondan çıkarılan baskın renk (RGB tamsayı).
     #[serde(default)]
     pub color: Option<u32>,
+    #[serde(default)]
+    pub author: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GalleryItem {
+    pub url: String,
+    #[serde(default)]
+    pub featured: bool,
+    #[serde(default)]
+    pub ordering: i64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -156,6 +167,8 @@ pub struct Project {
     #[serde(default)]
     pub environment: Vec<String>,
     pub license: Option<License>,
+    #[serde(default)]
+    pub gallery: Vec<GalleryItem>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

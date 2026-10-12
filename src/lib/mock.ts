@@ -264,6 +264,47 @@ type MockMod = {
   deps?: string[];
   plugin?: boolean;
 };
+/** Gerçek Modrinth açıklamalarına benzeyen Markdown: başlık, rozet, liste, tablo, kod, HTML. */
+const MOCK_BODY = (title: string, desc: string) => `<center>
+
+![banner](https://placehold.co/800x200/2f4a63/ffffff/png?text=${encodeURIComponent(title)})
+
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2)](https://example.com/discord) [![Modrinth](https://img.shields.io/badge/Modrinth-download-1bd96a)](https://modrinth.com)
+
+</center>
+
+## ${title}
+
+${desc}
+
+---
+
+### Özellikler
+
+- **Hafif:** sunucuyu yavaşlatmaz
+- **Kolay:** kurduktan sonra ayar gerekmez
+- Yeni komut: \`/${title.toLowerCase().replace(/\W+/g, "")} reload\`
+
+| Sürüm | Minecraft | Durum |
+| --- | --- | --- |
+| 1.2.0 | 26.3 | Kararlı |
+| 1.1.4 | 1.21.11 | Eski |
+
+> Hata bulursan GitHub'da bildir.
+
+\`\`\`json
+{ "enabled": true, "radius": 64 }
+\`\`\`
+
+<details><summary>Sık sorulanlar</summary>
+
+Arkadaşımın da kurması gerekir mi? Uygulama bunu sana söyler.
+
+</details>
+
+<script>alert("bu çalışmamalı")</script><img src="x" onerror="alert(1)">
+`;
+
 const MODS: MockMod[] = [
   { projectId: "P7dR8mSH", slug: "fabric-api", title: "Fabric API", description: "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.", downloads: 272_714_633, clientNeed: "recommended" },
   { projectId: "gvQqBUqZ", slug: "lithium", title: "Lithium", description: "No-compromises game logic optimization mod. Well suited for clients and servers of all kinds.", downloads: 61_200_000, clientNeed: "recommended" },
@@ -676,7 +717,11 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       const plugin = byId(args.id).loader === "paper";
       const q = String(args.query).toLowerCase();
       const have = new Set((modsInstalled[args.id] ?? []).map((m) => m.projectId));
+      // Kategoriler sahte: her kategori listenin farklı bir alt kümesini gösterir (raflar farklı görünsün).
+      const cat = args.category ? String(args.category) : "";
+      const inCat = (m: MockMod) => !cat || (cat.length + m.projectId.charCodeAt(2)) % 3 !== 0;
       const list = MODS.filter((m) => !!m.plugin === plugin)
+        .filter(inCat)
         .filter((m) => !q || m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q))
         .sort((a, b) => (args.sort === "downloads" ? b.downloads - a.downloads : 0));
       return {
@@ -688,6 +733,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           description: m.description,
           downloads: m.downloads,
           icon: `modicon/${m.projectId}`,
+          author: ["jellysquid3", "CaffeineMC", "henkelmax", "vectorwing"][m.projectId.charCodeAt(3) % 4],
           // Bazı kartlar görselsiz: zemin rengi + büyük ikon görünümü de denensin.
           image: m.projectId.charCodeAt(0) % 2 ? `modimg/${m.projectId}` : null,
           color: ["#3b7a57", "#7a3b5c", "#3b5c7a", "#7a6a3b"][m.projectId.charCodeAt(1) % 4],
@@ -704,13 +750,22 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         projectId: m.projectId,
         title: m.title,
         description: m.description,
-        body: `# ${m.title}\n\n${m.description}\n\n**Özellikler**\n- Hızlı\n- Hafif\n\n[Discord](https://example.com)`,
+        body: MOCK_BODY(m.title, m.description),
         downloads: m.downloads,
         license: "MIT License",
         url: `https://modrinth.com/project/${m.slug}`,
         icon: `modicon/${m.projectId}`,
+        gallery: [0, 1, 2, 3].map((n) => `modimg/${m.projectId}_${n}`),
         clientNeed: m.clientNeed,
         installed: have.has(m.projectId),
+      };
+    }
+    case "mods_plan": {
+      // Çözüm gerçekte birkaç istek sürer: önizleme önce bilgiyle açılır, bu sonra dolar.
+      await sleep(900);
+      const m = modById(args.projectId)!;
+      const have = new Set((modsInstalled[args.id] ?? []).map((x) => x.projectId));
+      return {
         versionNumber: "1.2.0+26.3",
         unstable: m.slug === "chunky",
         with: (m.deps ?? []).filter((d) => !have.has(d)).map((d) => ({ projectId: d, title: modById(d)!.title })),

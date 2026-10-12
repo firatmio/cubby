@@ -138,6 +138,7 @@ export interface ModHit {
   downloads: number;
   /** `media` yolu (modicon/<id>) */
   icon: string | null;
+  author: string;
   /** Kartın büyük görseli: `media` yolu (modimg/<id>); yoksa null */
   image: string | null;
   /** Görsel yokken zemin rengi (#rrggbb) */
@@ -156,18 +157,25 @@ export interface ModNamed {
   title: string;
 }
 
-export interface ModDetail {
+/** Önizlemenin hızlı parçası (tek istek). */
+export interface ModInfo {
   projectId: string;
   title: string;
   description: string;
-  /** Modrinth açıklaması (markdown) */
+  /** Modrinth açıklaması (Markdown, içinde HTML olabilir) */
   body: string;
   downloads: number;
   license: string | null;
   url: string;
   icon: string | null;
+  /** Galeri resimleri (`media` yolları: modimg/<id>_<n>), öne çıkan önce */
+  gallery: string[];
   clientNeed: ClientNeed;
   installed: boolean;
+}
+
+/** Önizlemenin yavaş parçası: sürüm ve bağımlılık çözümü. */
+export interface ModPlan {
   versionNumber: string | null;
   /** Kurulacak sürüm beta/alpha */
   unstable: boolean;
@@ -507,7 +515,8 @@ export const api = {
   takePendingInvite: () => invoke<string | null>("take_pending_invite"),
   modsSearch: (id: string, query: string, category: string | null, sort: ModSort, offset: number) =>
     invoke<ModSearch>("mods_search", { id, query, category, sort, offset }),
-  modsProject: (id: string, projectId: string) => invoke<ModDetail>("mods_project", { id, projectId }),
+  modsProject: (id: string, projectId: string) => invoke<ModInfo>("mods_project", { id, projectId }),
+  modsPlan: (id: string, projectId: string) => invoke<ModPlan>("mods_plan", { id, projectId }),
   modsInstall: (id: string, projectId: string) => invoke<InstalledMod[]>("mods_install", { id, projectId }),
   modsInstalled: (id: string) => invoke<InstalledMod[]>("mods_installed", { id }),
   modsRemove: (id: string, file: string) => invoke<InstalledMod[]>("mods_remove", { id, file }),

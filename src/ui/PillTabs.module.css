@@ -17,6 +17,7 @@
   color: var(--text-2);
   font-size: var(--fs-sm);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 160ms;
 }

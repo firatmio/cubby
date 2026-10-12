@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * Sayfaların arkasındaki iki zemin yan yana: Oyna'da dünyanın kapağı, Keşfet'te resimsiz,
- * dünyanın renginde yumuşak ışıltılar ve silik bir nokta deseni. Başlık çubuğunun arkası da dahil.
+ * dünyanın renginde yumuşak ışıltılar. Başlık çubuğunun arkası da dahil.
  */
 export function Backdrops({ image, color, strip }: Props) {
   return (
@@ -22,9 +22,7 @@ export function Backdrops({ image, color, strip }: Props) {
           <Background image={image} color={color} />
         </div>
         <div className={styles.slot}>
-          <div className={styles.discover} style={{ "--glow": color } as React.CSSProperties}>
-            <div className={styles.dots} />
-          </div>
+          <div className={styles.discover} style={{ "--glow": color } as React.CSSProperties} />
         </div>
       </motion.div>
     </div>
