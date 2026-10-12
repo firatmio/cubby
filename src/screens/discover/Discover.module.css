@@ -257,14 +257,6 @@
 
 /* Önizleme açıkken vitrin daralır: bant sıkışmasın. */
 @container (max-width: 760px) {
-  .featured {
-    height: 220px;
-  }
-
-  .featuredSlide {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  }
-
   .featuredText {
     padding: var(--sp-4) var(--sp-5);
   }
@@ -280,9 +272,11 @@
 }
 
 .featured {
+  /* Bant genişledikçe yükselir (vitrin kabının genişliğine göre); görsel aşırı yakınlaşıp bozulmasın. */
+  --fh: clamp(230px, 24cqw, 400px);
   position: relative;
   flex-shrink: 0;
-  height: 240px;
+  height: var(--fh);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-tile);
@@ -295,7 +289,8 @@
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  /* Görsel kendi oranında (16:9) durur, ama bandın %60'ını geçmez; kalanı yazı alır. */
+  grid-template-columns: min(calc(var(--fh) * 16 / 9), 60%) minmax(0, 1fr);
 }
 
 .featuredArt {
