@@ -63,11 +63,15 @@ pub fn account_status(auth: State<'_, AuthManager>) -> AccountStatus {
 
 #[tauri::command]
 pub async fn account_login(app: AppHandle, auth: State<'_, AuthManager>) -> AppResult<Account> {
-    auth.login(|url| {
-        app.opener()
-            .open_url(url, None::<&str>)
-            .map_err(|e| AppError::msg(format!("Tarayıcı açılamadı: {e}")))
-    })
+    auth.login(
+        |url| {
+            app.opener()
+                .open_url(url, None::<&str>)
+                .map_err(|e| AppError::msg(format!("Tarayıcı açılamadı: {e}")))
+        },
+        // Tarayıcıdan dönmeye gerek kalmasın: giriş biter bitmez uygulama öne gelir.
+        || crate::focus_main(&app),
+    )
     .await
 }
 

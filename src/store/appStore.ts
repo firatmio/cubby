@@ -16,6 +16,7 @@ import {
   type ServerStatus,
   type LaunchResult,
   type GameProgress,
+  type Account,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -99,6 +100,9 @@ interface AppStore {
   /** Oyun hatayla kapandı: çıkış kodu (mesaj kapatılınca null). */
   gameCrash: number | null;
   setGameCrash: (code: number | null) => void;
+  /** Microsoft girişi az önce bağlandı: kutlama gösterilecek hesap. */
+  celebrate: Account | null;
+  setCelebrate: (a: Account | null) => void;
   /** Katılırken oyuncunun Minecraft'ına mod kurulumu. */
   joinProgress: JoinProgress | null;
   setJoinProgress: (p: JoinProgress | null) => void;
@@ -241,6 +245,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     setGameProgress: (gameProgress) => set({ gameProgress }),
     gameCrash: null,
     setGameCrash: (gameCrash) => set({ gameCrash }),
+    celebrate: null,
+    setCelebrate: (celebrate) => set({ celebrate }),
     joinProgress: null,
     setJoinProgress: (joinProgress) => set({ joinProgress }),
     modProgress: null,

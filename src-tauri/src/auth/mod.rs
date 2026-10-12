@@ -71,8 +71,13 @@ impl AuthManager {
             .and_then(|b| serde_json::from_slice(&b).ok())
     }
 
-    /// Tarayıcıda Microsoft girişi. `open` giriş sayfasını sistem tarayıcısında açar.
-    pub async fn login(&self, open: impl FnOnce(&str) -> AppResult<()>) -> AppResult<Account> {
+    /// Tarayıcıda Microsoft girişi. `open` giriş sayfasını sistem tarayıcısında açar; `on_code`
+    /// tarayıcı geri döndüğünde çağrılır (uygulama penceresi öne gelsin).
+    pub async fn login(
+        &self,
+        open: impl FnOnce(&str) -> AppResult<()>,
+        on_code: impl FnOnce(),
+    ) -> AppResult<Account> {
         let client_id =
             client_id().ok_or_else(|| AppError::msg("Microsoft girişi bu sürümde kapalı."))?;
         let listener = TcpListener::bind(("127.0.0.1", 0)).await?;
@@ -86,6 +91,7 @@ impl AuthManager {
             &state,
         ))?;
         let code = oauth::wait_for_code(listener, &state).await?;
+        on_code();
         let tokens =
             oauth::exchange_code(&self.http, client_id, &code, &redirect, &pkce.verifier).await?;
         let session = self.complete(&tokens).await?;

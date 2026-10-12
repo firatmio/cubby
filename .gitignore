@@ -25,3 +25,7 @@ dist-ssr
 
 .vscode
 .VSCodeCounter
+
+.env
+.env.local
+*.local

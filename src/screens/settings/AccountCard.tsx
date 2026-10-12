@@ -4,29 +4,16 @@ import { api, errorMessage, type AccountStatus } from "../../lib/api";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import sections from "../instance/sections.module.css";
+import { SkinHead } from "../../ui/SkinHead";
+import { useAppStore } from "../../store/appStore";
 import styles from "./AccountCard.module.css";
-
-/** Skin'in yüz kısmı (8×8) ve şapka katmanı; skin 64×64 PNG. */
-function SkinHead({ url }: { url: string | null }) {
-  // textures.minecraft.net http adres veriyor; uygulama sayfası https olduğu için https'e çevrilir.
-  const src = url?.replace(/^http:\/\//, "https://");
-  return (
-    <span className={styles.head} aria-hidden>
-      {src && (
-        <>
-          <span className={styles.face} style={{ backgroundImage: `url("${src}")` }} />
-          <span className={styles.hat} style={{ backgroundImage: `url("${src}")` }} />
-        </>
-      )}
-    </span>
-  );
-}
 
 /** Microsoft hesabı: giriş yapılınca oyun Launcher'a uğramadan, doğrudan dünyada açılır. */
 export function AccountCard() {
   const [status, setStatus] = useState<AccountStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setCelebrate = useAppStore((s) => s.setCelebrate);
 
   useEffect(() => {
     api.accountStatus().then(setStatus).catch(console.error);
@@ -41,6 +28,7 @@ export function AccountCard() {
     try {
       const a = await api.accountLogin();
       setStatus({ ...status, account: a });
+      setCelebrate(a);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -77,7 +65,8 @@ export function AccountCard() {
           </Button>
         </div>
       )}
-      {error && <p className={sections.error}>{error}</p>}
+      {/* Mojang onayı beklemek bir hata değil, bilinen bir durum: sakin renkte. */}
+      {error && <p className={error.includes("Mojang onayı") ? sections.dim : sections.error}>{error}</p>}
     </Card>
   );
 }

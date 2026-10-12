@@ -58,7 +58,7 @@ pub const EVENT_INVITE: &str = "join://invite";
 /// Kapanış başladıysa ikinci kez tetiklenmesin.
 static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
 
-fn focus_main(app: &AppHandle) {
+pub(crate) fn focus_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.show();

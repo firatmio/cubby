@@ -1,0 +1,52 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  background: rgba(12, 12, 12, 0.45);
+  backdrop-filter: blur(16px) saturate(1.1);
+  cursor: pointer;
+}
+
+.center {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  margin-bottom: var(--sp-4);
+}
+
+.ring {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+}
+
+.bit {
+  position: absolute;
+  border-radius: 2px;
+}
+
+.head {
+  display: flex;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+}
+
+.title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+
+.sub {
+  max-width: 420px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}

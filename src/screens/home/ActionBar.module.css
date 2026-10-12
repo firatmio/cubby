@@ -28,7 +28,6 @@
   align-items: center;
   gap: var(--sp-2);
   width: max-content;
-  max-width: 460px;
   padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
   border-radius: var(--radius);
   background: rgba(60, 22, 22, 0.88);
@@ -60,4 +59,8 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.error span {
+  max-width: 400px;
 }

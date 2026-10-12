@@ -14,6 +14,7 @@ import { JoinDialog } from "./screens/join/JoinDialog";
 import { ModsSheet } from "./screens/mods/ModsSheet";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
+import { AccountCelebration } from "./shell/AccountCelebration";
 import { Background } from "./shell/Background";
 import { TitleBar } from "./shell/TitleBar";
 import { useAppStore, useSelected, useSelectedJoined } from "./store/appStore";
@@ -84,6 +85,7 @@ export default function App() {
       <CoverSheet />
       <AppSettingsSheet />
       <JoinDialog />
+      <AccountCelebration />
 
       {shuttingDown && (
         <Dialog title="Kapatılıyor">
