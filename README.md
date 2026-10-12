@@ -14,11 +14,14 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [ ] M6 — NeoForge/Forge/Quilt
 - [x] **M7a** — Katıl modu: davet linki/kodu (`mcsm://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
 - [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
-- [ ] M7b — Mod eşitleme (M8'in Modrinth altyapısıyla), Fabric istemci kurulumu, web katılım sayfası
+- [x] **M7b** — Modlar oyuncunun Minecraft'ına da: Fabric dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
 
-Sıradaki sıra: M7b → M6.
+Sıradaki: M6.
 
-**Sonra (fikir aşamasında):**
+**Sonra:**
+- Web katılım sayfası (uygulamanın adı belli olunca, yayın hazırlığıyla birlikte)
+
+**Fikir aşamasında:**
 - Dünya yedekleme: Google hesabı bağlayıp Google Drive'a otomatik yedek
 - Premium hesapla kendi sunucumuzda (VDS) yedekleme
 
