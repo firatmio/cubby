@@ -201,6 +201,7 @@ pub fn run() {
 
                 app.manage(PendingInvite::default());
                 app.manage(mods_cmds::ModIcons::default());
+                app.manage(mods_cmds::ModImages::default());
                 app.manage(client_cmds::ClientStates::default());
                 client_cmds::install(app.handle());
                 // Kurulumda NSIS kaydeder; geliştirirken ve taşınabilir kullanımda burada kaydedilir.
@@ -225,6 +226,12 @@ pub fn run() {
             let app = ctx.app_handle().clone();
             let path = request.uri().path().to_string();
             // Mod ikonları ağdan gelebilir (async); diğerleri dosya okuma + küçültme (blocking).
+            if let Some(project) = mods_cmds::is_image_path(&path) {
+                tauri::async_runtime::spawn(async move {
+                    responder.respond(mods_cmds::gallery_response(&app, &project).await);
+                });
+                return;
+            }
             if let Some(project) = mods_cmds::is_icon_path(&path) {
                 tauri::async_runtime::spawn(async move {
                     responder.respond(mods_cmds::icon_response(&app, &project).await);

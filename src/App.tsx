@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { api, mediaUrl } from "./lib/api";
 import { useLang, useT } from "./i18n";
 import { bindBackendEvents } from "./lib/events";
 import { KIND_COLORS, accentOf } from "./lib/format";
 import { screen } from "./lib/motion";
+import { settingFrom, useMotion, useMotionLevel } from "./lib/perf";
 import { AdvancedSheet } from "./screens/advanced/AdvancedSheet";
 import { CoverSheet } from "./screens/cover/CoverSheet";
 import { PlayersSheet } from "./screens/players/PlayersSheet";
@@ -12,11 +13,12 @@ import { HomeScreen } from "./screens/home/HomeScreen";
 import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
 import { ConnectionSheet } from "./screens/connection/ConnectionSheet";
 import { JoinDialog } from "./screens/join/JoinDialog";
-import { ModsSheet } from "./screens/mods/ModsSheet";
+import { DiscoverPage } from "./screens/discover/DiscoverPage";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
 import { AccountCelebration } from "./shell/AccountCelebration";
 import { Background } from "./shell/Background";
+import { Pages } from "./shell/Pages";
 import { TitleBar } from "./shell/TitleBar";
 import { useAppStore, useSelected, useSelectedJoined } from "./store/appStore";
 import { Dialog } from "./ui/Dialog";
@@ -31,6 +33,7 @@ export default function App() {
   const t = useT();
   const selected = useSelected();
   const joined = useSelectedJoined();
+  const motionLevel = useMotionLevel();
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +48,10 @@ export default function App() {
     // Etkin dil Rust'ta (ayar ya da bilgisayarın dili).
     api
       .getSettings()
-      .then((v) => useLang.getState().setLang(v.language))
+      .then((v) => {
+        useLang.getState().setLang(v.language);
+        useMotion.getState().setSetting(settingFrom(v.settings.animations));
+      })
       .catch(console.error);
     // Uygulama bir davet linkiyle açıldıysa.
     api
@@ -69,38 +75,40 @@ export default function App() {
   }, [accent]);
 
   return (
-    <div className={styles.app}>
-      <Background image={image} color={accent} />
-      <TitleBar />
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={view}
-          className={styles.main}
-          variants={screen}
-          initial="hidden"
-          animate="show"
-          exit="exit"
-        >
-          {inSetup ? <SetupFlow /> : <HomeScreen />}
-        </motion.main>
-      </AnimatePresence>
+    // Animasyonlar kapalıysa (Windows ayarı) Motion transform'ları kendisi kapatır, yalnız belirme kalır.
+    <MotionConfig reducedMotion={motionLevel === "off" ? "always" : "never"}>
+      <div className={styles.app}>
+        <Background image={image} color={accent} />
+        <TitleBar />
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={view}
+            className={styles.main}
+            variants={screen}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
+            {inSetup ? <SetupFlow /> : <Pages play={<HomeScreen />} discover={<DiscoverPage />} />}
+          </motion.main>
+        </AnimatePresence>
 
-      <PlayersSheet />
-      <WorldSettingsSheet />
-      <ConnectionSheet />
-      <ModsSheet />
-      <AdvancedSheet />
-      <CoverSheet />
-      <AppSettingsSheet />
-      <JoinDialog />
-      <AccountCelebration />
+        <PlayersSheet />
+        <WorldSettingsSheet />
+        <ConnectionSheet />
+        <AdvancedSheet />
+        <CoverSheet />
+        <AppSettingsSheet />
+        <JoinDialog />
+        <AccountCelebration />
 
-      {shuttingDown && (
-        <Dialog title={t.app.shuttingDownTitle}>
-          <p>{t.app.shuttingDown}</p>
-          <Progress value={null} />
-        </Dialog>
-      )}
-    </div>
+        {shuttingDown && (
+          <Dialog title={t.app.shuttingDownTitle}>
+            <p>{t.app.shuttingDown}</p>
+            <Progress value={null} />
+          </Dialog>
+        )}
+      </div>
+    </MotionConfig>
   );
 }

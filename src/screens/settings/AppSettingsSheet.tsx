@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FolderOpen, RotateCcw } from "lucide-react";
 import { useLang, useT } from "../../i18n";
+import { settingFrom, useMotion, type MotionSetting } from "../../lib/perf";
 import { api, errorMessage, pickFolder, type AppSettings, type SettingsView } from "../../lib/api";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -22,6 +23,8 @@ export function AppSettingsSheet() {
   const [error, setError] = useState<string | null>(null);
   const t = useT();
   const setLang = useLang((s) => s.setLang);
+  const setMotion = useMotion((s) => s.setSetting);
+  const motionOff = useMotion((s) => s.detected === "off");
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +38,7 @@ export function AppSettingsSheet() {
       const v = await api.updateSettings(settings);
       setView(v);
       setLang(v.language);
+      setMotion(settingFrom(v.settings.animations));
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -60,6 +64,18 @@ export function AppSettingsSheet() {
               active={view.settings.language ?? "auto"}
               onChange={(c) => save({ ...view.settings, language: c === "auto" ? null : c })}
               layoutId="language-tab"
+            />
+          </Card>
+          <Card title={t.motion.title} description={motionOff ? t.motion.offNote : t.motion.text}>
+            <PillTabs<MotionSetting>
+              tabs={[
+                { id: "auto", label: t.motion.auto },
+                { id: "full", label: t.motion.full },
+                { id: "simple", label: t.motion.simple },
+              ]}
+              active={settingFrom(view.settings.animations)}
+              onChange={(c) => save({ ...view.settings, animations: c === "auto" ? null : c })}
+              layoutId="motion-tab"
             />
           </Card>
           <AccountCard />

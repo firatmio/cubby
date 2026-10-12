@@ -502,6 +502,29 @@ const tr = {
     connected: "Microsoft hesabı bağlandı",
     welcome: (name: string) => `Hoş geldin, ${name}. Oyun artık tek tıkla doğrudan dünyada açılır.`,
   },
+  pages: {
+    label: "Sayfalar",
+    play: "Oyna",
+    discover: "Keşfet",
+  },
+  discover: {
+    pickWorld: "Dünya seç",
+    friendsWorld: "Arkadaşının dünyası",
+    emptyTitle: "Önce bir dünya kur",
+    emptyText: "Keşfet, seçtiğin dünyaya uyan modları ve içerikleri gösterir.",
+    friendNote: "Modları dünyanın sahibi seçiyor; burada yalnız sana ait olanlar var.",
+    friendSoon: "Bu dünyada kendi kaynak paketlerin ve shader'ların çok yakında burada olacak.",
+    vanillaTitle: "Saf Minecraft dünyalarına mod kurulmaz",
+    vanillaText: "Modlu bir dünya seç ya da yeni bir tane kur. Kaynak paketleri ve veri paketleri çok yakında burada.",
+  },
+  motion: {
+    title: "Animasyonlar",
+    text: "Otomatik, bilgisayar zorlanırsa sadeleşir.",
+    offNote: "Windows'ta animasyon efektleri kapalı; yalnız yumuşak geçişler kullanılıyor.",
+    auto: "Otomatik",
+    full: "Tam",
+    simple: "Sade",
+  },
 };
 
 export type Dict = typeof tr;

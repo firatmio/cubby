@@ -21,8 +21,12 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [~] **M9** — Oyunu Launcher'sız açma: Microsoft girişi (PKCE, tarayıcıda; yenileme anahtarı Windows Kimlik Bilgisi Yöneticisi'nde), oyunun dosyaları `.minecraft`'la paylaşılarak hash doğrulamalı indirilir, oyun Quick Play ile doğrudan dünyada açılır (vanilla ve NeoForge 26.3'te canlı doğrulandı). Microsoft girişinin son adımı **Mojang onayı bekliyor**: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md). Onaya kadar ve girişsiz oyuncularda Launcher'lı akış çalışır
 
 - [x] **İngilizce** — arayüz ve hata mesajları Türkçe ve İngilizce; ilk açılışta bilgisayarın diline göre, Ayarlar > Dil'den değiştirilebilir
+- [~] **M10** — Oyna / Keşfet sayfaları: başlık çubuğunun ortasında goo (slime) geçişli haplar, sayfalar esneyerek kayar. Animasyon seviyesi (Tam / Sade / Kapalı) kendiliğinden belirlenir (Windows animasyon ayarı, yazılımla çizim, düşen kareler) ve Ayarlar'dan değiştirilebilir
+  - [x] **M10a** — sayfalar, animasyon seviyesi, modlarla Keşfet: dünya seçici, büyük görselli kart ızgarası (Modrinth'in öne çıkan görselleri küçültülüp diskte önbelleklenir), önden yükleme ve bellek önbelleği sayesinde listeler anında gelir
+  - [ ] **M10b** — kaynak paketleri (istenirse arkadaşlara zorunlu), shader'lar (Iris kendiliğinden kurulur), veri paketleri
+  - [ ] **M10c** — mod paketleri → yeni dünya
 
-Bütün milestone'lar bitti; sırada web katılım sayfası ve yayın hazırlığı var.
+Sırada M10b/M10c, sonra web katılım sayfası ve yayın hazırlığı var.
 
 **Sonra:**
 - Web katılım sayfası (yayın hazırlığıyla birlikte)

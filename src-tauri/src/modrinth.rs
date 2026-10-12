@@ -99,6 +99,15 @@ pub fn facets(kind: LoaderKind, mc: &str, category: Option<&str>) -> String {
     if let Some(c) = category {
         groups.push(vec![format!("categories:{c}")]);
     }
+    // Mod paketleri de aynı loader kategorilerini taşır; yalnız tek tek modlar/eklentiler gelsin.
+    groups.push(vec![
+        if kind == LoaderKind::Paper {
+            "project_type:plugin"
+        } else {
+            "project_type:mod"
+        }
+        .into(),
+    ]);
     serde_json::to_string(&groups).expect("facet serileştirilemedi")
 }
 
@@ -113,6 +122,12 @@ pub struct SearchHit {
     pub client_side: Side,
     #[serde(default)]
     pub environment: Vec<String>,
+    /// Öne çıkan galeri görseli (kartın büyük resmi).
+    #[serde(default)]
+    pub featured_gallery: Option<String>,
+    /// İkondan çıkarılan baskın renk (RGB tamsayı).
+    #[serde(default)]
+    pub color: Option<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -376,10 +391,12 @@ mod tests {
         assert_eq!(f[1], vec!["versions:26.3"]);
         assert_eq!(f[2], vec!["server_side:required", "server_side:optional"]);
         assert_eq!(f[3], vec!["categories:economy"]);
+        assert_eq!(f[4], vec!["project_type:plugin"]);
         let f: Vec<Vec<String>> =
             serde_json::from_str(&facets(LoaderKind::Fabric, "1.21.11", None)).unwrap();
-        assert_eq!(f.len(), 3);
+        assert_eq!(f.len(), 4);
         assert_eq!(f[0], vec!["categories:fabric"]);
+        assert_eq!(f[3], vec!["project_type:mod"]);
     }
 
     #[test]

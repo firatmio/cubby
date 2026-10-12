@@ -22,6 +22,8 @@ pub struct AppSettings {
     pub client_sync: bool,
     /// Arayüz dili: `"tr"` / `"en"`; `None` = bilgisayarın dili.
     pub language: Option<String>,
+    /// Animasyonlar: `"full"` / `"simple"`; `None` = otomatik (bilgisayar zorlanırsa sadeleşir).
+    pub animations: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -32,6 +34,7 @@ impl Default for AppSettings {
             eula_accepted: false,
             client_sync: true,
             language: None,
+            animations: None,
         }
     }
 }
@@ -166,5 +169,6 @@ mod tests {
         let s: AppSettings = serde_json::from_str("{}").unwrap();
         assert!(s.use_screenshots);
         assert!(s.language.is_none());
+        assert!(s.animations.is_none());
     }
 }

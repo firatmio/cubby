@@ -97,3 +97,9 @@
   background: rgba(20, 20, 20, 0.6);
   color: var(--text);
 }
+
+:global([data-motion="simple"]) .add,
+:global([data-motion="off"]) .add {
+  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.06);
+}

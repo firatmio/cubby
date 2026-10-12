@@ -95,7 +95,7 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null, animations: null as "full" | "simple" | null };
 
 const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
@@ -688,6 +688,9 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           description: m.description,
           downloads: m.downloads,
           icon: `modicon/${m.projectId}`,
+          // Bazı kartlar görselsiz: zemin rengi + büyük ikon görünümü de denensin.
+          image: m.projectId.charCodeAt(0) % 2 ? `modimg/${m.projectId}` : null,
+          color: ["#3b7a57", "#7a3b5c", "#3b5c7a", "#7a6a3b"][m.projectId.charCodeAt(1) % 4],
           clientNeed: m.clientNeed,
           installed: have.has(m.projectId),
         })),

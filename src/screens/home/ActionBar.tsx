@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ImageIcon, LogIn, Play, Plug, Puzzle, Settings2, Square, Users, Wrench } from "lucide-react";
+import { ImageIcon, LogIn, Play, Settings2, Square, Users, Wrench } from "lucide-react";
 import type { Instance } from "../../lib/api";
 import { useT } from "../../i18n";
 import { launchHint } from "../../lib/launch";
@@ -85,13 +85,6 @@ export function ActionBar({ instance }: { instance: Instance }) {
       <div className={styles.buttons}>
         <IconButton icon={Users} label={t.players} onClick={() => openSheet("players")} />
         <IconButton icon={Settings2} label={t.worldSettings} onClick={() => openSheet("world")} />
-        {instance.loader !== "vanilla" && (
-          <IconButton
-            icon={instance.loader === "paper" ? Plug : Puzzle}
-            label={instance.loader === "paper" ? t.plugins : t.mods}
-            onClick={() => openSheet("mods")}
-          />
-        )}
         <IconButton icon={ImageIcon} label={t.cover} onClick={() => openSheet("cover")} />
         <IconButton icon={Wrench} label={t.advanced} onClick={() => openSheet("advanced")} />
       </div>

@@ -5,6 +5,7 @@ import { IS_MOCK } from "../lib/api";
 import { useAppStore } from "../store/appStore";
 import { IconButton } from "../ui/IconButton";
 import { useT } from "../i18n";
+import { PageSwitch } from "./PageSwitch";
 import styles from "./TitleBar.module.css";
 
 /** Pencere işlemleri; tarayıcıdaki mock modunda etkisiz. */
@@ -16,6 +17,7 @@ const win = () => (IS_MOCK ? null : getCurrentWindow());
  */
 export function TitleBar() {
   const openSheet = useAppStore((s) => s.openSheet);
+  const home = useAppStore((s) => s.view === "home");
   const t = useT().titleBar;
 
   const onMouseDown = (e: MouseEvent) => {
@@ -26,6 +28,7 @@ export function TitleBar() {
   return (
     <header className={styles.bar} onMouseDown={onMouseDown}>
       <span className={styles.name}>Cubby</span>
+      {home && <PageSwitch />}
       <div className={styles.actions}>
         <IconButton icon={Settings} label={t.settings} size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
         <IconButton icon={Minus} label={t.minimize} size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />

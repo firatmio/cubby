@@ -54,3 +54,11 @@
     linear-gradient(to right, rgba(22, 22, 22, 0.7) 0%, rgba(22, 22, 22, 0) 60%);
   pointer-events: none;
 }
+
+/* Tam ekran görselin yavaş yakınlaşması sade modda durur. */
+:global([data-motion="simple"]) .image,
+:global([data-motion="simple"]) .glow,
+:global([data-motion="off"]) .image,
+:global([data-motion="off"]) .glow {
+  animation: none;
+}

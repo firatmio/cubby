@@ -159,6 +159,16 @@ pub fn render_cover(src: &Path, meta_dir: &Path) -> AppResult<String> {
     Ok(accent_color(&thumb))
 }
 
+/// Uzak bir görselin (Modrinth galeri resmi) küçük önizlemesi: `max` pikseli aşmayacak JPEG.
+pub fn render_preview(bytes: &[u8], dest: &Path, max: u32) -> AppResult<()> {
+    let img = image::load_from_memory(bytes)
+        .map_err(|e| AppError::msg(tx!("Resim açılamadı: {e}", "Couldn't open the image: {e}")))?;
+    if let Some(dir) = dest.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    write_jpeg(&resize(&img, max), dest)
+}
+
 pub const SERVER_ICON: &str = "server-icon.png";
 
 /// Sunucu listesinde görünen 64×64 simge: kapağın ortasından kare kırpılır.

@@ -69,6 +69,8 @@ export interface AppSettings {
   clientSync: boolean;
   /** "tr" / "en"; null = bilgisayarın dili */
   language: "tr" | "en" | null;
+  /** "full" / "simple"; null = otomatik */
+  animations: "full" | "simple" | null;
 }
 
 export type Launcher = "official" | "tLauncher";
@@ -136,6 +138,10 @@ export interface ModHit {
   downloads: number;
   /** `media` yolu (modicon/<id>) */
   icon: string | null;
+  /** Kartın büyük görseli: `media` yolu (modimg/<id>); yoksa null */
+  image: string | null;
+  /** Görsel yokken zemin rengi (#rrggbb) */
+  color: string | null;
   clientNeed: ClientNeed;
   installed: boolean;
 }

@@ -78,3 +78,11 @@
 
   transition: --accent 700ms ease;
 }
+
+/* Sade/kapalı animasyon (güçsüz ekran kartı, oyun açıkken kare düşmesi, Windows ayarı):
+   arka plan bulanıklığı en pahalı efekt; yerine daha opak yüzeyler. */
+:root[data-motion="simple"],
+:root[data-motion="off"] {
+  --blur: none;
+  --glass: rgba(34, 34, 34, 0.92);
+}

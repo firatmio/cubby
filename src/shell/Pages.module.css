@@ -1,0 +1,23 @@
+.root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.strip {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  will-change: transform;
+}
+
+.page {
+  position: relative;
+  flex: 0 0 50%;
+  height: 100%;
+}
+
+/* Geçiş bitince görünmeyen sayfa çizilmez; durumu (kaydırma, arama) yerinde kalır. */
+.page[data-hidden] {
+  visibility: hidden;
+}

@@ -25,8 +25,14 @@ const MAX_LOG_LINES = 5000;
 /** Tam ekran görünüm: dünyalar (ana ekran) ya da yeni dünya kurulumu. */
 export type View = "home" | "setup";
 
+/** Ana görünümdeki iki sayfa: dünyalar (Oyna) ve seçili dünya için içerik (Keşfet). */
+export type Page = "play" | "discover";
+
+/** Keşfet'in sekmeleri. */
+export type DiscoverTab = "mods";
+
 /** Sağdan kayan paneller. */
-export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection" | "mods";
+export type SheetName = "advanced" | "cover" | "settings" | "players" | "world" | "connection";
 
 export interface ServerRuntime {
   status: ServerStatus;
@@ -45,6 +51,12 @@ interface AppStore {
 
   sheet: SheetName | null;
   openSheet: (sheet: SheetName | null) => void;
+
+  page: Page;
+  setPage: (page: Page) => void;
+  discoverTab: DiscoverTab;
+  /** Keşfet'i bir sekmesiyle açar (eski "Modlar" paneli yerine). */
+  openDiscover: (tab: DiscoverTab) => void;
 
   /** Kurulumda seçilen türün rengi (arka plan parlaması). */
   setupColor: string;
@@ -126,6 +138,11 @@ export const useAppStore = create<AppStore>((set, get) => {
 
     sheet: null,
     openSheet: (sheet) => set({ sheet }),
+
+    page: "play",
+    setPage: (page) => set({ page, sheet: null }),
+    discoverTab: "mods",
+    openDiscover: (discoverTab) => set({ page: "discover", discoverTab, sheet: null }),
 
     setupColor: "#6cc04a",
     setSetupColor: (setupColor) => set({ setupColor }),

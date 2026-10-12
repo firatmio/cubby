@@ -52,3 +52,9 @@
     transform: translateY(10px) scale(0.97);
   }
 }
+
+:global([data-motion="simple"]) .backdrop,
+:global([data-motion="off"]) .backdrop {
+  backdrop-filter: none;
+  background: rgba(10, 10, 10, 0.78);
+}

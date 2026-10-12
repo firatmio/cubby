@@ -20,8 +20,12 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](
 - [x] **Start and join** — from the menu next to Start: once the server is up, the Minecraft Launcher opens with the world's profile selected and Play connects straight to the world (Quick Play, 1.20+); "Play" on your friend's side does the same
 - [~] **M9** — Launching without the Launcher: Microsoft sign-in (PKCE in the browser; the refresh token lives in Windows Credential Manager), game files are downloaded hash-verified while sharing `.minecraft`, and the game opens straight into the world with Quick Play (verified live with vanilla and NeoForge 26.3). The last step of Microsoft sign-in is **waiting for Mojang's approval**: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md) (Turkish). Until then, and for players who aren't signed in, the Launcher flow is used
 - [x] **English** — UI and error messages in Turkish and English; follows the computer's language on first launch, changeable in Settings > Language
+- [~] **M10** — Play / Discover pages: centred pills in the title bar with a goo (slime) transition, pages slide with a stretch. Animation level (Full / Simple / Off) detected automatically (Windows animation setting, software rendering, dropped frames) and adjustable in Settings
+  - [x] **M10a** — pages, animation level, Discover with mods: world picker, large-image card grid (Modrinth featured images resized and cached on disk), prefetching and an in-memory cache so lists appear instantly
+  - [ ] **M10b** — resource packs (optionally required for friends), shaders (Iris installed automatically), data packs
+  - [ ] **M10c** — modpacks → new world
 
-All milestones are done; next up are a web join page and release preparation.
+Next up: M10b/M10c, then a web join page and release preparation.
 
 **Next:**
 - Web join page (together with release preparation)

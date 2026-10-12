@@ -19,6 +19,10 @@ use crate::sessions::META_DIR;
 
 pub const EVENT_PROGRESS: &str = "mods://progress";
 const ICON_MAX: usize = 1024 * 1024;
+/// Galeri görselleri büyük olabilir; indirilip küçültülür.
+const IMAGE_MAX: usize = 16 * 1024 * 1024;
+/// Kart görselinin önizleme genişliği (3 sütunlu ızgarada ~2x keskinlik).
+const IMAGE_PREVIEW: u32 = 640;
 const BODY_MAX: usize = 6000;
 
 /// Aynı anda tek kurulum/güncelleme (dosya yarışlarını önler).
@@ -36,6 +40,21 @@ impl ModIcons {
             .unwrap_or_else(|e| e.into_inner())
             .insert(id.to_string(), url.clone());
         Some(format!("modicon/{id}"))
+    }
+}
+
+/// Proje kimliği → öne çıkan galeri görseli (`media://modimg/<id>` bunu kullanır).
+#[derive(Default)]
+pub struct ModImages(pub Mutex<HashMap<String, String>>);
+
+impl ModImages {
+    fn remember(&self, id: &str, url: Option<&String>) -> Option<String> {
+        let url = url.filter(|u| u.starts_with("https://cdn.modrinth.com/"))?;
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id.to_string(), url.clone());
+        Some(format!("modimg/{id}"))
     }
 }
 
@@ -94,6 +113,10 @@ pub struct HitView {
     description: String,
     downloads: u64,
     icon: Option<String>,
+    /// Kartın büyük görseli (`media` yolu).
+    image: Option<String>,
+    /// Görsel yokken zemin rengi (`#rrggbb`).
+    color: Option<String>,
     client_need: ClientNeed,
     installed: bool,
 }
@@ -111,6 +134,7 @@ pub async fn mods_search(
     app: AppHandle,
     state: State<'_, AppState>,
     icons: State<'_, ModIcons>,
+    images: State<'_, ModImages>,
     id: String,
     query: String,
     category: Option<String>,
@@ -141,6 +165,8 @@ pub async fn mods_search(
             .filter(|h| client_need(&h.environment, h.client_side) != ClientNeed::ClientOnly)
             .map(|h| HitView {
                 icon: icons.remember(&h.project_id, h.icon_url.as_ref()),
+                image: images.remember(&h.project_id, h.featured_gallery.as_ref()),
+                color: h.color.map(|c| format!("#{c:06x}")),
                 installed: installed.contains(&h.project_id),
                 project_id: h.project_id,
                 slug: h.slug,
@@ -683,9 +709,103 @@ pub async fn icon_response(app: &AppHandle, project_id: &str) -> Response<Vec<u8
     image_response(bytes.to_vec())
 }
 
+pub fn is_image_path(path: &str) -> Option<String> {
+    let id = path.strip_prefix("/modimg/")?;
+    (!id.is_empty() && id.len() <= 32 && id.chars().all(|c| c.is_ascii_alphanumeric()))
+        .then(|| id.to_string())
+}
+
+/// Kartın büyük görseli: önbellekte küçültülmüş JPEG varsa o, yoksa CDN'den indirilip küçültülür.
+/// İkinci açılışta diskten anında gelir.
+pub async fn gallery_response(app: &AppHandle, project_id: &str) -> Response<Vec<u8>> {
+    let Ok(dir) = app
+        .path()
+        .app_data_dir()
+        .map(|d| d.join("cache").join("modimgs"))
+    else {
+        return not_found();
+    };
+    let file = dir.join(format!("{project_id}.jpg"));
+    if let Ok(bytes) = std::fs::read(&file) {
+        return image_response_bytes(bytes);
+    }
+    let url = app
+        .state::<ModImages>()
+        .0
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(project_id)
+        .cloned();
+    let Some(url) = url else {
+        return not_found();
+    };
+    let http = app.state::<AppState>().http.clone();
+    let Ok(resp) = http
+        .get(&url)
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+    else {
+        return not_found();
+    };
+    if resp
+        .content_length()
+        .is_some_and(|l| l as usize > IMAGE_MAX)
+    {
+        return not_found();
+    }
+    let Ok(bytes) = resp.bytes().await else {
+        return not_found();
+    };
+    if bytes.len() > IMAGE_MAX {
+        return not_found();
+    }
+    let out = file.clone();
+    let made = tauri::async_runtime::spawn_blocking(move || {
+        crate::covers::render_preview(&bytes, &out, IMAGE_PREVIEW)
+    })
+    .await;
+    match (made, std::fs::read(&file)) {
+        (Ok(Ok(())), Ok(bytes)) => image_response_bytes(bytes),
+        _ => not_found(),
+    }
+}
+
+fn image_response_bytes(bytes: Vec<u8>) -> Response<Vec<u8>> {
+    Response::builder()
+        .header("Content-Type", "image/jpeg")
+        .header("Cache-Control", "max-age=604800")
+        .body(bytes)
+        .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn image_paths() {
+        assert_eq!(
+            is_image_path("/modimg/AANobbMI").as_deref(),
+            Some("AANobbMI")
+        );
+        assert!(is_image_path("/modimg/../x").is_none());
+        assert!(is_image_path("/modimg/").is_none());
+        assert!(is_image_path("/modicon/AANobbMI").is_none());
+        let images = ModImages::default();
+        assert_eq!(
+            images.remember(
+                "a1",
+                Some(&"https://cdn.modrinth.com/data/a1/images/x.png".into())
+            ),
+            Some("modimg/a1".into())
+        );
+        // Yalnız Modrinth CDN'i: başka adresler kabul edilmez.
+        assert_eq!(
+            images.remember("a2", Some(&"https://example.com/x.png".into())),
+            None
+        );
+    }
 
     #[test]
     fn icon_paths_and_mime() {

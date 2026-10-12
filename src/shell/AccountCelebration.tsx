@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useT } from "../i18n";
+import { useMotionLevel } from "../lib/perf";
 import { useAppStore } from "../store/appStore";
 import { SkinHead } from "../ui/SkinHead";
 import styles from "./AccountCelebration.module.css";
@@ -31,6 +32,7 @@ export function AccountCelebration() {
   const setCelebrate = useAppStore((s) => s.setCelebrate);
   const [visible, setVisible] = useState(false);
   const t = useT();
+  const full = useMotionLevel() === "full";
 
   useEffect(() => {
     if (!account) return;
@@ -62,13 +64,15 @@ export function AccountCelebration() {
           role="status"
         >
           <div className={styles.center}>
-            <motion.span
-              className={styles.ring}
-              initial={{ scale: 0.3, opacity: 0.9 }}
-              animate={{ scale: 2.6, opacity: 0 }}
-              transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
-            />
-            {bits.map((b, i) => (
+            {full && (
+              <motion.span
+                className={styles.ring}
+                initial={{ scale: 0.3, opacity: 0.9 }}
+                animate={{ scale: 2.6, opacity: 0 }}
+                transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
+              />
+            )}
+            {(full ? bits : bits.filter((_, i) => i % 3 === 0)).map((b, i) => (
               <motion.span
                 key={i}
                 className={styles.bit}

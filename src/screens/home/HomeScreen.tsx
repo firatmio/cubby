@@ -21,7 +21,7 @@ export function HomeScreen() {
     const onKey = (e: KeyboardEvent) => {
       const st = useAppStore.getState();
       const typing = (e.target as HTMLElement).closest("input, textarea");
-      if (st.sheet || typing) return;
+      if (st.sheet || typing || st.page !== "play") return;
       if (e.key === "ArrowRight") st.selectStep(1);
       if (e.key === "ArrowLeft") st.selectStep(-1);
     };

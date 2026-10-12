@@ -497,6 +497,29 @@ const en: Dict = {
     connected: "Microsoft account connected",
     welcome: (name: string) => `Welcome, ${name}. The game now opens straight into the world with one click.`,
   },
+  pages: {
+    label: "Pages",
+    play: "Play",
+    discover: "Discover",
+  },
+  discover: {
+    pickWorld: "Choose a world",
+    friendsWorld: "Friend's world",
+    emptyTitle: "Set up a world first",
+    emptyText: "Discover shows mods and content that fit the world you pick.",
+    friendNote: "The world's owner picks the mods; only the things that are yours are here.",
+    friendSoon: "Your own resource packs and shaders for this world are coming here very soon.",
+    vanillaTitle: "Vanilla worlds can't have mods",
+    vanillaText: "Pick a modded world or set up a new one. Resource packs and data packs are coming here very soon.",
+  },
+  motion: {
+    title: "Animations",
+    text: "Automatic tones them down if your computer struggles.",
+    offNote: "Animation effects are turned off in Windows; only gentle fades are used.",
+    auto: "Automatic",
+    full: "Full",
+    simple: "Simple",
+  },
 };
 
 export default en;

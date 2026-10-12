@@ -50,3 +50,9 @@
   font-size: var(--fs-sm);
   text-align: center;
 }
+
+:global([data-motion="simple"]) .overlay,
+:global([data-motion="off"]) .overlay {
+  backdrop-filter: none;
+  background: rgba(12, 12, 12, 0.82);
+}
