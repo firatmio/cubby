@@ -255,6 +255,84 @@
   container-type: inline-size;
 }
 
+/* ---- Sıradakiler (yalnız geniş pencerede) ---- */
+
+.featuredQueue {
+  display: none;
+}
+
+@container (min-width: 1300px) {
+  .featuredQueue {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 4px;
+    width: 300px;
+    padding: var(--sp-4) var(--sp-3);
+    overflow-y: auto;
+    border-left: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.22);
+    scrollbar-width: none;
+  }
+
+  .featuredQueue > .featuredLabel {
+    padding: 0 var(--sp-2) var(--sp-1);
+  }
+
+  /* Sütun noktaların işini görür (aşağıdaki genel kuralı ezmesi için daha özgül). */
+  .featured .featuredNav {
+    display: none;
+  }
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 5px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms;
+}
+
+.queueItem:hover {
+  background: var(--hover);
+}
+
+.queueItemOn,
+.queueItemOn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.queueItem img {
+  flex-shrink: 0;
+  width: 76px;
+  height: 43px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.queueText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.queueTitle {
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Önizleme açıkken vitrin daralır: bant sıkışmasın. */
 @container (max-width: 760px) {
   .featuredText {
@@ -275,6 +353,7 @@
   /* Bant genişledikçe yükselir (vitrin kabının genişliğine göre); görsel aşırı yakınlaşıp bozulmasın. */
   --fh: clamp(230px, 24cqw, 400px);
   position: relative;
+  display: flex;
   flex-shrink: 0;
   height: var(--fh);
   overflow: hidden;
@@ -282,6 +361,14 @@
   border-radius: var(--radius-tile);
   background: color-mix(in srgb, var(--tint, #3d3d3d) 26%, #161616);
   transition: background 500ms;
+}
+
+/* Slaytların kaydığı alan (geniş pencerede sağında Sıradakiler sütunu durur). */
+.featuredStage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Her proje bir slayt; ileri/geri basınca yatay kayarak değişir. */
@@ -293,8 +380,27 @@
   grid-template-columns: min(calc(var(--fh) * 16 / 9), 60%) minmax(0, 1fr);
 }
 
+/* Aynı görselin büyütülmüş, bulanık ve koyulaştırılmış kopyası bandın tamamını doldurur. */
+.featuredBlur {
+  position: absolute;
+  top: -48px;
+  left: -48px;
+  width: calc(100% + 96px);
+  height: calc(100% + 96px);
+  object-fit: cover;
+  filter: blur(40px) brightness(0.42) saturate(1.25);
+  pointer-events: none;
+}
+
+/* Bulanıklık pahalı: sade modda yalnız düz renk zemin kalır. */
+:global([data-motion="simple"]) .featuredBlur,
+:global([data-motion="off"]) .featuredBlur {
+  display: none;
+}
+
 .featuredArt {
   position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
@@ -306,15 +412,14 @@
   object-fit: cover;
 }
 
-/* Görsel metin tarafına doğru zemine erir. */
-.featuredArt::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to right, transparent 55%, color-mix(in srgb, var(--tint, #3d3d3d) 26%, #161616));
-  content: "";
+/* Görsel sağ kenarında arkadaki bulanık kopyasına (ya da düz zemine) erir. */
+.featuredArt img {
+  mask-image: linear-gradient(to right, #000 62%, transparent);
 }
 
 .featuredText {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;

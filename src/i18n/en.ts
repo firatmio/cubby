@@ -515,6 +515,7 @@ const en: Dict = {
     vanillaTitle: "Vanilla worlds can't have mods",
     vanillaText: "Pick a modded world or set up a new one. Resource packs and data packs are coming here very soon.",
     featured: "Featured",
+    upNext: "Up next",
     details: "Details",
     previous: "Previous",
     next: "Next",

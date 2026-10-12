@@ -26,7 +26,10 @@ const slide: Variants = {
   exit: (dir: number) => ({ x: `${-dir * 100}%` }),
 };
 
-/** Vitrinin başındaki geniş bant: popüler ve görselli ilk birkaç proje, elle geçilir (kendiliğinden dönmez). */
+/**
+ * Vitrinin başındaki geniş bant: popüler ve görselli ilk birkaç proje, elle geçilir (kendiliğinden dönmez).
+ * Arkada aynı görselin bulanık kopyası bandı doldurur; geniş pencerede sağda "Sıradakiler" sütunu çıkar.
+ */
 export function Featured({ hits, plugin, isInstalled, installing, busy, onInstall, onOpen }: Props) {
   const tt = useT();
   const t = tt.mods;
@@ -36,6 +39,7 @@ export function Featured({ hits, plugin, isInstalled, installing, busy, onInstal
   const i = Math.min(index, hits.length - 1);
   const hit = hits[i];
   const step = (d: number) => setPos([(i + d + hits.length) % hits.length, d]);
+  const go = (n: number) => n !== i && setPos([n, n > i ? 1 : -1]);
   const transition =
     level === "full"
       ? ({ type: "spring", stiffness: 300, damping: 34 } as const)
@@ -47,65 +51,90 @@ export function Featured({ hits, plugin, isInstalled, installing, busy, onInstal
       aria-label={tt.discover.featured}
       style={{ "--tint": hit.color ?? "#3d3d3d" } as React.CSSProperties}
     >
-      <AnimatePresence initial={false} custom={dir}>
-        <motion.div
-          key={hit.projectId}
-          className={styles.featuredSlide}
-          custom={dir}
-          variants={slide}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={transition}
-        >
-          <div className={styles.featuredArt}>
-            <img src={mediaUrl(hit.image!)} alt="" draggable={false} decoding="async" />
-          </div>
-          <div className={styles.featuredText}>
-            <span className={styles.featuredLabel}>{tt.discover.featured}</span>
-            <div className={styles.featuredTitle}>
-              <ModIcon icon={hit.icon} plugin={plugin} size={40} />
-              <h2>{hit.title}</h2>
+      <div className={styles.featuredStage}>
+        <AnimatePresence initial={false} custom={dir}>
+          <motion.div
+            key={hit.projectId}
+            className={styles.featuredSlide}
+            custom={dir}
+            variants={slide}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={transition}
+          >
+            <img className={styles.featuredBlur} src={mediaUrl(hit.image!)} alt="" draggable={false} aria-hidden />
+            <div className={styles.featuredArt}>
+              <img src={mediaUrl(hit.image!)} alt="" draggable={false} decoding="async" />
             </div>
-            <p className={styles.featuredDesc}>{hit.description}</p>
-            <span className={styles.tileMeta}>
-              {t.downloads(compactCount(hit.downloads))}
-              <NeedBadge need={hit.clientNeed} />
-            </span>
-            <div className={styles.featuredActions}>
-              {isInstalled(hit) ? (
-                <span className={styles.installed}>
-                  <Check size={15} aria-hidden /> {t.installed}
-                </span>
-              ) : (
-                <Button
-                  variant="primary"
-                  icon={Download}
-                  loading={installing === hit.projectId}
-                  disabled={busy}
-                  onClick={() => onInstall(hit.projectId)}
-                >
-                  {t.install}
+            <div className={styles.featuredText}>
+              <span className={styles.featuredLabel}>{tt.discover.featured}</span>
+              <div className={styles.featuredTitle}>
+                <ModIcon icon={hit.icon} plugin={plugin} size={40} />
+                <h2>{hit.title}</h2>
+              </div>
+              <p className={styles.featuredDesc}>{hit.description}</p>
+              <span className={styles.tileMeta}>
+                {t.downloads(compactCount(hit.downloads))}
+                <NeedBadge need={hit.clientNeed} />
+              </span>
+              <div className={styles.featuredActions}>
+                {isInstalled(hit) ? (
+                  <span className={styles.installed}>
+                    <Check size={15} aria-hidden /> {t.installed}
+                  </span>
+                ) : (
+                  <Button
+                    variant="primary"
+                    icon={Download}
+                    loading={installing === hit.projectId}
+                    disabled={busy}
+                    onClick={() => onInstall(hit.projectId)}
+                  >
+                    {t.install}
+                  </Button>
+                )}
+                <Button variant="ghost" icon={Info} onClick={() => onOpen(hit)}>
+                  {tt.discover.details}
                 </Button>
-              )}
-              <Button variant="ghost" icon={Info} onClick={() => onOpen(hit)}>
-                {tt.discover.details}
-              </Button>
+              </div>
             </div>
+          </motion.div>
+        </AnimatePresence>
+        {hits.length > 1 && (
+          <div className={styles.featuredNav}>
+            <button type="button" aria-label={tt.discover.previous} onClick={() => step(-1)}>
+              <ChevronLeft size={16} aria-hidden />
+            </button>
+            {hits.map((h, n) => (
+              <span key={h.projectId} className={n === i ? styles.dotOn : styles.dot} />
+            ))}
+            <button type="button" aria-label={tt.discover.next} onClick={() => step(1)}>
+              <ChevronRight size={16} aria-hidden />
+            </button>
           </div>
-        </motion.div>
-      </AnimatePresence>
+        )}
+      </div>
+
       {hits.length > 1 && (
-        <div className={styles.featuredNav}>
-          <button type="button" aria-label={tt.discover.previous} onClick={() => step(-1)}>
-            <ChevronLeft size={16} aria-hidden />
-          </button>
+        <div className={styles.featuredQueue} role="list" aria-label={tt.discover.upNext}>
+          <span className={styles.featuredLabel}>{tt.discover.upNext}</span>
           {hits.map((h, n) => (
-            <span key={h.projectId} className={n === i ? styles.dotOn : styles.dot} />
+            <button
+              key={h.projectId}
+              type="button"
+              role="listitem"
+              aria-current={n === i}
+              className={[styles.queueItem, n === i && styles.queueItemOn].filter(Boolean).join(" ")}
+              onClick={() => go(n)}
+            >
+              <img src={mediaUrl(h.image!)} alt="" draggable={false} loading="lazy" decoding="async" />
+              <span className={styles.queueText}>
+                <span className={styles.queueTitle}>{h.title}</span>
+                <span className={styles.tileMeta}>{t.downloads(compactCount(h.downloads))}</span>
+              </span>
+            </button>
           ))}
-          <button type="button" aria-label={tt.discover.next} onClick={() => step(1)}>
-            <ChevronRight size={16} aria-hidden />
-          </button>
         </div>
       )}
     </section>

@@ -520,6 +520,7 @@ const tr = {
     vanillaTitle: "Saf Minecraft dünyalarına mod kurulmaz",
     vanillaText: "Modlu bir dünya seç ya da yeni bir tane kur. Kaynak paketleri ve veri paketleri çok yakında burada.",
     featured: "Öne çıkan",
+    upNext: "Sıradakiler",
     details: "Ayrıntı",
     previous: "Önceki",
     next: "Sonraki",
