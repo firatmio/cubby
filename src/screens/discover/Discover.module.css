@@ -239,10 +239,11 @@
 .scroll {
   flex: 1;
   min-height: 0;
-  margin: 0 calc(-1 * var(--sp-3));
-  padding: var(--sp-2) var(--sp-3) var(--sp-8);
+  /* Üstteki pay, en üst sıradaki kutucuk büyüyüp kalkınca çerçevesi kesilmesin diye. */
+  margin: -6px calc(-1 * var(--sp-3)) 0;
+  padding: 14px var(--sp-3) var(--sp-8);
   overflow-y: auto;
-  mask-image: linear-gradient(to bottom, transparent, #000 12px);
+  mask-image: linear-gradient(to bottom, transparent, #000 6px);
 }
 
 /* ---- Vitrin: öne çıkan bandı ---- */
@@ -414,8 +415,12 @@
 /* ---- Raflar ---- */
 
 .shelf {
+  /* Ekran dışındaki raf çizilmez. Bu, rafın kutusunun dışına çizimi de kırpar; o yüzden kutu yanlara
+     taşırılır ki büyüyen kutucuğun çerçevesi kesilmesin. */
+  margin: 0 calc(-1 * var(--sp-3));
+  padding: 0 var(--sp-3);
   content-visibility: auto;
-  contain-intrinsic-size: auto 250px;
+  contain-intrinsic-size: auto 260px;
 }
 
 .shelfHead {
@@ -452,7 +457,8 @@
 
 .shelfFrame {
   position: relative;
-  margin: 0 calc(-1 * var(--sp-3));
+  /* Satırın üst/alt payı (aşağıda) kutucuğun büyüyüp kalkmasına yer açar; görünen boşluk değişmesin. */
+  margin: -6px calc(-1 * var(--sp-3)) -4px;
 }
 
 /* Kenarda devam eden kutucuklar kesilmiş değil, solarak biter. */
@@ -461,7 +467,8 @@
   --r: 0px;
   display: flex;
   gap: var(--sp-4);
-  padding: 8px var(--sp-3) 6px;
+  /* Yatay kaydırma dikeyde de kırpar: üstte büyüme + kalkma + çerçeve (≈11 px) için pay. */
+  padding: 14px var(--sp-3) 10px;
   overflow-x: auto;
   scroll-padding: 0 var(--sp-3);
   scroll-snap-type: x proximity;
