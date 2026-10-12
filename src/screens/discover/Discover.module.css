@@ -3,14 +3,6 @@
   inset: 0;
 }
 
-/* Arka plan (dünyanın kapağı) iki sayfada ortak; Keşfet'te kartlar okunsun diye daha koyu. */
-.scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(18, 18, 18, 0.62), rgba(18, 18, 18, 0.86) 45%);
-  pointer-events: none;
-}
-
 .content {
   position: absolute;
   inset: 0;
@@ -235,7 +227,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
   gap: var(--sp-4);
 }
 

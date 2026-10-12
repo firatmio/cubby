@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useTransform, useVelocity } from "motion/react";
 import { useMotionLevel, watchFrames } from "../lib/perf";
+import { pageX } from "./pageMotion";
 import { useAppStore, type Page } from "../store/appStore";
 import styles from "./Pages.module.css";
 
@@ -19,7 +20,8 @@ export function Pages({ play, discover }: { play: ReactNode; discover: ReactNode
   const setPage = useAppStore((s) => s.setPage);
   const level = useMotionLevel();
   const root = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
+  // Arka planlar da (Backdrops) aynı değerle kayar.
+  const x = pageX;
   const speed = useVelocity(x);
   const stretch = useTransform(speed, [-7000, 0, 7000], [1.05, 1, 1.05], { clamp: true });
   const skew = useTransform(speed, [-7000, 0, 7000], [2.5, 0, -2.5], { clamp: true });

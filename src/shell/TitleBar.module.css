@@ -27,3 +27,9 @@
   background: var(--danger-fill);
   color: #fff;
 }
+
+/* Kare ikon diğerlerinden iri görünmesin. */
+.max svg {
+  width: 13px;
+  height: 13px;
+}

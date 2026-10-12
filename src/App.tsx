@@ -17,7 +17,7 @@ import { DiscoverPage } from "./screens/discover/DiscoverPage";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
 import { AccountCelebration } from "./shell/AccountCelebration";
-import { Background } from "./shell/Background";
+import { Backdrops } from "./shell/Backdrops";
 import { Pages } from "./shell/Pages";
 import { TitleBar } from "./shell/TitleBar";
 import { useAppStore, useSelected, useSelectedJoined } from "./store/appStore";
@@ -78,7 +78,7 @@ export default function App() {
     // Animasyonlar kapalıysa (Windows ayarı) Motion transform'ları kendisi kapatır, yalnız belirme kalır.
     <MotionConfig reducedMotion={motionLevel === "off" ? "always" : "never"}>
       <div className={styles.app}>
-        <Background image={image} color={accent} />
+        <Backdrops image={image} color={accent} strip={!inSetup} />
         <TitleBar />
         <AnimatePresence mode="wait">
           <motion.main

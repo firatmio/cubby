@@ -134,7 +134,7 @@ export const useAppStore = create<AppStore>((set, get) => {
 
   return {
     view: "home",
-    setView: (view) => set({ view, sheet: null }),
+    setView: (view) => set((st) => ({ view, sheet: null, page: view === "setup" ? "play" : st.page })),
 
     sheet: null,
     openSheet: (sheet) => set({ sheet }),

@@ -43,6 +43,8 @@ export function PageSwitch() {
   const dropX = useMotionValue(0);
   const dropLeft = useTransform(dropX, (v) => v - 12);
   const shown = useRef<Page | null>(null);
+  // Filtre yalnız damla akarken açık; dururken hap filtresiz çizilir (kenarlar normal hap gibi keskin).
+  const [flowing, setFlowing] = useState(false);
 
   // Hap genişlikleri dile göre değişir: ölç, değişince yeniden ölç.
   useLayoutEffect(() => {
@@ -77,20 +79,28 @@ export function PageSwitch() {
       return;
     }
     const forward = to.left > from.left;
-    animate(left, to.left, forward ? TRAIL : LEAD);
-    animate(right, to.left + to.width, forward ? LEAD : TRAIL);
+    setFlowing(true);
     // Kalkış noktasında kalıp küçülen damla: goo ile ana damlaya bağlı bir boyun gibi görünür.
     dropX.jump(from.left + from.width / 2);
     drop.jump(1);
-    animate(drop, 0, { duration: 0.42, ease: [0.4, 0, 0.2, 1] });
+    const runs = [
+      animate(left, to.left, forward ? TRAIL : LEAD),
+      animate(right, to.left + to.width, forward ? LEAD : TRAIL),
+      animate(drop, 0, { duration: 0.42, ease: [0.4, 0, 0.2, 1] }),
+    ];
+    let live = true;
+    Promise.all(runs).then(() => live && setFlowing(false));
     watchFrames(700);
+    return () => {
+      live = false;
+    };
   }, [page, boxes, goo, level, left, right, drop, dropX]);
 
   return (
     <div className={styles.switch} role="tablist" aria-label={t.label}>
-      <div className={styles.blobs} style={goo ? { filter: "url(#cubby-goo)" } : undefined} aria-hidden>
+      <div className={styles.blobs} style={goo && flowing ? { filter: "url(#cubby-goo)" } : undefined} aria-hidden>
         <motion.span className={styles.blob} style={{ x: left, width, scaleY: goo ? scaleY : 1 }} />
-        {goo && (
+        {goo && flowing && (
           <motion.span
             className={styles.drop}
             style={{ x: dropLeft, scale: drop, opacity: drop }}
@@ -124,10 +134,10 @@ export function PageSwitch() {
               <feColorMatrix
                 in="blur"
                 mode="matrix"
-                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -12"
                 result="goo"
               />
-              <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+              <feComposite in="SourceGraphic" in2="goo" operator="over" />
             </filter>
           </defs>
         </svg>

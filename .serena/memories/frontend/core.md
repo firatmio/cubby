@@ -1,6 +1,7 @@
 # frontend/core (src)
 
-Konsol (PS5 UI matematiği) tarzı: sabit 1200×720, yalnız koyu tema, özel başlık çubuğu.
+Konsol (PS5 UI matematiği) tarzı: tasarım 1200×720 (pencere en az bu; büyütülebilir/yeniden boyutlanabilir, başlık çubuğunda büyüt düğmesi + çift tık), yalnız koyu tema, özel başlık çubuğu.
+Arka planlar `shell/Backdrops` şeridinde (Oyna: dünya kapağı `Background`, Keşfet: resimsiz ışıltı + nokta deseni); sayfalarla aynı `pageX` (`shell/pageMotion.ts`) motion değeriyle birlikte kayar. Goo filtresi yalnız damla akarken açık (`flowing`), dururken hap filtresiz.
 
 - `App.tsx` — `shell/Background` (dünya kapağı çapraz geçiş / tür rengi parlaması) + `shell/TitleBar` (startDragging, küçült, kapat, ⚙) + `AnimatePresence` ile `home | setup`; paneller (`PlayersSheet`, `WorldSettingsSheet`, `AdvancedSheet`, `CoverSheet`, `AppSettingsSheet`) her zaman monte, `sheet` store alanıyla açılır. `--accent` CSS değişkeni seçili dünyanın kapak rengi (`@property` ile yumuşak geçiş).
 - Store (zustand): `view`, `selectedId`, `sheet`, `setupColor`; sunucu başına `status/logs/stats/players/rejected`. `loadInstances` tüm sunucuların snapshot'ını hydrate eder.

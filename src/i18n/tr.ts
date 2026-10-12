@@ -64,6 +64,8 @@ const tr = {
   titleBar: {
     settings: "Ayarlar",
     minimize: "Küçült",
+    maximize: "Büyüt",
+    restore: "Önceki boyut",
     close: "Kapat",
   },
   app: {

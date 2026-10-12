@@ -62,6 +62,8 @@ const en: Dict = {
   titleBar: {
     settings: "Settings",
     minimize: "Minimize",
+    maximize: "Maximize",
+    restore: "Restore",
     close: "Close",
   },
   app: {

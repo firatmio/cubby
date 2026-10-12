@@ -16,8 +16,10 @@
         "title": "Cubby",
         "width": 1200,
         "height": 720,
-        "resizable": false,
-        "maximizable": false,
+        "minWidth": 1200,
+        "minHeight": 720,
+        "resizable": true,
+        "maximizable": true,
         "decorations": false,
         "shadow": true,
         "center": true

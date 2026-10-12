@@ -50,7 +50,6 @@ export function DiscoverPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.scrim} aria-hidden />
       {body}
     </div>
   );
