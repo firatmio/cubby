@@ -48,6 +48,11 @@ Formda istenenler ve önerilen cevaplar:
 
 Cevap e-postayla geliyor; geliştirici raporlarına göre yaklaşık bir hafta sürüyor, garanti değil.
 
+> **Başvuru eski adla ("MC Server Client") yapıldıysa yeniden başvurma:** onay ada değil uygulama
+> kimliğine verilir. Azure'da adı *Markalama ve özellikler*'den `Cubby` yap (kimlik değişmez; oyuncunun
+> Microsoft giriş ekranında görünen ad da budur). Mojang yazarsa adın değiştiğini, kimliğin aynı kaldığını
+> söyle; reddederlerse Cubby adıyla, aynı kimlikle yeniden başvur.
+
 ## 3. Geliştirmede kimliği vermek
 
 Kimlik derleme anında okunur:
