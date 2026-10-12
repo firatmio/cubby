@@ -46,8 +46,12 @@ impl Session {
 }
 
 fn keyring() -> AppResult<keyring::Entry> {
-    keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)
-        .map_err(|e| AppError::msg(format!("Kimlik kasası açılamadı: {e}")))
+    keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|e| {
+        AppError::msg(tx!(
+            "Kimlik kasası açılamadı: {e}",
+            "Couldn't open the credential store: {e}"
+        ))
+    })
 }
 
 pub struct AuthManager {
@@ -78,8 +82,12 @@ impl AuthManager {
         open: impl FnOnce(&str) -> AppResult<()>,
         on_code: impl FnOnce(),
     ) -> AppResult<Account> {
-        let client_id =
-            client_id().ok_or_else(|| AppError::msg("Microsoft girişi bu sürümde kapalı."))?;
+        let client_id = client_id().ok_or_else(|| {
+            AppError::msg(tx!(
+                "Microsoft girişi bu sürümde kapalı.",
+                "Microsoft sign-in is disabled in this build."
+            ))
+        })?;
         let listener = TcpListener::bind(("127.0.0.1", 0)).await?;
         let redirect = format!("http://localhost:{}", listener.local_addr()?.port());
         let pkce = oauth::pkce();
@@ -107,9 +115,10 @@ impl AuthManager {
         let xsts = xbox::xsts(&self.http, &xbl).await?;
         let mc = xbox::minecraft_login(&self.http, &xsts).await?;
         if !xbox::owns_game(&self.http, &mc.access_token).await? {
-            return Err(AppError::msg(
+            return Err(AppError::msg(tx!(
                 "Bu Microsoft hesabında Minecraft: Java Edition yok.",
-            ));
+                "This Microsoft account doesn't own Minecraft: Java Edition."
+            )));
         }
         let profile = xbox::profile(&self.http, &mc.access_token).await?;
         let account = Account {
@@ -137,11 +146,18 @@ impl AuthManager {
         if let Some(s) = self.session.lock().await.as_ref().filter(|s| s.fresh()) {
             return Ok(s.clone());
         }
-        let client_id =
-            client_id().ok_or_else(|| AppError::msg("Microsoft girişi bu sürümde kapalı."))?;
-        let refresh = keyring()?
-            .get_password()
-            .map_err(|_| AppError::msg("Microsoft hesabıyla giriş yapılmamış."))?;
+        let client_id = client_id().ok_or_else(|| {
+            AppError::msg(tx!(
+                "Microsoft girişi bu sürümde kapalı.",
+                "Microsoft sign-in is disabled in this build."
+            ))
+        })?;
+        let refresh = keyring()?.get_password().map_err(|_| {
+            AppError::msg(tx!(
+                "Microsoft hesabıyla giriş yapılmamış.",
+                "You're not signed in with a Microsoft account."
+            ))
+        })?;
         let tokens = oauth::refresh(&self.http, client_id, &refresh).await?;
         self.complete(&tokens).await
     }

@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Info, X } from "lucide-react";
+import { useT } from "../../i18n";
 import { spring } from "../../lib/motion";
 import type { GameNotice } from "./useGameNotice";
 import styles from "./ActionBar.module.css";
 
 /** Ana butonun üstünde tek satırlık bilgi/hata çubuğu. */
 export function NoticeBar({ notice }: { notice: GameNotice | null }) {
+  const t = useT();
   return (
     <AnimatePresence mode="wait">
       {notice && (
@@ -27,7 +29,7 @@ export function NoticeBar({ notice }: { notice: GameNotice | null }) {
             </button>
           )}
           {notice.dismiss && (
-            <button type="button" aria-label="Kapat" onClick={notice.dismiss}>
+            <button type="button" aria-label={t.common.close} onClick={notice.dismiss}>
               <X size={14} />
             </button>
           )}

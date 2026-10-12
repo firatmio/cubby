@@ -81,12 +81,16 @@ impl JavaManager {
         required: u32,
     ) -> AppResult<Option<JavaInfo>> {
         if let Some(path) = pinned {
-            let java = probe(path.to_string())
-                .await
-                .ok_or_else(|| AppError::msg(format!("Seçili Java çalıştırılamadı: {path}")))?;
+            let java = probe(path.to_string()).await.ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Seçili Java çalıştırılamadı: {path}",
+                    "Couldn't run the selected Java: {path}"
+                ))
+            })?;
             if java.major < required {
-                return Err(AppError::msg(format!(
+                return Err(AppError::msg(tx!(
                     "Seçili Java {} bu sunucu için eski; Java {required}+ gerekli.",
+                    "The selected Java {} is too old for this server; Java {required}+ is required.",
                     java.major
                 )));
             }
@@ -124,7 +128,12 @@ impl JavaManager {
             .await?;
         let java = probe(exe.to_string_lossy().into_owned())
             .await
-            .ok_or_else(|| AppError::msg("İndirilen Java çalıştırılamadı"))?;
+            .ok_or_else(|| {
+                AppError::msg(tx!(
+                    "İndirilen Java çalıştırılamadı",
+                    "Couldn't run the downloaded Java"
+                ))
+            })?;
         self.list(true).await;
         Ok(JavaInfo {
             managed: true,

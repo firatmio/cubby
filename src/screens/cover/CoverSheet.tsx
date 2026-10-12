@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Check, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { useT } from "../../i18n";
 import { api, errorMessage, mediaUrl, pickImage, type CoverSource, type Shot, type ShotList } from "../../lib/api";
 import { relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
@@ -55,6 +56,7 @@ export function CoverSheet() {
   const [list, setList] = useState<ShotList | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   const load = useCallback(() => {
     if (!instance) return;
@@ -85,7 +87,7 @@ export function CoverSheet() {
   };
 
   const fromComputer = async () => {
-    const path = await pickImage("Kapak resmi seç");
+    const path = await pickImage(t.cover.pickTitle);
     if (path) await apply("file", { type: "file", path });
   };
 
@@ -94,14 +96,14 @@ export function CoverSheet() {
   return (
     <Sheet
       open={open && !!instance}
-      title="Kapak resmi"
-      subtitle="Dünyanın arka planı. Oyunda F2 ile çektiğin görüntüler burada."
+      title={t.cover.title}
+      subtitle={t.cover.subtitle}
       onClose={() => openSheet(null)}
       width={620}
     >
       <div className={styles.actions}>
         <Button icon={ImagePlus} loading={busy === "file"} disabled={busy !== null} onClick={fromComputer}>
-          Bilgisayardan seç
+          {t.cover.fromComputer}
         </Button>
         <Button
           variant={isAuto ? "secondary" : "ghost"}
@@ -110,16 +112,16 @@ export function CoverSheet() {
           disabled={busy !== null}
           onClick={() => apply("auto", { type: "auto" })}
         >
-          {isAuto ? "Otomatik seçiliyor" : "Otomatiğe dön"}
+          {isAuto ? t.cover.autoOn : t.cover.backToAuto}
         </Button>
       </div>
       {error && <p className={styles.error}>{error}</p>}
 
       <div className={styles.scroll}>
-        {!list && !error && <p className={styles.dim}>Ekran görüntüleri aranıyor…</p>}
+        {!list && !error && <p className={styles.dim}>{t.cover.searching}</p>}
         {list && (
           <>
-            <h3 className={styles.section}>Bu dünyada çekilenler</h3>
+            <h3 className={styles.section}>{t.cover.thisWorld}</h3>
             {list.matched.length > 0 ? (
               <ShotGrid
                 shots={list.matched}
@@ -127,13 +129,11 @@ export function CoverSheet() {
                 onPick={(file) => apply(file, { type: "screenshot", file })}
               />
             ) : (
-              <p className={styles.dim}>
-                Henüz yok. Dünya açıkken oyunda F2'ye bas; çektiğin görüntü kendiliğinden kapak olur.
-              </p>
+              <p className={styles.dim}>{t.cover.noneYet}</p>
             )}
             {list.others.length > 0 && (
               <>
-                <h3 className={styles.section}>Diğer ekran görüntülerin</h3>
+                <h3 className={styles.section}>{t.cover.others}</h3>
                 <ShotGrid
                   shots={list.others}
                   busy={busy}

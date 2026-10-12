@@ -117,7 +117,10 @@ pub fn minecraft_dir(app: &AppHandle) -> AppResult<PathBuf> {
         .minecraft_dir()
         .filter(|d| d.is_dir())
         .ok_or_else(|| {
-            AppError::msg("Minecraft klasörü bulunamadı. Ayarlar'dan Minecraft klasörünü seç.")
+            AppError::msg(tx!(
+                "Minecraft klasörü bulunamadı. Ayarlar'dan Minecraft klasörünü seç.",
+                "Minecraft folder not found. Choose your Minecraft folder in Settings."
+            ))
         })
 }
 
@@ -182,7 +185,7 @@ pub async fn prepare_client(
 ) -> AppResult<(Launcher, PathBuf, bool, String)> {
     let mc = minecraft_dir(app)?;
     let launcher = client::detect_launcher(&mc).ok_or_else(|| {
-        AppError::msg("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.")
+        AppError::msg(tx!("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.", "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again."))
     })?;
     let version_id =
         ensure_client_version(app, &mc, kind, mc_version, loader_version, on_line).await?;
@@ -275,7 +278,7 @@ pub fn prepare_plain(
 ) -> AppResult<(Launcher, String)> {
     let mc = minecraft_dir(app)?;
     let launcher = client::detect_launcher(&mc).ok_or_else(|| {
-        AppError::msg("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.")
+        AppError::msg(tx!("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.", "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again."))
     })?;
     let version = play_version(&mc, dir, mc_version, mc_version, Some(addr))?;
     let pick = write_profile(&mc, launcher, key, world_name, &version, None, icon)?;
@@ -340,10 +343,13 @@ pub async fn prepare_direct(
 async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientStatus> {
     let server_dir = paths::server_dir(app, &inst.id)?;
     let meta = paths::instance_dir(app, &inst.id)?.join(META_DIR);
-    let lv = inst
-        .loader_version
-        .clone()
-        .ok_or_else(|| AppError::msg(format!("{} sürümü bilinmiyor.", inst.loader.label())))?;
+    let lv = inst.loader_version.clone().ok_or_else(|| {
+        AppError::msg(tx!(
+            "{} sürümü bilinmiyor.",
+            "The {} version is unknown.",
+            inst.loader.label()
+        ))
+    })?;
     let port = server_port(&server_dir, inst.port);
     let ip = format!("localhost:{port}");
     let (launcher, mods_dir, shared, pick) = prepare_client(
@@ -433,10 +439,12 @@ async fn prepare_play(app: &AppHandle, inst: &Instance) -> AppResult<(Launcher, 
         let s = sync_host_with(app, &inst.id, true).await;
         return match (s.state, s.launcher, s.pick) {
             ("ok", Some(l), Some(p)) => Ok((l, p)),
-            _ => Err(AppError::msg(
-                s.message
-                    .unwrap_or_else(|| "Minecraft'ın hazırlanamadı.".into()),
-            )),
+            _ => Err(AppError::msg(s.message.unwrap_or_else(|| {
+                tx!(
+                    "Minecraft'ın hazırlanamadı.",
+                    "Couldn't prepare your Minecraft."
+                )
+            }))),
         };
     }
     let server_dir = paths::server_dir(app, &inst.id)?;

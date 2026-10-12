@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Loader2, type LucideIcon } from "lucide-react";
+import { useT } from "../i18n";
 import { spring } from "../lib/motion";
 import styles from "./SplitButton.module.css";
 
@@ -18,6 +19,7 @@ type Props<T extends string> = {
 
 /** Ana eylem + ▾ menü. Menü yukarı açılır; dışarı tıklayınca ya da Esc ile kapanır. */
 export function SplitButton<T extends string>({ options, value, onRun, loading, className }: Props<T>) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = options.find((o) => o.id === value) ?? options[0];
@@ -53,7 +55,7 @@ export function SplitButton<T extends string>({ options, value, onRun, loading, 
         type="button"
         className={styles.more}
         disabled={loading}
-        aria-label="Diğer seçenekler"
+        aria-label={t.common.moreOptions}
         aria-haspopup="menu"
         aria-expanded={open}
         whileTap={{ scale: 0.92 }}

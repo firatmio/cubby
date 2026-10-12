@@ -4,6 +4,7 @@ import { Minus, Settings, X } from "lucide-react";
 import { IS_MOCK } from "../lib/api";
 import { useAppStore } from "../store/appStore";
 import { IconButton } from "../ui/IconButton";
+import { useT } from "../i18n";
 import styles from "./TitleBar.module.css";
 
 /** Pencere işlemleri; tarayıcıdaki mock modunda etkisiz. */
@@ -15,6 +16,7 @@ const win = () => (IS_MOCK ? null : getCurrentWindow());
  */
 export function TitleBar() {
   const openSheet = useAppStore((s) => s.openSheet);
+  const t = useT().titleBar;
 
   const onMouseDown = (e: MouseEvent) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
@@ -25,11 +27,11 @@ export function TitleBar() {
     <header className={styles.bar} onMouseDown={onMouseDown}>
       <span className={styles.name}>Cubby</span>
       <div className={styles.actions}>
-        <IconButton icon={Settings} label="Ayarlar" size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
-        <IconButton icon={Minus} label="Küçült" size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />
+        <IconButton icon={Settings} label={t.settings} size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
+        <IconButton icon={Minus} label={t.minimize} size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />
         <IconButton
           icon={X}
-          label="Kapat"
+          label={t.close}
           size="sm"
           variant="ghost"
           tipBelow

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { api, mediaUrl } from "./lib/api";
+import { useLang, useT } from "./i18n";
 import { bindBackendEvents } from "./lib/events";
 import { KIND_COLORS, accentOf } from "./lib/format";
 import { screen } from "./lib/motion";
@@ -26,6 +27,8 @@ export default function App() {
   const view = useAppStore((s) => s.view);
   const setupColor = useAppStore((s) => s.setupColor);
   const shuttingDown = useAppStore((s) => s.shuttingDown);
+  // Kök dile abone: dil değişince bütün ağaç yeniden çizilir (getT() kullanan yerler de güncellenir).
+  const t = useT();
   const selected = useSelected();
   const joined = useSelectedJoined();
 
@@ -39,6 +42,11 @@ export default function App() {
     const st = useAppStore.getState();
     st.loadInstances().catch(console.error);
     st.loadJoined().catch(console.error);
+    // Etkin dil Rust'ta (ayar ya da bilgisayarın dili).
+    api
+      .getSettings()
+      .then((v) => useLang.getState().setLang(v.language))
+      .catch(console.error);
     // Uygulama bir davet linkiyle açıldıysa.
     api
       .takePendingInvite()
@@ -88,8 +96,8 @@ export default function App() {
       <AccountCelebration />
 
       {shuttingDown && (
-        <Dialog title="Kapatılıyor">
-          <p>Dünya kaydediliyor ve sunucu durduruluyor…</p>
+        <Dialog title={t.app.shuttingDownTitle}>
+          <p>{t.app.shuttingDown}</p>
           <Progress value={null} />
         </Dialog>
       )}

@@ -20,8 +20,12 @@ fn empty() -> Value {
 /// Dosya yoksa boş liste döner.
 pub fn read(mc_dir: &Path) -> AppResult<Value> {
     match std::fs::read(mc_dir.join(FILE)) {
-        Ok(bytes) => fastnbt::from_bytes(&bytes)
-            .map_err(|e| AppError::msg(format!("servers.dat okunamadı: {e}"))),
+        Ok(bytes) => fastnbt::from_bytes(&bytes).map_err(|e| {
+            AppError::msg(tx!(
+                "servers.dat okunamadı: {e}",
+                "Couldn't read servers.dat: {e}"
+            ))
+        }),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(empty()),
         Err(e) => Err(e.into()),
     }
@@ -33,8 +37,12 @@ pub fn write(mc_dir: &Path, root: &Value) -> AppResult<()> {
     if path.exists() {
         std::fs::copy(&path, mc_dir.join("servers.dat_old"))?;
     }
-    let bytes = fastnbt::to_bytes(root)
-        .map_err(|e| AppError::msg(format!("servers.dat yazılamadı: {e}")))?;
+    let bytes = fastnbt::to_bytes(root).map_err(|e| {
+        AppError::msg(tx!(
+            "servers.dat yazılamadı: {e}",
+            "Couldn't write servers.dat: {e}"
+        ))
+    })?;
     let tmp = mc_dir.join("servers.dat.tmp");
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(tmp, path)?;

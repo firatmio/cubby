@@ -11,8 +11,8 @@ const MC_LOGIN: &str = "https://api.minecraftservices.com/authentication/login_w
 const MC_ENTITLEMENTS: &str = "https://api.minecraftservices.com/entitlements/mcstore";
 const MC_PROFILE: &str = "https://api.minecraftservices.com/minecraft/profile";
 
-/// Uygulama kimliği Mojang'dan onay almadıysa son adım bu mesajla düşer.
-pub const NOT_APPROVED: &str = "Uygulamanın Microsoft girişi için Mojang onayı bekleniyor. Şimdilik oyun Launcher'la açılıyor.";
+/// Uygulama kimliği Mojang'dan onay almadıysa son adım bu kodla düşer; arayüz kendi metnini gösterir.
+pub const NOT_APPROVED: &str = "NOT_APPROVED";
 
 #[derive(Debug, Clone)]
 pub struct XboxToken {
@@ -30,17 +30,34 @@ fn parse_xbox(v: &Value) -> Option<XboxToken> {
 /// XSTS'nin 401 `XErr` kodları; sade Türkçe.
 pub fn xerr_message(code: u64) -> String {
     match code {
-        2148916227 => "Bu Microsoft hesabı Xbox'ta engellenmiş.".into(),
+        2148916227 => tx!(
+            "Bu Microsoft hesabı Xbox'ta engellenmiş.",
+            "This Microsoft account is banned on Xbox."
+        ),
         2148916233 => {
-            "Bu Microsoft hesabının Xbox profili yok. Bir kez xbox.com'a giriş yapıp profil oluştur, sonra tekrar dene."
-                .into()
+            tx!(
+                "Bu Microsoft hesabının Xbox profili yok. Bir kez xbox.com'a giriş yapıp profil oluştur, sonra tekrar dene.",
+                "This Microsoft account has no Xbox profile. Sign in to xbox.com once to create one, then try again."
+            )
         }
-        2148916235 => "Xbox Live bu hesabın ülkesinde kullanılamıyor.".into(),
-        2148916236 | 2148916237 => "Bu hesap için Xbox'ta yetişkin doğrulaması gerekiyor.".into(),
+        2148916235 => tx!(
+            "Xbox Live bu hesabın ülkesinde kullanılamıyor.",
+            "Xbox Live isn't available in this account's country."
+        ),
+        2148916236 | 2148916237 => tx!(
+            "Bu hesap için Xbox'ta yetişkin doğrulaması gerekiyor.",
+            "This account needs adult verification on Xbox."
+        ),
         2148916238 => {
-            "Bu bir çocuk hesabı: bir yetişkinin hesabı Microsoft Aile grubuna eklemesi gerekiyor.".into()
+            tx!(
+                "Bu bir çocuk hesabı: bir yetişkinin hesabı Microsoft Aile grubuna eklemesi gerekiyor.",
+                "This is a child account: an adult needs to add it to a Microsoft Family group."
+            )
         }
-        other => format!("Xbox girişi olmadı (kod {other})."),
+        other => tx!(
+            "Xbox girişi olmadı (kod {other}).",
+            "Xbox sign-in failed (code {other})."
+        ),
     }
 }
 
@@ -60,10 +77,20 @@ pub async fn xbox_live(http: &reqwest::Client, ms_access: &str) -> AppResult<Xbo
         .send()
         .await?
         .error_for_status()
-        .map_err(|e| AppError::msg(format!("Xbox Live girişi olmadı: {e}")))?
+        .map_err(|e| {
+            AppError::msg(tx!(
+                "Xbox Live girişi olmadı: {e}",
+                "Xbox Live sign-in failed: {e}"
+            ))
+        })?
         .json()
         .await?;
-    parse_xbox(&v).ok_or_else(|| AppError::msg("Xbox Live yanıtı okunamadı."))
+    parse_xbox(&v).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Xbox Live yanıtı okunamadı.",
+            "Couldn't read the Xbox Live response."
+        ))
+    })
 }
 
 pub async fn xsts(http: &reqwest::Client, xbl: &XboxToken) -> AppResult<XboxToken> {
@@ -80,10 +107,15 @@ pub async fn xsts(http: &reqwest::Client, xbl: &XboxToken) -> AppResult<XboxToke
     }
     let v: Value = resp
         .error_for_status()
-        .map_err(|e| AppError::msg(format!("Xbox girişi olmadı: {e}")))?
+        .map_err(|e| AppError::msg(tx!("Xbox girişi olmadı: {e}", "Xbox sign-in failed: {e}")))?
         .json()
         .await?;
-    parse_xbox(&v).ok_or_else(|| AppError::msg("Xbox yanıtı okunamadı."))
+    parse_xbox(&v).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Xbox yanıtı okunamadı.",
+            "Couldn't read the Xbox response."
+        ))
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,11 +128,22 @@ pub async fn minecraft_login(http: &reqwest::Client, xsts: &XboxToken) -> AppRes
     let body = json!({ "identityToken": format!("XBL3.0 x={};{}", xsts.uhs, xsts.token) });
     let resp = http.post(MC_LOGIN).json(&body).send().await?;
     if resp.status() == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError::msg(NOT_APPROVED));
+        return Err(AppError::msg(format!(
+            "[{NOT_APPROVED}] {}",
+            tx!(
+                "Uygulamanın Microsoft girişi için Mojang onayı bekleniyor. Şimdilik oyun Launcher'la açılıyor.",
+                "Microsoft sign-in for this app is waiting for Mojang's approval. For now the game opens through the Launcher."
+            )
+        )));
     }
     Ok(resp
         .error_for_status()
-        .map_err(|e| AppError::msg(format!("Minecraft girişi olmadı: {e}")))?
+        .map_err(|e| {
+            AppError::msg(tx!(
+                "Minecraft girişi olmadı: {e}",
+                "Minecraft sign-in failed: {e}"
+            ))
+        })?
         .json()
         .await?)
 }
@@ -149,9 +192,10 @@ pub struct Skin {
 pub async fn profile(http: &reqwest::Client, mc_token: &str) -> AppResult<Profile> {
     let resp = http.get(MC_PROFILE).bearer_auth(mc_token).send().await?;
     if resp.status() == reqwest::StatusCode::NOT_FOUND {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Bu hesapta Minecraft profili yok. Minecraft Launcher'a bir kez giriş yapıp oyuncu adını seç.",
-        ));
+            "This account has no Minecraft profile. Sign in to the Minecraft Launcher once and pick a player name."
+        )));
     }
     Ok(resp.error_for_status()?.json().await?)
 }

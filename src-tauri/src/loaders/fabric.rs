@@ -67,8 +67,12 @@ impl FabricLoader {
 
     async fn latest_installer(&self) -> AppResult<String> {
         let installers: Vec<VersionFlag> = self.get("/versions/installer").await?;
-        pick_recommended(&installers)
-            .ok_or_else(|| AppError::msg("Fabric başlatıcı sürümü bulunamadı"))
+        pick_recommended(&installers).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Fabric başlatıcı sürümü bulunamadı",
+                "No Fabric launcher version found"
+            ))
+        })
     }
 }
 
@@ -131,7 +135,11 @@ impl Loader for FabricLoader {
                 .await?
                 .recommended
                 .ok_or_else(|| {
-                    AppError::msg(format!("{} için Fabric sürümü yok", req.mc_version))
+                    AppError::msg(tx!(
+                        "{} için Fabric sürümü yok",
+                        "No Fabric version for {}",
+                        req.mc_version
+                    ))
                 })?,
         };
         let installer = self.latest_installer().await?;

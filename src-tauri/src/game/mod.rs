@@ -279,7 +279,7 @@ fn parse_args(list: Option<&Value>) -> Vec<Arg> {
 pub fn merge(chain: &[Value], mc_dir: &Path, env: Env) -> AppResult<Merged> {
     let top = chain
         .last()
-        .ok_or_else(|| AppError::msg("Sürüm bilgisi boş."))?;
+        .ok_or_else(|| AppError::msg(tx!("Sürüm bilgisi boş.", "Version info is empty.")))?;
     let libs_dir = mc_dir.join("libraries");
     let mut m = Merged {
         id: top
@@ -364,10 +364,16 @@ pub fn merge(chain: &[Value], mc_dir: &Path, env: Env) -> AppResult<Merged> {
         m.game_args.extend(parse_args(v.pointer("/arguments/game")));
     }
     if m.main_class.is_empty() {
-        return Err(AppError::msg("Sürümün başlangıç sınıfı yok."));
+        return Err(AppError::msg(tx!(
+            "Sürümün başlangıç sınıfı yok.",
+            "The version has no main class."
+        )));
     }
     if m.asset_index.is_none() {
-        return Err(AppError::msg("Sürümün asset bilgisi yok."));
+        return Err(AppError::msg(tx!(
+            "Sürümün asset bilgisi yok.",
+            "The version has no asset info."
+        )));
     }
     Ok(m)
 }
@@ -387,7 +393,10 @@ where
     let mut next = Some(id.to_string());
     while let Some(id) = next.take() {
         if chain.len() > 8 || !crate::util::is_safe_name(&id) {
-            return Err(AppError::msg("Sürüm zinciri bozuk."));
+            return Err(AppError::msg(tx!(
+                "Sürüm zinciri bozuk.",
+                "The version chain is broken."
+            )));
         }
         let file = mc_dir.join("versions").join(&id).join(format!("{id}.json"));
         let bytes = match std::fs::read(&file) {
@@ -399,8 +408,12 @@ where
                 b
             }
         };
-        let v: Value = serde_json::from_slice(&bytes)
-            .map_err(|e| AppError::msg(format!("{id} sürüm dosyası okunamadı: {e}")))?;
+        let v: Value = serde_json::from_slice(&bytes).map_err(|e| {
+            AppError::msg(tx!(
+                "{id} sürüm dosyası okunamadı: {e}",
+                "Couldn't read the {id} version file: {e}"
+            ))
+        })?;
         next = v
             .get("inheritsFrom")
             .and_then(Value::as_str)
@@ -442,8 +455,9 @@ pub fn classpath(m: &Merged) -> AppResult<Vec<PathBuf>> {
     for lib in &m.libraries {
         if let Some(a) = &lib.artifact {
             if a.url.is_empty() && !a.path.is_file() {
-                return Err(AppError::msg(format!(
+                return Err(AppError::msg(tx!(
                     "{} eksik; mod altyapısını yeniden kurmak gerekiyor.",
+                    "{} is missing; the mod loader needs to be reinstalled.",
                     lib.name
                 )));
             }

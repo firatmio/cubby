@@ -47,6 +47,8 @@ fastnbt = "2.6"
 base64 = "0.22"
 tauri-plugin-deep-link = "2.6"
 # Microsoft yenileme anahtarı: Windows Kimlik Bilgisi Yöneticisi / macOS Anahtar Zinciri / Secret Service
+# İlk açılışta arayüz dili için bilgisayarın dili
+sys-locale = "0.3.2"
 keyring = { version = "3.6.3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
 
 

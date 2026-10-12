@@ -1,3 +1,4 @@
+import { getT, locale } from "../i18n";
 import type { Instance, LoaderKind } from "./api";
 
 /** Teknik adlar (ikinci satırda, küçük). */
@@ -17,15 +18,11 @@ export function isModded(kind: LoaderKind): boolean {
   return MOD_LOADERS.includes(kind);
 }
 
-/** Kullanıcıya görünen tür adı. */
-export const KIND_LABELS: Record<LoaderKind, string> = {
-  fabric: "Modlu",
-  neoforge: "Modlu",
-  forge: "Modlu",
-  quilt: "Modlu",
-  paper: "Eklentili",
-  vanilla: "Saf Minecraft",
-};
+/** Kullanıcıya görünen tür adı ("Modlu", "Eklentili", "Saf Minecraft"). */
+export function kindLabel(kind: LoaderKind): string {
+  const t = getT().kind;
+  return kind === "paper" ? t.plugins : kind === "vanilla" ? t.vanilla : t.modded;
+}
 
 /** Kapak yokken arka plan parlaması ve vurgu rengi. */
 export const KIND_COLORS: Record<LoaderKind, string> = {
@@ -52,7 +49,7 @@ export function accentOf(i: Instance | undefined): string {
 
 /** "Modlu dünya · Minecraft 26.3" */
 export function kindCaption(i: Instance): string {
-  return `${KIND_LABELS[i.loader]} dünya · Minecraft ${i.mcVersion}`;
+  return getT().kind.caption(kindLabel(i.loader), i.mcVersion);
 }
 
 /** Teknik özet: "Fabric 26.3 · loader 0.19.5", "NeoForge 26.3 · 26.3.0.76" */
@@ -73,7 +70,7 @@ export function formatRam(mb: number): string {
 
 export function formatDate(iso: string | number): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("tr-TR");
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(locale());
 }
 
 const MIN = 60_000;
@@ -82,13 +79,14 @@ const DAY = 24 * HOUR;
 
 /** "az önce", "12 dk önce", "3 sa önce", "dün", "4 gün önce", tarih. */
 export function relativeTime(ms: number, now = Date.now()): string {
+  const t = getT().time;
   const diff = Math.max(0, now - ms);
-  if (diff < MIN) return "Az önce";
-  if (diff < HOUR) return `${Math.floor(diff / MIN)} dk önce`;
+  if (diff < MIN) return t.justNow;
+  if (diff < HOUR) return t.minutesAgo(Math.floor(diff / MIN));
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
-  if (ms >= startOfToday) return `${Math.floor(diff / HOUR)} sa önce`;
-  if (ms >= startOfToday - DAY) return "dün";
-  if (diff < 7 * DAY) return `${Math.ceil(diff / DAY)} gün önce`;
+  if (ms >= startOfToday) return t.hoursAgo(Math.floor(diff / HOUR));
+  if (ms >= startOfToday - DAY) return t.yesterday;
+  if (diff < 7 * DAY) return t.daysAgo(Math.ceil(diff / DAY));
   return formatDate(ms);
 }
 
@@ -96,35 +94,19 @@ export function relativeTime(ms: number, now = Date.now()): string {
 export function formatDuration(ms: number): string {
   const h = Math.floor(ms / HOUR);
   const m = Math.max(1, Math.round((ms % HOUR) / MIN));
-  return h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
+  return getT().time.duration(h, m);
 }
 
-/** Modrinth kategorileri (mod ve eklentiler için ortak). */
-export const MOD_CATEGORY_LABELS: Record<string, string> = {
-  optimization: "Optimizasyon",
-  utility: "Araçlar",
-  worldgen: "Dünya oluşumu",
-  technology: "Teknoloji",
-  magic: "Büyü",
-  adventure: "Macera",
-  decoration: "Dekorasyon",
-  "game-mechanics": "Oyun mekaniği",
-  mobs: "Yaratıklar",
-  equipment: "Ekipman",
-  storage: "Depolama",
-  transportation: "Ulaşım",
-  food: "Yemek",
-  economy: "Ekonomi",
-  management: "Yönetim",
-  minigame: "Mini oyun",
-  social: "Sosyal",
-  library: "Kütüphane",
-};
+/** Modrinth kategorileri (mod ve eklentiler için ortak), etkin dilde. */
+export function categoryLabels(): Record<string, string> {
+  return getT().categories;
+}
 
 /** "2,7 Mn", "48 B", "312" */
 export function compactCount(n: number): string {
-  const f = (v: number) => v.toLocaleString("tr-TR", { maximumFractionDigits: 1 });
-  if (n >= 1_000_000) return `${f(n / 1_000_000)} Mn`;
-  if (n >= 1_000) return `${f(n / 1_000)} B`;
+  const t = getT().time;
+  const f = (v: number) => v.toLocaleString(locale(), { maximumFractionDigits: 1 });
+  if (n >= 1_000_000) return `${f(n / 1_000_000)} ${t.million}`;
+  if (n >= 1_000) return `${f(n / 1_000)} ${t.thousand}`;
   return String(n);
 }

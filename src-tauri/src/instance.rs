@@ -86,7 +86,7 @@ pub fn modify(dir: &Path, f: impl FnOnce(&mut Instance) -> AppResult<()>) -> App
 
 pub fn get(app: &AppHandle, id: &str) -> AppResult<Instance> {
     let dir = paths::instance_dir(app, id)?;
-    Instance::load(&dir).map_err(|_| AppError::msg("Sunucu bulunamadı"))
+    Instance::load(&dir).map_err(|_| AppError::msg(tx!("Sunucu bulunamadı", "Server not found")))
 }
 
 /// Okunamayan klasörler (silinmiş, takılı olmayan disk, bozuk dosya) atlanır.

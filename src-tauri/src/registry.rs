@@ -101,7 +101,10 @@ impl Registry {
             return Ok(self.default_root.join(id));
         };
         if !parent.is_absolute() || !parent.is_dir() {
-            return Err(AppError::msg("Seçilen konum bulunamadı"));
+            return Err(AppError::msg(tx!(
+                "Seçilen konum bulunamadı",
+                "The chosen location wasn't found"
+            )));
         }
         let base = slug(name);
         (1..1000)
@@ -110,7 +113,12 @@ impl Registry {
                 _ => parent.join(format!("{base}-{n}")),
             })
             .find(|p| !p.exists())
-            .ok_or_else(|| AppError::msg("Seçilen konumda uygun klasör adı bulunamadı"))
+            .ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Seçilen konumda uygun klasör adı bulunamadı",
+                    "Couldn't find a suitable folder name in the chosen location"
+                ))
+            })
     }
 }
 

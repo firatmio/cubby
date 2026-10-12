@@ -122,8 +122,12 @@ impl Adoptium {
     }
 
     async fn find(&self, required: u32) -> AppResult<Asset> {
-        let (os, arch) = platform()
-            .ok_or_else(|| AppError::msg("Bu sistem için otomatik Java indirme desteklenmiyor"))?;
+        let (os, arch) = platform().ok_or_else(|| {
+            AppError::msg(tx!(
+                "Bu sistem için otomatik Java indirme desteklenmiyor",
+                "Automatic Java download isn't supported on this system"
+            ))
+        })?;
         let rel: AvailableReleases = self.get(&format!("{API}/info/available_releases")).await?;
         for feature in feature_candidates(required, &rel) {
             let url = format!(
@@ -134,8 +138,9 @@ impl Adoptium {
                 return Ok(asset);
             }
         }
-        Err(AppError::msg(format!(
-            "Java {required}+ için indirilebilir JRE bulunamadı"
+        Err(AppError::msg(tx!(
+            "Java {required}+ için indirilebilir JRE bulunamadı",
+            "No downloadable JRE found for Java {required}+"
         )))
     }
 
@@ -173,10 +178,14 @@ impl Adoptium {
             // Arşivler tek bir üst klasör içerir (jdk-25.0.4.1+1-jre/...).
             let home = single_child_dir(&tmp).unwrap_or_else(|| tmp.clone());
             if java_in(&home).is_none() {
-                return Err(AppError::msg("İndirilen arşivde java bulunamadı"));
+                return Err(AppError::msg(tx!(
+                    "İndirilen arşivde java bulunamadı",
+                    "No java found in the downloaded archive"
+                )));
             }
             std::fs::rename(&home, &target)?;
-            java_in(&target).ok_or_else(|| AppError::msg("Java kurulamadı"))
+            java_in(&target)
+                .ok_or_else(|| AppError::msg(tx!("Java kurulamadı", "Couldn't install Java")))
         });
         let _ = tokio::fs::remove_dir_all(&tmp).await;
         result
@@ -197,13 +206,16 @@ fn extract(archive: &Path, dest: &Path) -> AppResult<()> {
     let name = archive.to_string_lossy().to_ascii_lowercase();
     if name.ends_with(".zip") {
         let mut zip = zip::ZipArchive::new(File::open(archive)?)
-            .map_err(|e| AppError::msg(format!("Zip açılamadı: {e}")))?;
+            .map_err(|e| AppError::msg(tx!("Zip açılamadı: {e}", "Couldn't open the zip: {e}")))?;
         for i in 0..zip.len() {
-            let mut entry = zip
-                .by_index(i)
-                .map_err(|e| AppError::msg(format!("Zip okunamadı: {e}")))?;
+            let mut entry = zip.by_index(i).map_err(|e| {
+                AppError::msg(tx!("Zip okunamadı: {e}", "Couldn't read the zip: {e}"))
+            })?;
             let Some(rel) = entry.enclosed_name() else {
-                return Err(AppError::msg("Zip içinde geçersiz yol"));
+                return Err(AppError::msg(tx!(
+                    "Zip içinde geçersiz yol",
+                    "Invalid path inside the zip"
+                )));
             };
             let out = dest.join(rel);
             if entry.is_dir() {
@@ -227,7 +239,10 @@ fn extract(archive: &Path, dest: &Path) -> AppResult<()> {
         tar::Archive::new(gz).unpack(dest)?;
         Ok(())
     } else {
-        Err(AppError::msg("Bilinmeyen arşiv türü"))
+        Err(AppError::msg(tx!(
+            "Bilinmeyen arşiv türü",
+            "Unknown archive type"
+        )))
     }
 }
 

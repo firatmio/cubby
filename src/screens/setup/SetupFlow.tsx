@@ -12,15 +12,16 @@ import {
   type LoaderVersionList,
   type SystemInfo,
 } from "../../lib/api";
+import { getT, useT, type Dict } from "../../i18n";
 import {
   KIND_COLORS,
-  KIND_LABELS,
   LOADER_LABELS,
   MOD_LOADERS,
   formatBytesMb,
   formatDate,
   formatRam,
   isModded,
+  kindLabel,
 } from "../../lib/format";
 import { crossfade, slide, spring } from "../../lib/motion";
 import { RAM_MIN, RAM_STEP, ramBounds, ramMinFor } from "../../lib/ram";
@@ -39,35 +40,36 @@ import styles from "./SetupFlow.module.css";
 type Step = "kind" | "version" | "name" | "access" | "whitelist" | "install";
 
 /** İlk adımın kartları; "Modlu" kartı seçili mod altyapısını (Fabric, NeoForge, …) temsil eder. */
-const KINDS: { id: LoaderKind; text: string }[] = [
-  { id: "fabric", text: "Mod kurabilirsin. Çoğu kişi için en iyi başlangıç." },
-  { id: "paper", text: "Hızlı ve hafif. Eklentilerle oyun kuralları değişir." },
-  { id: "vanilla", text: "Hiçbir ekleme yok, Minecraft olduğu gibi." },
+const kinds = (t: Dict["setup"]): { id: LoaderKind; text: string }[] => [
+  { id: "fabric", text: t.kindFabric },
+  { id: "paper", text: t.kindPaper },
+  { id: "vanilla", text: t.kindVanilla },
 ];
 
-const MOD_LOADER_TEXT: Record<string, string> = {
-  fabric: "Hafif, en çok mod burada.",
-  neoforge: "Create gibi büyük modlar ve mod paketleri.",
-  forge: "Eski ve köklü mod paketleri.",
-  quilt: "Fabric modlarını da çalıştırır.",
-};
+const modLoaderText = (t: Dict["setup"]): Record<string, string> => ({
+  fabric: t.loaderFabric,
+  neoforge: t.loaderNeoforge,
+  forge: t.loaderForge,
+  quilt: t.loaderQuilt,
+});
 
-const DOWNLOAD_LABELS: Record<NonNullable<InstallProgress["file"]>, string> = {
-  server: "Minecraft indiriliyor",
-  fabric: "Mod desteği hazırlanıyor",
-  paper: "Paper indiriliyor",
-  installer: "Kurulum aracı indiriliyor",
-  java: "Java indiriliyor",
-};
+const downloadLabels = (t: Dict["setup"]): Record<NonNullable<InstallProgress["file"]>, string> => ({
+  server: t.dlServer,
+  fabric: t.dlFabric,
+  paper: t.dlPaper,
+  installer: t.dlInstaller,
+  java: t.dlJava,
+});
 
 const MAX_NAME_LEN = 48;
 
 function progressText(p: InstallProgress | null, kind: LoaderKind): string {
-  if (p?.stage === "extract") return "Java hazırlanıyor…";
-  if (p?.stage === "installer") return `${LOADER_LABELS[kind]} kuruluyor · ${p.line ?? ""}`;
-  if (p?.stage !== "download" || !p.file) return "Hazırlanıyor…";
+  const t = getT();
+  if (p?.stage === "extract") return t.setup.javaPreparing;
+  if (p?.stage === "installer") return t.setup.installing(LOADER_LABELS[kind], p.line ?? "");
+  if (p?.stage !== "download" || !p.file) return t.common.preparing;
   const total = p.total ? ` / ${formatBytesMb(p.total)} MB` : " MB";
-  return `${DOWNLOAD_LABELS[p.file]} · ${formatBytesMb(p.downloaded)}${total}`;
+  return `${downloadLabels(t.setup)[p.file]} · ${formatBytesMb(p.downloaded)}${total}`;
 }
 
 /** Yeni dünya: adım başına tek soru; teknik seçimler "Gelişmiş seçenekler"de, önerilen değerlerle dolu. */
@@ -77,6 +79,8 @@ export function SetupFlow() {
   const addInstance = useAppStore((s) => s.addInstance);
   const progress = useAppStore((s) => s.installProgress);
   const setInstallProgress = useAppStore((s) => s.setInstallProgress);
+  const tt = useT();
+  const t = tt.setup;
 
   /** dir: son geçişin yönü (1 ileri, -1 geri); kayma animasyonu buna göre. */
   const [{ step, dir }, setNav] = useState<{ step: Step; dir: 1 | -1 }>({ step: "kind", dir: 1 });
@@ -146,7 +150,7 @@ export function SetupFlow() {
   }, [kind, version]);
 
   const bounds = ramBounds(sys?.totalMemMb ?? 4096);
-  const defaultName = useMemo(() => `${KIND_LABELS[kind]} dünya`, [kind]);
+  const defaultName = useMemo(() => tt.kind.defaultName(kindLabel(kind)), [kind, tt]);
   const noLoaderForVersion = kind !== "vanilla" && loaderVersions !== null && loaderVersions.versions.length === 0;
   // Premium olmayanlar girebiliyorsa beyaz liste zorunlu: yoksa herkes herkesin adıyla girebilir.
   const useWhitelist = whitelistOn || offline;
@@ -224,11 +228,11 @@ export function SetupFlow() {
   let content: ReactNode;
 
   if (step === "kind") {
-    question = "Nasıl oynamak istersiniz?";
-    sub = "Sonradan değiştirmek zor; emin değilsen Modlu iyi bir başlangıç.";
+    question = t.kindQ;
+    sub = t.kindSub;
     content = (
       <div className={styles.kinds}>
-        {KINDS.map(({ id, text }) => {
+        {kinds(t).map(({ id, text }) => {
           const modCard = id === "fabric";
           // Modlu kartı seçili (ya da en son seçilen) altyapının adını, logosunu ve görselini taşır.
           const shown = modCard ? (isModded(kind) ? kind : lastModLoader) : id;
@@ -266,14 +270,14 @@ export function SetupFlow() {
               >
                 <LoaderLogo kind={shown} size={48} />
               </motion.span>
-              <span className={styles.kindLabel}>{KIND_LABELS[id]}</span>
+              <span className={styles.kindLabel}>{kindLabel(id)}</span>
               <span className={styles.kindTech}>{LOADER_LABELS[shown]}</span>
               <span className={styles.kindText}>{text}</span>
             </motion.button>
           );
         })}
         <div className={[styles.modLoaders, !isModded(kind) && styles.hiddenRow].filter(Boolean).join(" ")}>
-          <span className={styles.modLoadersLabel}>Mod altyapısı</span>
+          <span className={styles.modLoadersLabel}>{t.modLoader}</span>
           <PillTabs
             tabs={MOD_LOADERS.map((l) => ({ id: l, label: LOADER_LABELS[l] }))}
             active={isModded(kind) ? kind : lastModLoader}
@@ -284,21 +288,21 @@ export function SetupFlow() {
             layoutId="mod-loader"
           />
           <span className={styles.modLoadersText}>
-            {MOD_LOADER_TEXT[isModded(kind) ? kind : lastModLoader]}
-            {(isModded(kind) ? kind : lastModLoader) === "fabric" && " (Önerilen)"}
+            {modLoaderText(t)[isModded(kind) ? kind : lastModLoader]}
+            {(isModded(kind) ? kind : lastModLoader) === "fabric" && t.recommendedSuffix}
           </span>
         </div>
       </div>
     );
   } else if (step === "version") {
-    question = "Hangi Minecraft sürümü?";
-    sub = "Arkadaşının oyunu da aynı sürümde olmalı. Genelde en yenisi iyidir.";
+    question = t.versionQ;
+    sub = t.versionSub;
     const latest = versions?.versions.find((v) => v.id === versions.latestRelease);
     content = versionsError ? (
       <div className={styles.errorBox}>
         <span>{versionsError}</span>
         <Button size="sm" icon={RotateCcw} onClick={loadVersions}>
-          Tekrar dene
+          {tt.common.retry}
         </Button>
       </div>
     ) : !versions ? (
@@ -315,7 +319,7 @@ export function SetupFlow() {
             onClick={() => setVersion(latest.id)}
           >
             <span className={styles.bigVersion}>{latest.id}</span>
-            <span className={styles.kindText}>En yeni sürüm · {formatDate(latest.releaseTime)}</span>
+            <span className={styles.kindText}>{t.latestVersion(formatDate(latest.releaseTime))}</span>
             {version === latest.id && <Check size={20} className={styles.bigCheck} aria-hidden />}
           </motion.button>
         )}
@@ -324,7 +328,7 @@ export function SetupFlow() {
             <Toggle
               checked={includeSnapshots}
               onChange={setIncludeSnapshots}
-              label="Deneme sürümlerini (snapshot) göster"
+              label={t.showSnapshots}
             />
             <SelectList
               maxHeight={230}
@@ -335,8 +339,8 @@ export function SetupFlow() {
                 label: v.id,
                 badges: (
                   <>
-                    {v.id === versions.latestRelease && <Badge tone="accent">En yeni</Badge>}
-                    {v.type === "snapshot" && <Badge tone="warning">Deneme</Badge>}
+                    {v.id === versions.latestRelease && <Badge tone="accent">{t.latest}</Badge>}
+                    {v.type === "snapshot" && <Badge tone="warning">{t.snapshot}</Badge>}
                   </>
                 ),
                 meta: formatDate(v.releaseTime),
@@ -351,17 +355,17 @@ export function SetupFlow() {
             className={styles.startSelf}
             onClick={() => setShowAllVersions(true)}
           >
-            Başka bir sürüm seç
+            {t.otherVersion}
           </Button>
         )}
         {noLoaderForVersion && (
-          <p className={styles.warn}>{version} için {KIND_LABELS[kind]} henüz hazır değil. Başka bir sürüm seç.</p>
+          <p className={styles.warn}>{t.notReady(version ?? "", LOADER_LABELS[kind])}</p>
         )}
       </div>
     );
   } else if (step === "name") {
-    question = "Dünyana bir isim ver";
-    sub = "Ana ekranda bu isimle görünecek. Sonradan değiştirebilirsin.";
+    question = t.nameQ;
+    sub = t.nameSub;
     const loaderItems = loaderVersions?.versions.map((v) => {
       const channel = v.channel ?? (v.stable ? "stable" : "beta");
       return {
@@ -369,7 +373,7 @@ export function SetupFlow() {
         label: kind === "paper" ? `Build ${v.version}` : v.version,
         badges: (
           <>
-            {v.version === loaderVersions.recommended && <Badge tone="accent">Önerilen</Badge>}
+            {v.version === loaderVersions.recommended && <Badge tone="accent">{t.recommended}</Badge>}
             {channel !== "stable" && <Badge tone="warning">{channel}</Badge>}
           </>
         ),
@@ -384,10 +388,10 @@ export function SetupFlow() {
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && canNext && next()}
           data-autofocus
-          aria-label="Dünyanın adı"
+          aria-label={t.worldName}
         />
         <button type="button" className={styles.disclosure} onClick={() => setAdvancedOpen((v) => !v)}>
-          Gelişmiş seçenekler
+          {t.advancedOptions}
           <motion.span animate={{ rotate: advancedOpen ? 180 : 0 }} transition={spring}>
             <ChevronDown size={16} aria-hidden />
           </motion.span>
@@ -403,7 +407,7 @@ export function SetupFlow() {
             >
               <div className={styles.advancedInner}>
                 <Slider
-                  label="En fazla bellek"
+                  label={t.maxMemory}
                   valueLabel={formatRam(ramMax)}
                   value={ramMax}
                   min={RAM_MIN}
@@ -413,7 +417,7 @@ export function SetupFlow() {
                 />
                 {kind !== "vanilla" && loaderItems && (
                   <div className={styles.loaderField}>
-                    <Field label={kind === "paper" ? "Paper build'i" : `${LOADER_LABELS[kind]} sürümü`}>
+                    <Field label={kind === "paper" ? t.paperBuild : t.loaderVersion(LOADER_LABELS[kind])}>
                       <SelectList
                         maxHeight={150}
                         value={loaderVersion ?? loaderVersions?.recommended ?? null}
@@ -423,20 +427,20 @@ export function SetupFlow() {
                     </Field>
                   </div>
                 )}
-                <Field label="Konum" hint={parentDir ? undefined : "Varsayılan: uygulamanın kendi klasörü"}>
+                <Field label={t.location} hint={parentDir ? undefined : t.locationHint}>
                   <div className={styles.location}>
-                    <span className={styles.path}>{parentDir ?? "Varsayılan"}</span>
+                    <span className={styles.path}>{parentDir ?? t.default}</span>
                     {parentDir && (
                       <Button size="sm" variant="ghost" onClick={() => setParentDir(null)}>
-                        Sıfırla
+                        {t.reset}
                       </Button>
                     )}
                     <Button
                       size="sm"
                       icon={FolderOpen}
-                      onClick={async () => setParentDir((await pickFolder("Dünyanın konacağı klasör")) ?? parentDir)}
+                      onClick={async () => setParentDir((await pickFolder(t.pickFolderTitle)) ?? parentDir)}
                     >
-                      Klasör seç
+                      {t.pickFolder}
                     </Button>
                   </div>
                 </Field>
@@ -447,8 +451,8 @@ export function SetupFlow() {
       </div>
     );
   } else if (step === "access") {
-    question = "Kimler girebilsin?";
-    sub = "Bunları sonradan Oyuncular ve Dünya ayarlarından değiştirebilirsin.";
+    question = t.accessQ;
+    sub = t.accessSub;
     content = (
       <div className={styles.accessStep}>
         <div className={styles.panel}>
@@ -456,34 +460,27 @@ export function SetupFlow() {
             checked={useWhitelist}
             onChange={setWhitelistOn}
             disabled={offline}
-            label="Beyaz liste"
-            description={
-              offline
-                ? "Premium olmayanlar girebildiği için açık kalmalı."
-                : "Yalnız adını eklediğin oyuncular girebilir. Adresi bilen başka biri giremez."
-            }
+            label={t.whitelist}
+            description={offline ? t.whitelistForced : t.whitelistText}
           />
           <Toggle
             checked={offline}
             onChange={setOffline}
-            label="Premium olmayanlar da girebilsin (TLauncher)"
-            description="Arkadaşın satın alınmış bir Minecraft hesabı olmadan oynuyorsa aç."
+            label={t.offline}
+            description={t.offlineText}
           />
         </div>
         {offline && (
           <p className={styles.warn}>
             <AlertTriangle size={15} aria-hidden />
-            Bu modda isimler doğrulanamaz; adresi bilen biri senin ya da arkadaşının adını kullanabilir. Bu yüzden
-            yalnız beyaz listedekiler girebilecek.
+            {t.offlineWarn}
           </p>
         )}
       </div>
     );
   } else if (step === "whitelist") {
-    question = "Beyaz liste";
-    sub = offline
-      ? "Oyunda kullandıkları isimleri yaz. Kendi adını da eklemeyi unutma."
-      : "Minecraft hesap adlarını yaz; her ismi Mojang'dan kontrol ederim. Kendi adını da ekle.";
+    question = t.whitelistQ;
+    sub = offline ? t.whitelistSubOffline : t.whitelistSub;
     content = (
       <div className={styles.accessStep}>
         <form className={styles.addRow} onSubmit={addPlayer}>
@@ -491,16 +488,16 @@ export function SetupFlow() {
             className={styles.playerInput}
             value={playerInput}
             maxLength={16}
-            placeholder="Oyuncu adı"
+            placeholder={t.playerName}
             onChange={(e) => {
               setPlayerInput(e.target.value);
               setLookupError(null);
             }}
             data-autofocus
-            aria-label="Oyuncu adı"
+            aria-label={t.playerName}
           />
           <Button type="submit" size="lg" icon={Plus} loading={lookupBusy} disabled={!playerInput.trim()}>
-            Ekle
+            {t.add}
           </Button>
         </form>
         {lookupError && <p className={styles.lookupError}>{lookupError}</p>}
@@ -520,7 +517,7 @@ export function SetupFlow() {
                 {n}
                 <button
                   type="button"
-                  aria-label={`${n} listeden çıkar`}
+                  aria-label={t.removeFromList(n)}
                   onClick={() => setAllowed((list) => list.filter((a) => a !== n))}
                 >
                   <X size={14} />
@@ -529,20 +526,20 @@ export function SetupFlow() {
             ))}
           </AnimatePresence>
         </div>
-        {allowed.length === 0 && <p className={styles.hint}>En az bir isim ekle; liste boşsa kimse giremez.</p>}
+        {allowed.length === 0 && <p className={styles.hint}>{t.needOne}</p>}
       </div>
     );
   } else {
-    question = installError ? "Kurulum tamamlanamadı" : created ? "Dünyan hazır" : "Dünyan kuruluyor";
+    question = installError ? t.failedQ : created ? t.readyQ : t.installingQ;
     sub = installError
       ? installError
       : created
         ? created.loader === "fabric"
-          ? "İlk açılışta mod desteği için birkaç küçük dosya daha iner."
-          : "Başlat'a bastığında arkadaşın katılabilir."
+          ? t.readyModded
+          : t.readySub
         : kind === "neoforge" || kind === "forge" || kind === "quilt"
-          ? `${LOADER_LABELS[kind]} kendi kurulum aracıyla kuruluyor; birkaç dakika sürebilir.`
-          : "Birkaç dakika sürebilir; gereken her şeyi indiriyorum.";
+          ? t.installerSub(LOADER_LABELS[kind])
+          : t.installSub;
     content = installError || created ? null : (
       <div className={styles.installing}>
         <Progress value={progress?.stage === "download" && progress.total ? progress.downloaded / progress.total : null} />
@@ -604,26 +601,26 @@ export function SetupFlow() {
         {step !== "install" ? (
           <>
             <Button icon={ArrowLeft} onClick={back}>
-              {qIndex === 0 ? "Vazgeç" : "Geri"}
+              {qIndex === 0 ? tt.common.cancel : t.back}
             </Button>
             <Button variant="primary" size="lg" icon={ArrowRight} iconRight disabled={!canNext} onClick={next}>
-              {step === lastStep ? "Kur" : "Devam"}
+              {step === lastStep ? t.install : t.next}
             </Button>
           </>
         ) : installError ? (
           <>
             <Button icon={ArrowLeft} onClick={() => setStep(lastStep)}>
-              Geri
+              {t.back}
             </Button>
             <Button variant="primary" size="lg" icon={RotateCcw} onClick={install}>
-              Tekrar dene
+              {tt.common.retry}
             </Button>
           </>
         ) : created ? (
           <>
             <span />
             <Button variant="primary" size="lg" icon={ArrowRight} iconRight onClick={() => setView("home")}>
-              Dünyaya git
+              {t.goToWorld}
             </Button>
           </>
         ) : null}

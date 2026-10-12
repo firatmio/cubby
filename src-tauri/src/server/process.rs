@@ -35,9 +35,16 @@ pub(super) async fn spawn(
     let mut child = match cmd.spawn() {
         Ok(c) => c,
         Err(e) => {
-            h.push_log(app, LogStream::System, format!("Java başlatılamadı: {e}"));
+            h.push_log(
+                app,
+                LogStream::System,
+                tx!("Java başlatılamadı: {e}", "Couldn't start Java: {e}"),
+            );
             h.set_status(app, ServerStatus::Crashed);
-            return Err(AppError::msg(format!("Java başlatılamadı: {e}")));
+            return Err(AppError::msg(tx!(
+                "Java başlatılamadı: {e}",
+                "Couldn't start Java: {e}"
+            )));
         }
     };
 
@@ -87,8 +94,9 @@ pub(super) async fn spawn(
         h.push_log(
             &app,
             LogStream::System,
-            format!(
+            tx!(
                 "Sunucu kapandı (çıkış kodu: {}).",
+                "The server stopped (exit code: {}).",
                 code.map_or_else(|| "?".to_string(), |c| c.to_string())
             ),
         );

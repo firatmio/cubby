@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Copy, Download, ListPlus, Play, RefreshCw, Trash2 } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
-import { KIND_LABELS, isModded } from "../../lib/format";
+import { getT, useT } from "../../i18n";
+import { isModded, kindLabel } from "../../lib/format";
 import { launchHint } from "../../lib/launch";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
@@ -18,24 +19,26 @@ import { useGameNotice, type GameNotice } from "../home/useGameNotice";
 type State = "running" | "stopped" | "starting" | "crashed";
 
 function describe(s: JoinStatus): { state: State; label: string; detail: string | null } {
-  if (s.error) return { state: "crashed", label: "Bağlanılamıyor", detail: s.error };
-  if (s.reachable === null) return { state: "starting", label: "Kontrol ediliyor", detail: null };
-  if (!s.reachable) return { state: "stopped", label: "Ulaşılamıyor", detail: "Arkadaşının uygulaması kapalı olabilir" };
-  if (!s.running) return { state: "stopped", label: "Kapalı", detail: "Arkadaşın dünyayı açınca girebilirsin" };
+  const t = getT().joined;
+  if (s.error) return { state: "crashed", label: t.cantConnect, detail: s.error };
+  if (s.reachable === null) return { state: "starting", label: t.checking, detail: null };
+  if (!s.reachable) return { state: "stopped", label: t.unreachable, detail: t.friendAppOff };
+  if (!s.running) return { state: "stopped", label: t.closed, detail: t.whenFriendOpens };
   return {
     state: "running",
-    label: "Açık",
-    detail: s.path === "relay" ? "Aracı sunucu üzerinden bağlı" : "Doğrudan bağlı",
+    label: t.open,
+    detail: s.path === "relay" ? t.viaRelay : t.direct,
   };
 }
 
 /** Arkadaşının dünyası: tür, büyük isim, bağlantı durumu. */
 export function JoinedHero({ view }: { view: JoinedView }) {
   const d = describe(view.status);
+  const t = useT().joined;
   return (
     <motion.div className={hero.hero} variants={stagger} initial="hidden" animate="show" exit="exit">
       <motion.p className={hero.caption} variants={rise}>
-        Arkadaşının dünyası · {KIND_LABELS[view.world.loader]} · Minecraft {view.world.mcVersion}
+        {t.caption(kindLabel(view.world.loader), view.world.mcVersion)}
       </motion.p>
       <motion.h1 className={hero.name} variants={rise}>
         {view.world.name}
@@ -60,6 +63,7 @@ function useEntryExists(id: string) {
 export function JoinedCards({ view }: { view: JoinedView }) {
   const [exists] = useEntryExists(view.world.id);
   const [copied, setCopied] = useState(false);
+  const t = useT();
   const copy = async () => {
     await navigator.clipboard.writeText(view.address);
     setCopied(true);
@@ -68,19 +72,19 @@ export function JoinedCards({ view }: { view: JoinedView }) {
   return (
     <motion.div className={cards.cards} variants={stagger} initial="hidden" animate="show" exit="exit">
       <motion.div className={cards.card} variants={rise}>
-        <span className={cards.label}>Minecraft › Çok Oyunculu</span>
+        <span className={cards.label}>{t.joined.serverList}</span>
         <span className={cards.value}>{view.world.name}</span>
         <span className={[cards.hint, exists === false && cards.alert].filter(Boolean).join(" ")}>
-          {exists === false ? "Listede yok · sağ alttan yeniden ekle" : "Sunucu listesinde hazır"}
+          {exists === false ? t.joined.notInList : t.joined.inList}
         </span>
       </motion.div>
       <motion.button type="button" className={[cards.card, cards.action].join(" ")} variants={rise} onClick={copy}>
-        <span className={cards.label}>Bu bilgisayardaki adres</span>
+        <span className={cards.label}>{t.joined.localAddress}</span>
         <span className={cards.value}>
           {view.address}
           {copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />}
         </span>
-        <span className={cards.hint}>{copied ? "Kopyalandı" : "Uygulama açıkken çalışır"}</span>
+        <span className={cards.hint}>{copied ? t.common.copied : t.joined.worksWhileOpen}</span>
       </motion.button>
     </motion.div>
   );
@@ -94,6 +98,7 @@ export function JoinedActions({ view }: { view: JoinedView }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const id = view.world.id;
+  const t = useT();
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
@@ -135,44 +140,44 @@ export function JoinedActions({ view }: { view: JoinedView }) {
           onClick={() =>
             run("mods", async () => {
               upsertJoined(await api.updateJoinedMods(id));
-              setMessage({ tone: "info", text: "Modlar arkadaşınınkiyle aynı oldu." });
+              setMessage({ tone: "info", text: t.joined.modsSynced });
             })
           }
         >
-          Modlar değişti · Güncelle
+          {t.joined.modsChanged}
         </Button>
       )}
       <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
-        Oyna
+        {t.joined.play}
       </Button>
       <div className={bar.buttons}>
         <IconButton
           icon={RefreshCw}
-          label="Bağlantıyı yenile"
+          label={t.joined.refresh}
           disabled={busy !== null}
           onClick={() => run("refresh", async () => upsertJoined(await api.refreshJoined(id)))}
         />
         <IconButton
           icon={ListPlus}
-          label="Sunucu listesine yeniden ekle"
+          label={t.joined.readd}
           disabled={busy !== null}
           onClick={() =>
             run("readd", async () => {
               await api.readdServerEntry(id, false);
-              setMessage({ tone: "info", text: "Minecraft'ın sunucu listesine eklendi." });
+              setMessage({ tone: "info", text: t.joined.readded });
             })
           }
         />
-        <IconButton icon={Trash2} label="Listemden kaldır" disabled={busy !== null} onClick={() => setConfirmRemove(true)} />
+        <IconButton icon={Trash2} label={t.joined.removeFromList} disabled={busy !== null} onClick={() => setConfirmRemove(true)} />
       </div>
 
       {confirmRemove && (
         <Dialog
-          title="Dünyayı kaldır"
+          title={t.joined.removeTitle}
           actions={
             <>
               <Button variant="ghost" onClick={() => setConfirmRemove(false)}>
-                Vazgeç
+                {t.common.cancel}
               </Button>
               <Button
                 variant="danger"
@@ -185,14 +190,13 @@ export function JoinedActions({ view }: { view: JoinedView }) {
                   })
                 }
               >
-                Kaldır
+                {t.common.remove}
               </Button>
             </>
           }
         >
           <p>
-            <b>{view.world.name}</b> listenden ve Minecraft'ın sunucu listesinden kaldırılacak. Arkadaşının dünyası etkilenmez;
-            tekrar katılmak için davet linkini yeniden açman yeterli.
+            <b>{view.world.name}</b> {t.joined.removeText}
           </p>
         </Dialog>
       )}

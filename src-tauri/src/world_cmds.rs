@@ -40,8 +40,9 @@ pub fn get_properties(app: AppHandle, id: String) -> AppResult<PropertiesView> {
 fn check_int(key: &str, value: &str, min: i64, max: i64) -> AppResult<()> {
     match value.trim().parse::<i64>() {
         Ok(n) if (min..=max).contains(&n) => Ok(()),
-        _ => Err(AppError::msg(format!(
-            "{key}: {min} ile {max} arasında bir sayı olmalı"
+        _ => Err(AppError::msg(tx!(
+            "{key}: {min} ile {max} arasında bir sayı olmalı",
+            "{key}: must be a number between {min} and {max}"
         ))),
     }
 }
@@ -50,7 +51,10 @@ fn check_choice(key: &str, value: &str, allowed: &[&str]) -> AppResult<()> {
     if allowed.contains(&value) {
         Ok(())
     } else {
-        Err(AppError::msg(format!("{key}: geçersiz değer \"{value}\"")))
+        Err(AppError::msg(tx!(
+            "{key}: geçersiz değer \"{value}\"",
+            "{key}: invalid value \"{value}\""
+        )))
     }
 }
 
@@ -69,12 +73,14 @@ fn validate_property(key: &str, value: &str) -> AppResult<()> {
         ),
         "pvp" | "hardcore" | "allow-flight" | "white-list" | "enforce-whitelist"
         | "online-mode" => check_choice(key, value, &["true", "false"]),
-        "motd" if value.chars().count() > 120 => {
-            Err(AppError::msg("Açıklama en fazla 120 karakter olabilir"))
-        }
-        _ if key.trim().is_empty() || key.contains(['\n', '\r']) => {
-            Err(AppError::msg("Geçersiz ayar adı"))
-        }
+        "motd" if value.chars().count() > 120 => Err(AppError::msg(tx!(
+            "Açıklama en fazla 120 karakter olabilir",
+            "The description can be at most 120 characters"
+        ))),
+        _ if key.trim().is_empty() || key.contains(['\n', '\r']) => Err(AppError::msg(tx!(
+            "Geçersiz ayar adı",
+            "Invalid setting name"
+        ))),
         _ => Ok(()),
     }
 }
@@ -93,7 +99,10 @@ pub fn update_properties(
             k.as_str(),
             "online-mode" | "white-list" | "enforce-whitelist"
         ) {
-            return Err(AppError::msg("Bu ayar Oyuncular panelinden değiştirilir"));
+            return Err(AppError::msg(tx!(
+                "Bu ayar Oyuncular panelinden değiştirilir",
+                "This setting is changed from the Players panel"
+            )));
         }
         validate_property(k, v)?;
     }
@@ -247,9 +256,10 @@ pub async fn set_whitelist_enabled(
 ) -> AppResult<AccessView> {
     let server_dir = paths::server_dir(&app, &id)?;
     if !on && is_offline(&server_dir)? {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Premium olmayanlar girebilirken beyaz liste kapatılamaz: adresi bilen biri adını taklit edebilir",
-        ));
+            "The whitelist can't be turned off while non-premium players are allowed: anyone with the address could impersonate a name"
+        )));
     }
     let mut props = Properties::load(&server_dir)?;
     props.set("white-list", on.to_string());
@@ -277,9 +287,10 @@ pub async fn set_offline_mode(
     offline: bool,
 ) -> AppResult<AccessView> {
     if state.servers.is_active(&id) {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Bu ayarı değiştirmek için önce dünyayı kapat",
-        ));
+            "Stop the world first to change this setting"
+        )));
     }
     let server_dir = paths::server_dir(&app, &id)?;
     let mut props = Properties::load(&server_dir)?;
@@ -291,8 +302,9 @@ pub async fn set_offline_mode(
     props.save(&server_dir)?;
     let dropped = players::rekey(&state.http, &server_dir, offline).await?;
     if !dropped.is_empty() {
-        return Err(AppError::msg(format!(
+        return Err(AppError::msg(tx!(
             "Premium hesabı bulunamadığı için beyaz listeden çıkarıldı: {}",
+            "Removed from the whitelist because no premium account was found: {}",
             dropped.join(", ")
         )));
     }
@@ -340,7 +352,13 @@ pub async fn set_op(
         }
         players::write_ops(&server_dir, &ops)?;
         if active {
-            notice = Some("Yetki dünya yeniden açılınca geçerli olur".to_string());
+            notice = Some(
+                tx!(
+                    "Yetki dünya yeniden açılınca geçerli olur",
+                    "The permission takes effect when the world restarts"
+                )
+                .to_string(),
+            );
         }
     }
     let mut view = access_view(&server_dir)?;

@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { api, errorMessage, openExternal, type Instance } from "../../lib/api";
+import { useT } from "../../i18n";
 import { useAppStore, useServer } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
@@ -14,6 +15,7 @@ const EULA_URL = "https://aka.ms/MinecraftEULA";
 export function useServerControl(instance: Instance) {
   const id = instance.id;
   const { status } = useServer(id);
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [eulaOpen, setEulaOpen] = useState(false);
@@ -34,7 +36,7 @@ export function useServerControl(instance: Instance) {
       }
       const java = await api.instanceJava(id);
       if (java.error) {
-        setError(`${java.error} Gelişmiş > Java'dan değiştirebilirsin.`);
+        setError(t.start.javaError(java.error));
         return;
       }
       if (!java.selected) {
@@ -89,15 +91,15 @@ export function useServerControl(instance: Instance) {
     <>
       {javaPrompt !== null && (
         <Dialog
-          title="Java gerekli"
+          title={t.start.javaTitle}
           actions={
             javaInstalling ? undefined : (
               <>
                 <Button variant="ghost" onClick={() => setJavaPrompt(null)}>
-                  Vazgeç
+                  {t.common.cancel}
                 </Button>
                 <Button variant="primary" onClick={() => installJavaAndStart(javaPrompt)}>
-                  İndir ve başlat
+                  {t.start.javaDownloadStart}
                 </Button>
               </>
             )
@@ -107,11 +109,8 @@ export function useServerControl(instance: Instance) {
             <JavaDownloadProgress />
           ) : (
             <>
-              <p>Bu dünya Java {javaPrompt} istiyor ama bilgisayarında uygun bir Java bulunamadı.</p>
-              <p>
-                Açık kaynak Eclipse Temurin'i (yaklaşık 50 MB) uygulamanın kendi klasörüne indirebilirim. Sistemine
-                kurulmaz, başka programları etkilemez.
-              </p>
+              <p>{t.start.javaMissing(javaPrompt)}</p>
+              <p>{t.start.javaOffer}</p>
             </>
           )}
         </Dialog>
@@ -123,18 +122,15 @@ export function useServerControl(instance: Instance) {
           actions={
             <>
               <Button variant="ghost" onClick={() => setEulaOpen(false)}>
-                Vazgeç
+                {t.common.cancel}
               </Button>
               <Button variant="primary" onClick={acceptEula}>
-                Kabul ediyorum
+                {t.start.eulaAccept}
               </Button>
             </>
           }
         >
-          <p>
-            Sunucu açmak için Mojang'ın Son Kullanıcı Lisans Sözleşmesi'ni (EULA) kabul etmen gerekiyor. Bu dünya için
-            yalnızca bir kez soracağım.
-          </p>
+          <p>{t.start.eulaText}</p>
           <p>
             <a
               href={EULA_URL}
@@ -143,7 +139,7 @@ export function useServerControl(instance: Instance) {
                 openExternal(EULA_URL);
               }}
             >
-              EULA'yı oku
+              {t.start.eulaRead}
             </a>
           </p>
         </Dialog>

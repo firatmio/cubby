@@ -115,8 +115,9 @@ pub async fn resolve(
         let Some(version) = version else {
             match project {
                 Some(p) if !dependency => {
-                    return Err(AppError::msg(format!(
-                        "Bu mod dünyanın sürümü için yayınlanmamış ({p})."
+                    return Err(AppError::msg(tx!(
+                        "Bu mod dünyanın sürümü için yayınlanmamış ({p}).",
+                        "This mod isn't released for the world's version ({p})."
                     )));
                 }
                 Some(p) => plan.missing.push(p),
@@ -217,18 +218,28 @@ pub async fn download_into(
     replace: Option<&str>,
     on_progress: impl FnMut(u64, Option<u64>),
 ) -> AppResult<ModRecord> {
-    let file = primary_jar(version)
-        .ok_or_else(|| AppError::msg("Bu sürümde kurulabilir bir .jar dosyası yok."))?;
-    let name = sanitize_filename(&file.filename)
-        .ok_or_else(|| AppError::msg(format!("Güvenli olmayan dosya adı: {}", file.filename)))?;
+    let file = primary_jar(version).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Bu sürümde kurulabilir bir .jar dosyası yok.",
+            "This version has no installable .jar file."
+        ))
+    })?;
+    let name = sanitize_filename(&file.filename).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Güvenli olmayan dosya adı: {}",
+            "Unsafe file name: {}",
+            file.filename
+        ))
+    })?;
     let target = content.join(&name);
     if replace.is_none_or(|old| old != name) && target.exists() {
         let existing = hash_bytes(HashAlgo::Sha1, &std::fs::read(&target)?);
         if existing == file.hashes.sha1 {
             return Ok(record(&name, version, file));
         }
-        return Err(AppError::msg(format!(
-            "Klasörde aynı adlı başka bir dosya var: {name}"
+        return Err(AppError::msg(tx!(
+            "Klasörde aynı adlı başka bir dosya var: {name}",
+            "Another file with the same name is in the folder: {name}"
         )));
     }
 
@@ -245,8 +256,12 @@ pub async fn download_into(
     if let Some(old) = replace {
         let old_path = content.join(old);
         if old_path.exists() {
-            trash::delete(&old_path)
-                .map_err(|e| AppError::msg(format!("Eski sürüm kaldırılamadı: {e}")))?;
+            trash::delete(&old_path).map_err(|e| {
+                AppError::msg(tx!(
+                    "Eski sürüm kaldırılamadı: {e}",
+                    "Couldn't remove the old version: {e}"
+                ))
+            })?;
         }
     }
     std::fs::rename(&staging, &target)?;

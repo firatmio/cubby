@@ -62,7 +62,10 @@ pub async fn read_body(r: &mut (impl AsyncRead + Unpin), max: usize) -> std::io:
     let mut buf = Vec::new();
     let n = r.take(max as u64 + 1).read_to_end(&mut buf).await?;
     if n > max {
-        return Err(std::io::Error::other("gövde çok büyük"));
+        return Err(std::io::Error::other(tx!(
+            "gövde çok büyük",
+            "body too large"
+        )));
     }
     Ok(buf)
 }
@@ -78,7 +81,10 @@ pub async fn read_line<T: for<'de> Deserialize<'de>>(
             break;
         }
         if buf.len() >= MAX_LINE {
-            return Err(std::io::Error::other("başlık çok uzun"));
+            return Err(std::io::Error::other(tx!(
+                "başlık çok uzun",
+                "header too long"
+            )));
         }
         buf.push(b);
     }

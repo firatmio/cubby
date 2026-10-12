@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useT } from "../../i18n";
 import { api, errorMessage, type Instance, type ServerStatus } from "../../lib/api";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -16,6 +17,7 @@ export function PropertiesTab({ instance, status }: { instance: Instance; status
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const t = useT();
 
   useEffect(() => {
     api
@@ -42,7 +44,7 @@ export function PropertiesTab({ instance, status }: { instance: Instance; status
       const p = await api.updateProperties(instance.id, edits);
       setValues(p.values);
       setEdits({});
-      setMessage({ ok: true, text: active ? "Kaydedildi. Dünya yeniden açılınca geçerli olur." : "Kaydedildi" });
+      setMessage({ ok: true, text: active ? t.advanced.savedRestart : t.advanced.saved });
     } catch (e) {
       setMessage({ ok: false, text: errorMessage(e) });
     } finally {
@@ -50,23 +52,23 @@ export function PropertiesTab({ instance, status }: { instance: Instance; status
     }
   };
 
-  if (!values) return <p className={styles.hint}>{message?.text ?? "Yükleniyor…"}</p>;
+  if (!values) return <p className={styles.hint}>{message?.text ?? t.advanced.loading}</p>;
 
   return (
     <div className={styles.wrap}>
       {!exists && (
-        <p className={styles.hint}>Dünya henüz hiç açılmadı; kalan ayarlar ilk açılışta oluşacak.</p>
+        <p className={styles.hint}>{t.advanced.notCreatedYet}</p>
       )}
       <div className={styles.search}>
         <Search size={16} aria-hidden />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ayar ara" spellCheck={false} />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.advanced.searchSetting} spellCheck={false} />
       </div>
       <div className={styles.table}>
         {rows.map(([key, value]) => {
           const managed = MANAGED.has(key);
           const current = edits[key] ?? value;
           return (
-            <label key={key} className={styles.row} title={managed ? "Oyuncular panelinden değiştirilir" : undefined}>
+            <label key={key} className={styles.row} title={managed ? t.advanced.managedHint : undefined}>
               <span className={styles.key}>{key}</span>
               <input
                 className={[styles.value, key in edits && styles.edited].filter(Boolean).join(" ")}
@@ -88,7 +90,7 @@ export function PropertiesTab({ instance, status }: { instance: Instance; status
       <div className={styles.footer}>
         {message && <span className={message.ok ? styles.ok : styles.error}>{message.text}</span>}
         <Button variant="primary" size="sm" disabled={!dirty} loading={saving} onClick={save}>
-          Kaydet
+          {t.common.save}
         </Button>
       </div>
     </div>

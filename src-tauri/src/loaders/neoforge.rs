@@ -148,11 +148,18 @@ impl Loader for NeoForgeLoader {
                 .await?
                 .recommended
                 .ok_or_else(|| {
-                    AppError::msg(format!("{} için NeoForge sürümü yok", req.mc_version))
+                    AppError::msg(tx!(
+                        "{} için NeoForge sürümü yok",
+                        "No NeoForge version for {}",
+                        req.mc_version
+                    ))
                 })?,
         };
         if !crate::util::is_safe_name(&version) {
-            return Err(AppError::msg("Geçersiz NeoForge sürümü."));
+            return Err(AppError::msg(tx!(
+                "Geçersiz NeoForge sürümü.",
+                "Invalid NeoForge version."
+            )));
         }
         let java_major = install_forge_like(
             &self.http,

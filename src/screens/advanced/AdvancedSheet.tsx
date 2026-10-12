@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useT } from "../../i18n";
 import { describeInstance } from "../../lib/format";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { PillTabs } from "../../ui/PillTabs";
@@ -13,14 +14,6 @@ import styles from "./AdvancedSheet.module.css";
 
 type Tab = "console" | "world" | "properties" | "java" | "files";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "console", label: "Konsol" },
-  { id: "world", label: "Dünya" },
-  { id: "properties", label: "Tüm ayarlar" },
-  { id: "java", label: "Java" },
-  { id: "files", label: "Dosyalar" },
-];
-
 /** Teknik her şey burada: konsol, bellek, Java, dosyalar. Ana ekranı sade tutar. */
 export function AdvancedSheet() {
   const open = useAppStore((s) => s.sheet === "advanced");
@@ -28,18 +21,26 @@ export function AdvancedSheet() {
   const instance = useSelected();
   const server = useServer(instance?.id ?? null);
   const [tab, setTab] = useState<Tab>("console");
+  const t = useT();
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "console", label: t.advanced.tabConsole },
+    { id: "world", label: t.advanced.tabWorld },
+    { id: "properties", label: t.advanced.tabProperties },
+    { id: "java", label: "Java" },
+    { id: "files", label: t.advanced.tabFiles },
+  ];
 
   return (
     <Sheet
       open={open && !!instance}
-      title="Gelişmiş"
+      title={t.advanced.title}
       subtitle={instance ? `${instance.name} · ${describeInstance(instance)}` : undefined}
       onClose={() => openSheet(null)}
       width={620}
     >
       {instance && (
         <>
-          <PillTabs tabs={TABS} active={tab} onChange={setTab} layoutId="advanced-tab" />
+          <PillTabs tabs={tabs} active={tab} onChange={setTab} layoutId="advanced-tab" />
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}

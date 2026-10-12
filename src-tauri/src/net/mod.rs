@@ -153,7 +153,10 @@ impl NetManager {
                 &paths::server_dir(app, id).map_err(|e| e.to_string())?,
                 inst.port,
             );
-            let ip = local_ipv4().ok_or("Bu bilgisayarın yerel ağ adresi bulunamadı.")?;
+            let ip = local_ipv4().ok_or(tx!(
+                "Bu bilgisayarın yerel ağ adresi bulunamadı.",
+                "Couldn't find this computer's local network address."
+            ))?;
             upnp::open(&self.http, ip, port)
                 .await
                 .map_err(|e| e.message())

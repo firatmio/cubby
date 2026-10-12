@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FolderOpen, Package } from "lucide-react";
+import { useT } from "../../i18n";
 import { api, errorMessage, type Instance } from "../../lib/api";
 import { CONTENT_DIR_LABEL } from "../../lib/format";
 import { Button } from "../../ui/Button";
@@ -8,6 +9,7 @@ import styles from "./sections.module.css";
 
 export function FilesTab({ instance }: { instance: Instance }) {
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
   const contentLabel = CONTENT_DIR_LABEL[instance.loader];
 
   const run = (fn: () => Promise<void>) => {
@@ -18,25 +20,23 @@ export function FilesTab({ instance }: { instance: Instance }) {
   return (
     <div className={styles.stack}>
       <Card
-        title="Sunucu klasörü"
-        description="Dünya, ayar ve kayıt (log) dosyaları burada."
+        title={t.instance.serverFolder}
+        description={t.instance.serverFolderText}
         actions={
           <Button icon={FolderOpen} onClick={() => run(() => api.openInstanceDir(instance.id))}>
-            Aç
+            {t.instance.open}
           </Button>
         }
       />
       {contentLabel && (
         <Card
-          title={`${contentLabel} klasörü`}
+          title={t.instance.contentFolder(contentLabel)}
           description={
-            instance.loader === "fabric"
-              ? "Mod .jar dosyalarını buraya at, sunucuyu yeniden başlat. Oyuna yeni içerik ekleyen modları arkadaşının da kurması gerekir."
-              : "Plugin .jar dosyalarını buraya at, sunucuyu yeniden başlat."
+            instance.loader === "paper" ? t.instance.pluginsFolderText : t.instance.modsFolderText
           }
           actions={
             <Button icon={Package} onClick={() => run(() => api.openContentDir(instance.id))}>
-              Aç
+              {t.instance.open}
             </Button>
           }
         />

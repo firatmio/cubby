@@ -115,7 +115,12 @@ fn write_jpeg(img: &DynamicImage, dest: &Path) -> AppResult<()> {
         let mut out = BufWriter::new(File::create(&tmp)?);
         JpegEncoder::new_with_quality(&mut out, JPEG_QUALITY)
             .encode_image(&DynamicImage::ImageRgb8(img.to_rgb8()))
-            .map_err(|e| AppError::msg(format!("Görsel kaydedilemedi: {e}")))?;
+            .map_err(|e| {
+                AppError::msg(tx!(
+                    "Görsel kaydedilemedi: {e}",
+                    "Couldn't save the image: {e}"
+                ))
+            })?;
     }
     std::fs::rename(tmp, dest)?;
     Ok(())
@@ -145,7 +150,8 @@ fn accent_color(img: &DynamicImage) -> String {
 
 /// Kaynaktan `cover.jpg` + `thumb.jpg` üretir; baskın rengi döner. Yavaş: blocking bağlamda çağır.
 pub fn render_cover(src: &Path, meta_dir: &Path) -> AppResult<String> {
-    let img = image::open(src).map_err(|e| AppError::msg(format!("Resim açılamadı: {e}")))?;
+    let img = image::open(src)
+        .map_err(|e| AppError::msg(tx!("Resim açılamadı: {e}", "Couldn't open the image: {e}")))?;
     std::fs::create_dir_all(meta_dir)?;
     write_jpeg(&resize(&img, COVER_MAX), &meta_dir.join(COVER_FILE))?;
     let thumb = resize(&img, THUMB_MAX);
@@ -158,7 +164,8 @@ pub const SERVER_ICON: &str = "server-icon.png";
 /// Sunucu listesinde görünen 64×64 simge: kapağın ortasından kare kırpılır.
 /// Minecraft simgeyi sunucu açılırken okur.
 pub fn write_server_icon(cover: &Path, server_dir: &Path) -> AppResult<()> {
-    let img = image::open(cover).map_err(|e| AppError::msg(format!("Resim açılamadı: {e}")))?;
+    let img = image::open(cover)
+        .map_err(|e| AppError::msg(tx!("Resim açılamadı: {e}", "Couldn't open the image: {e}")))?;
     let (w, h) = img.dimensions();
     let side = w.min(h);
     let icon = img
@@ -188,7 +195,7 @@ fn all_shots(app: &AppHandle) -> Vec<Shot> {
 fn shot_path(app: &AppHandle, file: &str) -> AppResult<PathBuf> {
     app.state::<SettingsStore>()
         .find_shot(file)
-        .ok_or_else(|| AppError::msg("Ekran görüntüsü bulunamadı"))
+        .ok_or_else(|| AppError::msg(tx!("Ekran görüntüsü bulunamadı", "Screenshot not found")))
 }
 
 pub fn list_for(app: &AppHandle, id: &str) -> AppResult<ShotList> {
@@ -242,7 +249,10 @@ pub async fn set_cover(app: &AppHandle, id: &str, source: CoverSource) -> AppRes
     match source {
         CoverSource::Screenshot { file } => {
             if !is_valid_shot_name(&file) {
-                return Err(AppError::msg("Geçersiz dosya adı"));
+                return Err(AppError::msg(tx!(
+                    "Geçersiz dosya adı",
+                    "Invalid file name"
+                )));
             }
             let path = shot_path(app, &file)?;
             apply(app, id, Some(path), CoverKind::Manual).await

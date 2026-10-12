@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, ChevronDown, RotateCcw } from "lucide-react";
 import { api, errorMessage, type AccessView } from "../../lib/api";
+import { useT } from "../../i18n";
 import { spring } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -22,18 +23,6 @@ type Form = {
   port: string;
 };
 
-const DIFFICULTIES = [
-  { id: "peaceful", label: "Barışçıl" },
-  { id: "easy", label: "Kolay" },
-  { id: "normal", label: "Normal" },
-  { id: "hard", label: "Zor" },
-];
-
-const GAMEMODES = [
-  { id: "survival", label: "Hayatta kalma" },
-  { id: "creative", label: "Yaratıcı" },
-  { id: "adventure", label: "Macera" },
-];
 
 function fromProps(v: Record<string, string>, fallbackMotd: string): Form {
   const int = (k: string, d: number) => {
@@ -71,6 +60,19 @@ export function WorldSettingsSheet() {
   const { status } = useServer(instance?.id ?? null);
   const active = status === "starting" || status === "running" || status === "stopping";
   const id = instance?.id;
+  const tt = useT();
+  const t = tt.world;
+  const difficulties = [
+    { id: "peaceful", label: t.peaceful },
+    { id: "easy", label: t.easy },
+    { id: "normal", label: t.normal },
+    { id: "hard", label: t.hard },
+  ];
+  const gamemodes = [
+    { id: "survival", label: t.survival },
+    { id: "creative", label: t.creative },
+    { id: "adventure", label: t.adventure },
+  ];
 
   const [initial, setInitial] = useState<Form | null>(null);
   const [form, setForm] = useState<Form | null>(null);
@@ -154,7 +156,7 @@ export function WorldSettingsSheet() {
   return (
     <Sheet
       open={open && !!instance}
-      title="Dünya ayarları"
+      title={t.title}
       subtitle={instance?.name}
       onClose={() => openSheet(null)}
       width={560}
@@ -170,9 +172,9 @@ export function WorldSettingsSheet() {
               exit={{ opacity: 0 }}
               transition={spring}
             >
-              <span>Kaydedildi. Dünya yeniden açılınca geçerli olur.</span>
+              <span>{t.savedRestart}</span>
               <Button size="sm" variant="primary" icon={RotateCcw} loading={busy === "restart"} onClick={restart}>
-                Şimdi yeniden başlat
+                {t.restartNow}
               </Button>
             </motion.div>
           )}
@@ -181,17 +183,17 @@ export function WorldSettingsSheet() {
         {form && (
           <>
             <section className={styles.section}>
-              <Field label="Zorluk">
+              <Field label={t.difficulty}>
                 <PillTabs
-                  tabs={DIFFICULTIES}
+                  tabs={difficulties}
                   active={form.difficulty}
                   onChange={(v) => set("difficulty", v)}
                   layoutId="difficulty"
                 />
               </Field>
-              <Field label="Oyun modu">
+              <Field label={t.gamemode}>
                 <PillTabs
-                  tabs={GAMEMODES}
+                  tabs={gamemodes}
                   active={form.gamemode}
                   onChange={(v) => set("gamemode", v)}
                   layoutId="gamemode"
@@ -200,11 +202,11 @@ export function WorldSettingsSheet() {
               <Toggle
                 checked={form.pvp}
                 onChange={(v) => set("pvp", v)}
-                label="Oyuncular birbirine vurabilsin"
-                description="Kapalıyken birbirinize zarar veremezsiniz."
+                label={t.pvp}
+                description={t.pvpText}
               />
               <Slider
-                label="En fazla oyuncu"
+                label={t.maxPlayers}
                 valueLabel={String(form.maxPlayers)}
                 value={form.maxPlayers}
                 min={1}
@@ -212,7 +214,7 @@ export function WorldSettingsSheet() {
                 step={1}
                 onChange={(v) => set("maxPlayers", v)}
               />
-              <Field label="Sunucu listesinde görünen açıklama">
+              <Field label={t.motd}>
                 <Input value={form.motd} maxLength={120} onChange={(e) => set("motd", e.target.value)} />
               </Field>
             </section>
@@ -223,25 +225,20 @@ export function WorldSettingsSheet() {
                   checked={access.offlineMode}
                   disabled={busy !== null || active}
                   onChange={setOffline}
-                  label="Premium olmayanlar da girebilsin (TLauncher)"
-                  description={
-                    active
-                      ? "Değiştirmek için önce dünyayı kapat."
-                      : "Arkadaşın satın alınmış bir Minecraft hesabı olmadan oynuyorsa aç."
-                  }
+                  label={t.offline}
+                  description={active ? t.stopFirst : t.offlineText}
                 />
                 {access.offlineMode && (
                   <p className={styles.warn}>
                     <AlertTriangle size={15} aria-hidden />
-                    Adresi bilen biri senin ya da arkadaşının adını kullanarak girebilir. Bu yüzden beyaz liste açık
-                    tutuluyor; yalnız eklediğin isimler girebilir.
+                    {t.offlineWarn}
                   </p>
                 )}
               </section>
             )}
 
             <button type="button" className={styles.disclosure} onClick={() => setAdvancedOpen((v) => !v)}>
-              Gelişmiş
+              {t.advanced}
               <motion.span animate={{ rotate: advancedOpen ? 180 : 0 }} transition={spring}>
                 <ChevronDown size={16} aria-hidden />
               </motion.span>
@@ -257,7 +254,7 @@ export function WorldSettingsSheet() {
                 >
                   <div className={styles.section}>
                     <Slider
-                      label="Görüş mesafesi (chunk)"
+                      label={t.viewDistance}
                       valueLabel={String(form.viewDistance)}
                       value={form.viewDistance}
                       min={2}
@@ -265,7 +262,7 @@ export function WorldSettingsSheet() {
                       step={1}
                       onChange={(v) => set("viewDistance", v)}
                     />
-                    <Field label="Port" hint="Genelde 25565. Aynı anda iki dünya açacaksan farklı olmalı.">
+                    <Field label={t.port} hint={t.portHint}>
                       <Input
                         value={form.port}
                         inputMode="numeric"
@@ -273,7 +270,7 @@ export function WorldSettingsSheet() {
                         onChange={(e) => set("port", e.target.value.replace(/\D/g, ""))}
                       />
                     </Field>
-                    <p className={styles.hint}>Diğer tüm ayarlar Gelişmiş &gt; Tüm ayarlar'da.</p>
+                    <p className={styles.hint}>{t.otherSettings}</p>
                   </div>
                 </motion.section>
               )}
@@ -284,9 +281,9 @@ export function WorldSettingsSheet() {
 
       {form && (
         <footer className={styles.footer}>
-          {active && dirty && <span className={styles.hint}>Yeniden başlatınca geçerli olur</span>}
+          {active && dirty && <span className={styles.hint}>{t.appliesOnRestart}</span>}
           <Button variant="primary" disabled={!dirty} loading={busy === "save"} onClick={save}>
-            Kaydet
+            {tt.common.save}
           </Button>
         </footer>
       )}

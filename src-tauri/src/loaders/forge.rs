@@ -186,11 +186,18 @@ impl Loader for ForgeLoader {
                 .await?
                 .recommended
                 .ok_or_else(|| {
-                    AppError::msg(format!("{} için Forge sürümü yok", req.mc_version))
+                    AppError::msg(tx!(
+                        "{} için Forge sürümü yok",
+                        "No Forge version for {}",
+                        req.mc_version
+                    ))
                 })?,
         };
         if !crate::util::is_safe_name(&forge) || !mc_supported(req.mc_version) {
-            return Err(AppError::msg("Geçersiz Forge sürümü."));
+            return Err(AppError::msg(tx!(
+                "Geçersiz Forge sürümü.",
+                "Invalid Forge version."
+            )));
         }
         let java_major = install_forge_like(
             &self.http,

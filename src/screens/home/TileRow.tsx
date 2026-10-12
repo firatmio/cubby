@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { LogIn, Plus, Users } from "lucide-react";
 import { mediaUrl, type Instance, type JoinedView } from "../../lib/api";
 import { KIND_COLORS } from "../../lib/format";
+import { useT } from "../../i18n";
 import { spring } from "../../lib/motion";
 import { joinKey, useAppStore, useServer } from "../../store/appStore";
 import { StatusDot } from "../../ui/Badge";
@@ -71,6 +72,7 @@ function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean })
   const select = useAppStore((s) => s.select);
   const ref = useRef<HTMLButtonElement>(null);
   const online = view.status.reachable && view.status.running;
+  const t = useT().home;
 
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
@@ -81,7 +83,7 @@ function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean })
       <motion.button
         ref={ref}
         type="button"
-        aria-label={`${view.world.name} (arkadaşının dünyası)`}
+        aria-label={t.friendsWorldAria(view.world.name)}
         aria-pressed={selected}
         className={[styles.tile, selected && styles.selected].filter(Boolean).join(" ")}
         style={{ "--kind": KIND_COLORS[view.world.loader] } as React.CSSProperties}
@@ -125,9 +127,10 @@ export function TileRow() {
   const selectedId = useAppStore((s) => s.selectedId);
   const setView = useAppStore((s) => s.setView);
   const openJoin = useAppStore((s) => s.openJoin);
+  const t = useT().home;
 
   return (
-    <nav className={styles.row} aria-label="Dünyalar">
+    <nav className={styles.row} aria-label={t.worlds}>
       {instances.map((i) => (
         <Tile key={i.id} instance={i} selected={i.id === selectedId} />
       ))}
@@ -137,7 +140,7 @@ export function TileRow() {
       <div className={styles.slot}>
         <motion.button
           type="button"
-          aria-label="Yeni dünya"
+          aria-label={t.newWorld}
           className={[styles.tile, styles.add].join(" ")}
           animate={{ scale: 0.82 }}
           whileHover={{ scale: 0.86 }}
@@ -151,8 +154,8 @@ export function TileRow() {
       <div className={styles.slot}>
         <motion.button
           type="button"
-          aria-label="Arkadaşının dünyasına katıl"
-          title="Arkadaşının dünyasına katıl"
+          aria-label={t.joinFriend}
+          title={t.joinFriend}
           className={[styles.tile, styles.add].join(" ")}
           animate={{ scale: 0.82 }}
           whileHover={{ scale: 0.86 }}

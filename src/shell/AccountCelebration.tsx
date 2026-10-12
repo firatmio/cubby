@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useT } from "../i18n";
 import { useAppStore } from "../store/appStore";
 import { SkinHead } from "../ui/SkinHead";
 import styles from "./AccountCelebration.module.css";
@@ -29,6 +30,7 @@ export function AccountCelebration() {
   const account = useAppStore((s) => s.celebrate);
   const setCelebrate = useAppStore((s) => s.setCelebrate);
   const [visible, setVisible] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (!account) return;
@@ -91,7 +93,7 @@ export function AccountCelebration() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
           >
-            Microsoft hesabı bağlandı
+            {t.settings.connected}
           </motion.p>
           <motion.p
             className={styles.sub}
@@ -99,7 +101,7 @@ export function AccountCelebration() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            Hoş geldin, {account.name}. Oyun artık tek tıkla doğrudan dünyada açılır.
+            {t.settings.welcome(account.name)}
           </motion.p>
         </motion.div>
       )}

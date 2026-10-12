@@ -48,8 +48,12 @@ pub async fn download_maven(
             break;
         }
     }
-    let (algo, hash) =
-        expected.ok_or_else(|| AppError::msg("Installer'ın doğrulama bilgisi bulunamadı."))?;
+    let (algo, hash) = expected.ok_or_else(|| {
+        AppError::msg(tx!(
+            "Installer'ın doğrulama bilgisi bulunamadı.",
+            "Couldn't find the installer's checksum."
+        ))
+    })?;
     download_file(http, url, dest, Some((algo, &hash)), on_progress).await
 }
 
@@ -65,7 +69,12 @@ pub fn read_json(jar: &Path, name: &str) -> AppResult<serde_json::Value> {
             .ok()?;
         serde_json::from_str(&text).ok()
     };
-    read().ok_or_else(|| AppError::msg(format!("Installer okunamadı ({name}).")))
+    read().ok_or_else(|| {
+        AppError::msg(tx!(
+            "Installer okunamadı ({name}).",
+            "Couldn't read the installer ({name})."
+        ))
+    })
 }
 
 /// Installer'ın kuracağı Launcher sürümünün adı (ör. `neoforge-26.3.0.76`).
@@ -75,7 +84,12 @@ pub fn version_id(jar: &Path) -> AppResult<String> {
         .and_then(|v| v.as_str())
         .filter(|id| crate::util::is_safe_name(id))
         .map(str::to_string)
-        .ok_or_else(|| AppError::msg("Installer'da sürüm adı yok."))
+        .ok_or_else(|| {
+            AppError::msg(tx!(
+                "Installer'da sürüm adı yok.",
+                "The installer has no version name."
+            ))
+        })
 }
 
 /// Installer'ın sunucu için beklediği resmi Minecraft jar'ının yolu (sunucu klasörüne göre).
@@ -107,9 +121,12 @@ pub async fn run(
         .stderr(Stdio::piped())
         .kill_on_drop(true);
     hide_console(&mut cmd);
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| AppError::msg(format!("Installer başlatılamadı: {e}")))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        AppError::msg(tx!(
+            "Installer başlatılamadı: {e}",
+            "Couldn't start the installer: {e}"
+        ))
+    })?;
 
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     for stream in [
@@ -159,9 +176,10 @@ pub async fn run(
     let status = match tokio::time::timeout(TIMEOUT, collect).await {
         Ok(status) => status?,
         Err(_) => {
-            return Err(AppError::msg(
+            return Err(AppError::msg(tx!(
                 "Installer çok uzun sürdü ve durduruldu. İnternet bağlantını kontrol edip tekrar dene.",
-            ));
+                "The installer took too long and was stopped. Check your internet connection and try again."
+            )));
         }
     };
     if !status.success() {
@@ -188,9 +206,12 @@ pub async fn install_forge_like(
     on_stage: &mut (impl FnMut(super::InstallStage) + Send),
 ) -> AppResult<u32> {
     use super::InstallStage;
-    let java = req
-        .java
-        .ok_or_else(|| AppError::msg("Kurulum için Java gerekli."))?;
+    let java = req.java.ok_or_else(|| {
+        AppError::msg(tx!(
+            "Kurulum için Java gerekli.",
+            "Java is required for the install."
+        ))
+    })?;
     tokio::fs::create_dir_all(server_dir).await?;
     let jar = server_dir.join("mcsm-installer.jar");
     download_maven(http, url, &jar, |downloaded, total| {
@@ -220,9 +241,10 @@ pub async fn install_forge_like(
     cleanup(server_dir, &jar).await;
     result?;
     if !server_dir.join(args_file).is_file() {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Kurulum bitti ama başlatma dosyası oluşmadı. Başka bir sürüm deneyebilirsin.",
-        ));
+            "The install finished but no launch file was created. You can try another version."
+        )));
     }
     tokio::fs::create_dir_all(server_dir.join("mods")).await?;
     Ok(java_major)

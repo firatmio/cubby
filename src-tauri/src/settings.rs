@@ -20,6 +20,8 @@ pub struct AppSettings {
     pub eula_accepted: bool,
     /// Modlu dünyaların oyuncuda gereken modları kendi Minecraft'ıma da (dünyaya özel profile) kurulsun.
     pub client_sync: bool,
+    /// Arayüz dili: `"tr"` / `"en"`; `None` = bilgisayarın dili.
+    pub language: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -29,6 +31,7 @@ impl Default for AppSettings {
             use_screenshots: true,
             eula_accepted: false,
             client_sync: true,
+            language: None,
         }
     }
 }
@@ -57,10 +60,17 @@ impl SettingsStore {
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
             .unwrap_or_default();
-        Self {
+        let store = Self {
             file,
             inner: Mutex::new(inner),
-        }
+        };
+        crate::i18n::set_lang(store.lang());
+        store
+    }
+
+    /// Etkin dil (ayar, yoksa bilgisayarın dili).
+    pub fn lang(&self) -> crate::i18n::Lang {
+        crate::i18n::effective(self.get().language.as_deref())
     }
 
     pub fn get(&self) -> AppSettings {
@@ -71,7 +81,10 @@ impl SettingsStore {
         if let Some(dir) = &new.minecraft_dir
             && !dir.is_dir()
         {
-            return Err(AppError::msg("Seçilen Minecraft klasörü bulunamadı"));
+            return Err(AppError::msg(tx!(
+                "Seçilen Minecraft klasörü bulunamadı",
+                "The selected Minecraft folder was not found"
+            )));
         }
         if let Some(parent) = self.file.parent() {
             std::fs::create_dir_all(parent)?;
@@ -80,6 +93,7 @@ impl SettingsStore {
         std::fs::write(&tmp, serde_json::to_string_pretty(&new)?)?;
         std::fs::rename(tmp, &self.file)?;
         *self.inner.lock().unwrap_or_else(|e| e.into_inner()) = new;
+        crate::i18n::set_lang(self.lang());
         Ok(())
     }
 
@@ -151,5 +165,6 @@ mod tests {
     fn old_files_get_defaults() {
         let s: AppSettings = serde_json::from_str("{}").unwrap();
         assert!(s.use_screenshots);
+        assert!(s.language.is_none());
     }
 }

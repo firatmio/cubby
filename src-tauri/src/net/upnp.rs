@@ -30,14 +30,25 @@ impl DirectError {
     pub fn message(&self) -> String {
         match self {
             Self::NoGateway => {
-                "Modemin otomatik port açmayı (UPnP) desteklemiyor ya da kapalı.".into()
+                tx!(
+                    "Modemin otomatik port açmayı (UPnP) desteklemiyor ya da kapalı.",
+                    "Your router doesn't support automatic port opening (UPnP), or it's turned off."
+                )
             }
-            Self::Refused => "Modemin port açma isteğini reddetti.".into(),
+            Self::Refused => tx!(
+                "Modemin port açma isteğini reddetti.",
+                "Your router refused the port-opening request."
+            ),
             Self::Cgnat => {
-                "İnternet sağlayıcın ortak IP kullanıyor (CGNAT); doğrudan bağlantı mümkün değil."
-                    .into()
+                tx!(
+                    "İnternet sağlayıcın ortak IP kullanıyor (CGNAT); doğrudan bağlantı mümkün değil.",
+                    "Your internet provider uses a shared IP (CGNAT); a direct connection isn't possible."
+                )
             }
-            Self::Other(e) => format!("Doğrudan bağlantı kurulamadı: {e}"),
+            Self::Other(e) => tx!(
+                "Doğrudan bağlantı kurulamadı: {e}",
+                "Couldn't set up a direct connection: {e}"
+            ),
         }
     }
 }
@@ -144,7 +155,10 @@ pub async fn open(
     let gateway_ip = match gw.get_external_ip().await {
         Ok(IpAddr::V4(ip)) => ip,
         Ok(IpAddr::V6(_)) => {
-            return Err(DirectError::Other("modem IPv6 dış adres bildirdi".into()));
+            return Err(DirectError::Other(tx!(
+                "modem IPv6 dış adres bildirdi",
+                "the router reported an IPv6 external address"
+            )));
         }
         Err(e) => return Err(DirectError::Other(e.to_string())),
     };

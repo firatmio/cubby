@@ -1,3 +1,7 @@
+// `tx!` (iki dilli metin) bütün modüllerde görünsün diye ilk sırada.
+#[macro_use]
+mod i18n;
+
 mod auth;
 mod client;
 mod client_cmds;
@@ -109,10 +113,27 @@ fn handle_invite_urls(app: &AppHandle, urls: impl IntoIterator<Item = String>) {
     let _ = app.emit(EVENT_INVITE, ());
 }
 
+fn tray_menu<R: tauri::Runtime, M: Manager<R>>(app: &M) -> tauri::Result<Menu<R>> {
+    let open = MenuItem::with_id(app, "open", tx!("Aç", "Open"), true, None::<&str>)?;
+    let quit = MenuItem::with_id(
+        app,
+        "quit",
+        tx!("Tamamen kapat", "Quit"),
+        true,
+        None::<&str>,
+    )?;
+    Menu::with_items(app, &[&open, &quit])
+}
+
+/// Dil değişince tepsi menüsü yeni dille kurulur.
+pub(crate) fn refresh_tray(app: &AppHandle) {
+    if let (Some(tray), Ok(menu)) = (app.tray_by_id("main"), tray_menu(app)) {
+        let _ = tray.set_menu(Some(menu));
+    }
+}
+
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "Aç", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Tamamen kapat", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &quit])?;
+    let menu = tray_menu(app)?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("Cubby")
         .menu(&menu)

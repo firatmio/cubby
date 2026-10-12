@@ -8,7 +8,7 @@ type Props = Omit<HTMLMotionProps<"button">, "children"> & {
   /** Ekran okuyucu + üstte beliren ipucu. */
   label: string;
   size?: "sm" | "md" | "lg";
-  variant?: "solid" | "ghost";
+  variant?: "solid" | "ghost" | "bar_action";
   /** İpucu butonun altında mı görünsün (başlık çubuğu için). */
   tipBelow?: boolean;
 };

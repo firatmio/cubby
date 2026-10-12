@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ImageIcon, LogIn, Play, Plug, Puzzle, Settings2, Square, Users, Wrench } from "lucide-react";
 import type { Instance } from "../../lib/api";
+import { useT } from "../../i18n";
 import { launchHint } from "../../lib/launch";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -13,10 +14,6 @@ import styles from "./ActionBar.module.css";
 
 type StartMode = "start" | "join";
 
-const START_OPTIONS = [
-  { id: "join" as const, label: "Başlat ve katıl", icon: LogIn },
-  { id: "start" as const, label: "Başlat", icon: Play },
-];
 
 /** Dünya başına son seçilen başlatma şekli (tarayıcı deposu yoksa "Başlat ve katıl"). */
 function loadMode(id: string): StartMode {
@@ -39,6 +36,11 @@ function saveMode(id: string, mode: StartMode) {
  *  soldaki bilgi kartları sıkışmasın. */
 export function ActionBar({ instance }: { instance: Instance }) {
   const openSheet = useAppStore((s) => s.openSheet);
+  const t = useT().home;
+  const startOptions = [
+    { id: "join" as const, label: t.startAndJoin, icon: LogIn },
+    { id: "start" as const, label: t.start, icon: Play },
+  ];
   const launch = useAppStore((s) => s.launchResults[instance.id]);
   const setLaunchResult = useAppStore((s) => s.setLaunchResult);
   const control = useServerControl(instance);
@@ -65,11 +67,11 @@ export function ActionBar({ instance }: { instance: Instance }) {
           onClick={control.stop}
           className={styles.power}
         >
-          {status === "stopping" ? "Kapanıyor" : status === "starting" ? "Açılıyor…" : "Durdur"}
+          {status === "stopping" ? t.stopping : status === "starting" ? t.starting : t.stop}
         </Button>
       ) : (
         <SplitButton
-          options={START_OPTIONS}
+          options={startOptions}
           value={mode}
           loading={control.starting}
           className={styles.power}
@@ -81,17 +83,17 @@ export function ActionBar({ instance }: { instance: Instance }) {
         />
       )}
       <div className={styles.buttons}>
-        <IconButton icon={Users} label="Oyuncular" onClick={() => openSheet("players")} />
-        <IconButton icon={Settings2} label="Dünya ayarları" onClick={() => openSheet("world")} />
+        <IconButton icon={Users} label={t.players} onClick={() => openSheet("players")} />
+        <IconButton icon={Settings2} label={t.worldSettings} onClick={() => openSheet("world")} />
         {instance.loader !== "vanilla" && (
           <IconButton
             icon={instance.loader === "paper" ? Plug : Puzzle}
-            label={instance.loader === "paper" ? "Eklentiler" : "Modlar"}
+            label={instance.loader === "paper" ? t.plugins : t.mods}
             onClick={() => openSheet("mods")}
           />
         )}
-        <IconButton icon={ImageIcon} label="Kapak resmi" onClick={() => openSheet("cover")} />
-        <IconButton icon={Wrench} label="Gelişmiş" onClick={() => openSheet("advanced")} />
+        <IconButton icon={ImageIcon} label={t.cover} onClick={() => openSheet("cover")} />
+        <IconButton icon={Wrench} label={t.advanced} onClick={() => openSheet("advanced")} />
       </div>
       {control.dialogs}
     </div>

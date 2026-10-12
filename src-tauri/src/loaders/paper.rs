@@ -169,11 +169,19 @@ impl Loader for PaperLoader {
             Some(v) => builds.iter().find(|b| b.id.to_string() == v),
             None => recommend(&builds),
         }
-        .ok_or_else(|| AppError::msg(format!("{} için uygun Paper build'i yok", req.mc_version)))?;
-        let download = build
-            .downloads
-            .get(DOWNLOAD_KEY)
-            .ok_or_else(|| AppError::msg("Paper build'inde sunucu dosyası yok"))?;
+        .ok_or_else(|| {
+            AppError::msg(tx!(
+                "{} için uygun Paper build'i yok",
+                "No suitable Paper build for {}",
+                req.mc_version
+            ))
+        })?;
+        let download = build.downloads.get(DOWNLOAD_KEY).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Paper build'inde sunucu dosyası yok",
+                "The Paper build has no server file"
+            ))
+        })?;
         let java_major = self.java_major(req.mc_version).await?;
 
         download_file(

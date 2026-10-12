@@ -85,8 +85,9 @@ pub fn get_instance(app: AppHandle, id: String) -> AppResult<Instance> {
 fn validate_name(name: &str) -> AppResult<String> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > MAX_NAME_LEN {
-        return Err(AppError::msg(format!(
-            "İsim 1–{MAX_NAME_LEN} karakter olmalı"
+        return Err(AppError::msg(tx!(
+            "İsim 1–{MAX_NAME_LEN} karakter olmalı",
+            "Name must be 1–{MAX_NAME_LEN} characters"
         )));
     }
     Ok(name.to_string())
@@ -94,7 +95,10 @@ fn validate_name(name: &str) -> AppResult<String> {
 
 fn validate_ram(min: u32, max: u32) -> AppResult<()> {
     if min < MIN_RAM_MB || max < min {
-        return Err(AppError::msg("RAM değerleri geçersiz"));
+        return Err(AppError::msg(tx!(
+            "RAM değerleri geçersiz",
+            "Invalid memory values"
+        )));
     }
     Ok(())
 }
@@ -325,7 +329,10 @@ pub async fn delete_instance(
     id: String,
 ) -> AppResult<()> {
     if state.servers.snapshot(&id).status.is_active() {
-        return Err(AppError::msg("Çalışan sunucu silinemez, önce durdur"));
+        return Err(AppError::msg(tx!(
+            "Çalışan sunucu silinemez, önce durdur",
+            "A running server can't be deleted; stop it first"
+        )));
     }
     let dir = paths::instance_dir(&app, &id)?;
     if let Ok(inst) = instance::get(&app, &id) {
@@ -336,7 +343,12 @@ pub async fn delete_instance(
         tokio::task::spawn_blocking(move || trash::delete(target))
             .await
             .map_err(|e| AppError::msg(e.to_string()))?
-            .map_err(|e| AppError::msg(format!("Geri Dönüşüm Kutusu'na taşınamadı: {e}")))?;
+            .map_err(|e| {
+                AppError::msg(tx!(
+                    "Geri Dönüşüm Kutusu'na taşınamadı: {e}",
+                    "Couldn't move to the Recycle Bin: {e}"
+                ))
+            })?;
     }
     registry.remove(&id)
 }
@@ -404,16 +416,21 @@ pub async fn start_server(
     let inst = instance::get(&app, &id)?;
     let server_dir = paths::server_dir(&app, &id)?;
     if !eula_accepted(&server_dir) {
-        return Err(AppError::msg("EULA onaylanmadan sunucu başlatılamaz"));
+        return Err(AppError::msg(tx!(
+            "EULA onaylanmadan sunucu başlatılamaz",
+            "The server can't start until the EULA is accepted"
+        )));
     }
 
     let java = java
         .resolve(inst.java_path.as_deref(), inst.java_major)
         .await?
         .ok_or_else(|| {
-            AppError::msg(format!(
+            AppError::msg(tx!(
                 "Minecraft {} için Java {}+ bulunamadı. Ayarlar > Java'dan indirebilirsin.",
-                inst.mc_version, inst.java_major
+                "Java {1}+ for Minecraft {0} wasn't found. You can download it in Settings > Java.",
+                inst.mc_version,
+                inst.java_major
             ))
         })?;
 
@@ -486,13 +503,23 @@ fn open_dir(app: &AppHandle, dir: &Path) -> AppResult<()> {
         std::process::Command::new("explorer.exe")
             .arg(&path)
             .spawn()
-            .map_err(|e| AppError::msg(format!("Klasör açılamadı: {e}")))?;
+            .map_err(|e| {
+                AppError::msg(tx!(
+                    "Klasör açılamadı: {e}",
+                    "Couldn't open the folder: {e}"
+                ))
+            })?;
         Ok(())
     }
     #[cfg(not(windows))]
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
-        .map_err(|e| AppError::msg(format!("Klasör açılamadı: {e}")))
+        .map_err(|e| {
+            AppError::msg(tx!(
+                "Klasör açılamadı: {e}",
+                "Couldn't open the folder: {e}"
+            ))
+        })
 }
 
 #[tauri::command]
@@ -504,10 +531,12 @@ pub fn open_instance_dir(app: AppHandle, id: String) -> AppResult<()> {
 #[tauri::command]
 pub fn open_content_dir(app: AppHandle, state: State<'_, AppState>, id: String) -> AppResult<()> {
     let inst = instance::get(&app, &id)?;
-    let sub = state
-        .loaders
-        .content_dir(inst.loader)
-        .ok_or_else(|| AppError::msg("Bu sunucu türünde mod/plugin klasörü yok"))?;
+    let sub = state.loaders.content_dir(inst.loader).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Bu sunucu türünde mod/plugin klasörü yok",
+            "This server type has no mods/plugins folder"
+        ))
+    })?;
     open_dir(&app, &paths::server_dir(&app, &id)?.join(sub))
 }
 
@@ -607,6 +636,8 @@ pub async fn set_instance_java(
 #[serde(rename_all = "camelCase")]
 pub struct SettingsView {
     settings: AppSettings,
+    /// Etkin dil (ayar `None` ise bilgisayarın dili).
+    language: crate::i18n::Lang,
     /// Ayarda klasör yoksa kullanılan varsayılan.
     minecraft_dir: Option<String>,
     screenshots_found: bool,
@@ -616,6 +647,7 @@ pub struct SettingsView {
 pub fn get_settings(store: State<'_, SettingsStore>) -> SettingsView {
     let shots = store.screenshots_dir();
     SettingsView {
+        language: store.lang(),
         settings: store.get(),
         minecraft_dir: store
             .minecraft_dir()
@@ -631,7 +663,11 @@ pub fn update_settings(
     settings: AppSettings,
 ) -> AppResult<SettingsView> {
     let turned_on = settings.client_sync && !store.get().client_sync;
+    let lang_changed = settings.language != store.get().language;
     store.set(settings)?;
+    if lang_changed {
+        crate::refresh_tray(&app);
+    }
     // "Modları kendi Minecraft'ıma da kur" yeni açıldıysa modlu dünyalar hemen eşitlensin.
     if turned_on {
         for inst in instance::list(&app) {
@@ -675,7 +711,11 @@ pub(crate) fn server_port(server_dir: &Path, fallback: u16) -> u16 {
 pub fn lan_address(app: AppHandle, id: String) -> AppResult<String> {
     let inst = instance::get(&app, &id)?;
     let port = server_port(&paths::server_dir(&app, &id)?, inst.port);
-    let ip =
-        local_ip_address::local_ip().map_err(|_| AppError::msg("Yerel ağ adresi bulunamadı"))?;
+    let ip = local_ip_address::local_ip().map_err(|_| {
+        AppError::msg(tx!(
+            "Yerel ağ adresi bulunamadı",
+            "Local network address not found"
+        ))
+    })?;
     Ok(format!("{ip}:{port}"))
 }

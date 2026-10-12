@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { getT } from "../i18n";
 import type { ServerStatus } from "../lib/api";
 import styles from "./Badge.module.css";
 
@@ -8,13 +9,9 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
   return <span className={[styles.badge, styles[tone]].join(" ")}>{children}</span>;
 }
 
-export const STATUS_LABELS: Record<ServerStatus, string> = {
-  stopped: "Kapalı",
-  starting: "Açılıyor",
-  running: "Açık",
-  stopping: "Kapanıyor",
-  crashed: "Beklenmedik şekilde kapandı",
-};
+export function statusLabel(status: ServerStatus): string {
+  return getT().status[status];
+}
 
 export function StatusDot({ status }: { status: ServerStatus }) {
   return <span className={[styles.dot, styles[status]].join(" ")} aria-hidden />;

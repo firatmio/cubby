@@ -91,9 +91,12 @@ pub struct JoinManager {
 }
 
 fn host_id(w: &JoinedWorld) -> AppResult<EndpointId> {
-    w.host
-        .parse()
-        .map_err(|_| AppError::msg("Davet bozuk: arkadaşının kimliği okunamadı."))
+    w.host.parse().map_err(|_| {
+        AppError::msg(tx!(
+            "Davet bozuk: arkadaşının kimliği okunamadı.",
+            "Broken invite: couldn't read your friend's ID."
+        ))
+    })
 }
 
 /// Ping sonucunu arayüz durumuna çevirir.
@@ -122,7 +125,10 @@ pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
             reachable: Some(true),
             running: false,
             path: None,
-            error: Some("Davet artık geçerli değil. Arkadaşından yeni bir davet iste.".into()),
+            error: Some(tx!(
+                "Davet artık geçerli değil. Arkadaşından yeni bir davet iste.",
+                "This invite is no longer valid. Ask your friend for a new one."
+            )),
             mods_rev: None,
         },
         Err(_) => JoinStatus {
@@ -140,7 +146,12 @@ fn free_port(taken: &[u16]) -> AppResult<u16> {
     PORTS
         .filter(|p| !taken.contains(p))
         .find(|p| std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, *p)).is_ok())
-        .ok_or_else(|| AppError::msg("Bağlantı için boş port bulunamadı."))
+        .ok_or_else(|| {
+            AppError::msg(tx!(
+                "Bağlantı için boş port bulunamadı.",
+                "No free port found for the connection."
+            ))
+        })
 }
 
 impl JoinManager {
@@ -180,7 +191,12 @@ impl JoinManager {
             .iter()
             .find(|w| w.id == id)
             .cloned()
-            .ok_or_else(|| AppError::msg("Bu dünya listede yok."))
+            .ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Bu dünya listede yok.",
+                    "This world isn't in the list."
+                ))
+            })
     }
 
     pub async fn status(&self, id: &str) -> JoinStatus {
@@ -241,7 +257,7 @@ impl JoinManager {
         let result = match host_id(w) {
             Ok(host) => tokio::time::timeout(PING_TIMEOUT, self.p2p.ping(host, &w.world, &w.token))
                 .await
-                .unwrap_or_else(|_| Err(AppError::msg("zaman aşımı"))),
+                .unwrap_or_else(|_| Err(AppError::msg(tx!("zaman aşımı", "timed out")))),
             Err(e) => Err(e),
         };
         let mut status = status_from(result);
@@ -280,8 +296,9 @@ impl JoinManager {
             Ok(l) => l,
             Err(_) => {
                 let status = JoinStatus {
-                    error: Some(format!(
+                    error: Some(tx!(
                         "Port {} başka bir program tarafından kullanılıyor; dünyayı kaldırıp yeniden katıl.",
+                        "Port {} is used by another program; remove the world and join again.",
                         w.local_port
                     )),
                     ..Default::default()
@@ -369,10 +386,12 @@ impl JoinManager {
         f: impl FnOnce(&mut JoinedWorld),
     ) -> AppResult<JoinedWorld> {
         let mut worlds = self.worlds.lock().await;
-        let w = worlds
-            .iter_mut()
-            .find(|w| w.id == id)
-            .ok_or_else(|| AppError::msg("Bu dünya listede yok."))?;
+        let w = worlds.iter_mut().find(|w| w.id == id).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Bu dünya listede yok.",
+                "This world isn't in the list."
+            ))
+        })?;
         f(w);
         let out = w.clone();
         self.save(&worlds).await?;
@@ -381,10 +400,12 @@ impl JoinManager {
 
     pub async fn remove(&self, id: &str) -> AppResult<JoinedWorld> {
         let mut worlds = self.worlds.lock().await;
-        let index = worlds
-            .iter()
-            .position(|w| w.id == id)
-            .ok_or_else(|| AppError::msg("Bu dünya listede yok."))?;
+        let index = worlds.iter().position(|w| w.id == id).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Bu dünya listede yok.",
+                "This world isn't in the list."
+            ))
+        })?;
         let removed = worlds.remove(index);
         self.save(&worlds).await?;
         drop(worlds);

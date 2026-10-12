@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ChevronRight, SendHorizontal } from "lucide-react";
+import { useT } from "../../i18n";
 import { api, errorMessage, type LogLine, type ServerStatus } from "../../lib/api";
 import { Button } from "../../ui/Button";
 import styles from "./ConsoleTab.module.css";
@@ -27,6 +28,7 @@ export function ConsoleTab({ id, status, logs }: Props) {
   const historyIndex = useRef(-1);
   const [command, setCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   const canSend = status === "running" || status === "starting";
 
@@ -78,7 +80,7 @@ export function ConsoleTab({ id, status, logs }: Props) {
       <div ref={logRef} className={styles.log} onScroll={onScroll}>
         {logs.length === 0 ? (
           <p className={styles.empty}>
-            {status === "stopped" ? "Sunucu kapalı. Başlat'a bastığında kayıtlar burada akacak." : "Bekleniyor…"}
+            {status === "stopped" ? t.instance.consoleStopped : t.instance.waiting}
           </p>
         ) : (
           logs.map((l, i) => (
@@ -99,10 +101,10 @@ export function ConsoleTab({ id, status, logs }: Props) {
           disabled={!canSend}
           spellCheck={false}
           autoComplete="off"
-          placeholder={canSend ? "Komut yaz (say merhaba, list, op <oyuncu>)" : "Sunucu kapalıyken komut gönderilemez"}
+          placeholder={canSend ? t.instance.commandPlaceholder : t.instance.commandDisabled}
         />
         <Button type="submit" variant="ghost" size="sm" icon={SendHorizontal} disabled={!canSend || !command.trim()}>
-          Gönder
+          {t.instance.send}
         </Button>
       </form>
     </div>

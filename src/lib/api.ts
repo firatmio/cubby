@@ -67,6 +67,8 @@ export interface AppSettings {
   eulaAccepted: boolean;
   /** Modlu dünyaların oyuncuda gereken modları kendi Minecraft'ıma da kurulsun */
   clientSync: boolean;
+  /** "tr" / "en"; null = bilgisayarın dili */
+  language: "tr" | "en" | null;
 }
 
 export type Launcher = "official" | "tLauncher";
@@ -278,6 +280,8 @@ export interface PropertiesView {
 
 export interface SettingsView {
   settings: AppSettings;
+  /** Etkin dil (ayar ya da bilgisayarın dili) */
+  language: "tr" | "en";
   /** Kullanılan Minecraft klasörü (ayar ya da varsayılan) */
   minecraftDir: string | null;
   screenshotsFound: boolean;
@@ -554,9 +558,21 @@ export function openExternal(url: string) {
   openUrl(url).catch(console.error);
 }
 
-/** Rust hataları string olarak gelir. */
-export function errorMessage(e: unknown): string {
+/** Bazı Rust hataları arayüzün tanıdığı bir kodla başlar: `[NOT_APPROVED] …`. */
+const CODE = /^\[([A-Z_]+)\] /;
+
+function rawError(e: unknown): string {
   if (typeof e === "string") return e;
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+/** Rust hataları string olarak gelir; varsa kod öneki atılır. */
+export function errorMessage(e: unknown): string {
+  return rawError(e).replace(CODE, "");
+}
+
+/** Hatanın kodu (`NOT_APPROVED` gibi); kodsuz hatalarda null. */
+export function errorCode(e: unknown): string | null {
+  return CODE.exec(rawError(e))?.[1] ?? null;
 }

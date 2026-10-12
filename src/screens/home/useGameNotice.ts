@@ -1,4 +1,5 @@
 import { api } from "../../lib/api";
+import { useT } from "../../i18n";
 import { progressHint } from "../../lib/launch";
 import { useAppStore } from "../../store/appStore";
 
@@ -15,12 +16,13 @@ export function useGameNotice(): GameNotice | null {
   const progress = useAppStore((s) => s.gameProgress);
   const crash = useAppStore((s) => s.gameCrash);
   const setGameCrash = useAppStore((s) => s.setGameCrash);
+  const t = useT().launch;
   if (progress) return { tone: "info", text: progressHint(progress) };
   if (crash !== null) {
     return {
       tone: "error",
-      text: `Minecraft beklenmedik şekilde kapandı (kod ${crash}).`,
-      action: { label: "Günlüğü aç", run: () => void api.openGameLog().catch(console.error) },
+      text: t.crashed(crash),
+      action: { label: t.openLog, run: () => void api.openGameLog().catch(console.error) },
       dismiss: () => setGameCrash(null),
     };
   }

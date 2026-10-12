@@ -95,7 +95,7 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null };
 
 const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
@@ -771,7 +771,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       byId(args.id).javaPath = args.path;
       return { ...byId(args.id) };
     case "get_settings":
-      return { settings, minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true };
+      return { settings, language: settings.language ?? (navigator.language.startsWith("tr") ? "tr" : "en"), minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true };
     case "update_settings":
       settings = args.settings;
       return mockInvoke("get_settings");

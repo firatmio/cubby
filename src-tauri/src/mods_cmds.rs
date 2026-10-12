@@ -51,7 +51,12 @@ fn ctx(app: &AppHandle, state: &AppState, id: &str) -> AppResult<Ctx> {
         .loaders
         .content_dir(inst.loader)
         .filter(|_| inst.loader != LoaderKind::Vanilla)
-        .ok_or_else(|| AppError::msg("Saf Minecraft dünyalarına mod kurulamaz."))?;
+        .ok_or_else(|| {
+            AppError::msg(tx!(
+                "Saf Minecraft dünyalarına mod kurulamaz.",
+                "Mods can't be installed on vanilla worlds."
+            ))
+        })?;
     Ok(Ctx {
         meta: paths::instance_dir(app, id)?.join(META_DIR),
         content: paths::server_dir(app, id)?.join(sub),
@@ -303,8 +308,9 @@ pub async fn mods_install(
             .into_iter()
             .map(|n| n.title)
             .collect();
-        return Err(AppError::msg(format!(
+        return Err(AppError::msg(tx!(
             "Bu mod kurulu olan şununla uyumsuz: {}. Önce onu kaldır.",
+            "This mod is incompatible with an installed one: {}. Remove that first.",
             list.join(", ")
         )));
     }
@@ -471,11 +477,12 @@ pub async fn mods_remove(
 ) -> AppResult<Vec<InstalledView>> {
     let _guard = OPS.lock().await;
     let c = ctx(&app, &state, &id)?;
-    let name =
-        mods::sanitize_filename(&file).ok_or_else(|| AppError::msg("Geçersiz dosya adı."))?;
+    let name = mods::sanitize_filename(&file)
+        .ok_or_else(|| AppError::msg(tx!("Geçersiz dosya adı.", "Invalid file name.")))?;
     let path = c.content.join(&name);
     if path.exists() {
-        trash::delete(&path).map_err(|e| AppError::msg(format!("Kaldırılamadı: {e}")))?;
+        trash::delete(&path)
+            .map_err(|e| AppError::msg(tx!("Kaldırılamadı: {e}", "Couldn't remove: {e}")))?;
     }
     let records: Vec<ModRecord> = mods::load_records(&c.meta)
         .into_iter()
@@ -500,7 +507,10 @@ async fn update_one(
         .find(|r| r.file == file)
         .cloned()
         .ok_or_else(|| {
-            AppError::msg("Bu dosya Modrinth'te tanınmadı; elle güncellemen gerekiyor.")
+            AppError::msg(tx!(
+                "Bu dosya Modrinth'te tanınmadı; elle güncellemen gerekiyor.",
+                "Modrinth doesn't recognize this file; you'll need to update it by hand."
+            ))
         })?;
     let latest = api
         .latest_for(

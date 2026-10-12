@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
-import { KIND_LABELS, LOADER_LABELS, formatBytesMb, isModded } from "../../lib/format";
+import { getT, useT } from "../../i18n";
+import { LOADER_LABELS, formatBytesMb, isModded, kindLabel } from "../../lib/format";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
@@ -10,14 +11,11 @@ import { Toggle } from "../../ui/Toggle";
 import styles from "./JoinDialog.module.css";
 
 function hostLine(s: JoinStatus): { ok: boolean; text: string } {
+  const t = getT().join;
   if (s.error) return { ok: false, text: s.error };
-  if (s.reachable === false)
-    return { ok: false, text: "Arkadaşının bilgisayarına şu an ulaşılamıyor. Yine de ekleyebilirsin; uygulaması açılınca bağlanır." };
-  if (!s.running) return { ok: true, text: "Arkadaşının uygulaması açık, dünyası şu an kapalı. Açınca girebilirsin." };
-  return {
-    ok: true,
-    text: s.path === "relay" ? "Dünya açık · aracı sunucu üzerinden bağlanılacak" : "Dünya açık · doğrudan bağlanılacak",
-  };
+  if (s.reachable === false) return { ok: false, text: t.unreachable };
+  if (!s.running) return { ok: true, text: t.worldClosed };
+  return { ok: true, text: s.path === "relay" ? t.openRelay : t.openDirect };
 }
 
 function Item({ ok, children }: { ok: boolean; children: React.ReactNode }) {
@@ -56,6 +54,8 @@ export function JoinDialog() {
   const [withRecommended, setWithRecommended] = useState(true);
   const progress = useAppStore((s) => s.joinProgress);
   const setJoinProgress = useAppStore((s) => s.setJoinProgress);
+  const tt = useT();
+  const t = tt.join;
 
   const check = useCallback(async (value: string) => {
     if (!value.trim()) return;
@@ -102,25 +102,25 @@ export function JoinDialog() {
 
   return (
     <Dialog
-      title={preview ? preview.name : "Arkadaşının dünyasına katıl"}
+      title={preview ? preview.name : t.title}
       actions={
         <>
           <Button variant="ghost" onClick={close}>
-            İptal
+            {t.cancel}
           </Button>
           {preview ? (
             preview.minecraftRunning ? (
               <Button icon={RotateCcw} loading={busy} onClick={() => check(code)}>
-                Tekrar kontrol et
+                {t.recheck}
               </Button>
             ) : (
               <Button variant="primary" loading={busy} disabled={!canJoin} onClick={join}>
-                Katıl
+                {t.join}
               </Button>
             )
           ) : (
             <Button variant="primary" loading={busy} disabled={!code.trim()} onClick={() => check(code)}>
-              Devam
+              {t.next}
             </Button>
           )}
         </>
@@ -128,7 +128,7 @@ export function JoinDialog() {
     >
       {!preview ? (
         <>
-          <p>Arkadaşının gönderdiği davet linkini ya da kodunu yapıştır.</p>
+          <p>{t.pasteHint}</p>
           <textarea
             className={styles.code}
             value={code}
@@ -143,45 +143,45 @@ export function JoinDialog() {
           />
           {busy && (
             <p className={styles.checking}>
-              <Loader2 size={15} className={styles.spin} aria-hidden /> Arkadaşının bilgisayarına ulaşılıyor…
+              <Loader2 size={15} className={styles.spin} aria-hidden /> {t.reaching}
             </p>
           )}
         </>
       ) : (
         <>
           <p className={styles.caption}>
-            {KIND_LABELS[preview.loader]} dünya · Minecraft {preview.mcVersion}
+            {tt.kind.caption(kindLabel(preview.loader), preview.mcVersion)}
           </p>
           {preview.own ? (
             <ul className={styles.list}>
-              <Item ok={false}>Bu senin kendi dünyan; davet arkadaşın için.</Item>
+              <Item ok={false}>{t.own}</Item>
             </ul>
           ) : (
             <ul className={styles.list}>
               <Item ok={hostLine(preview.status).ok}>{hostLine(preview.status).text}</Item>
               {preview.minecraftDir ? (
                 <Item ok>
-                  Minecraft'ın Çok Oyunculu listesine {preview.alreadyJoined ? "güncellenecek" : "eklenecek"}: <b>{preview.name}</b>
+                  {preview.alreadyJoined ? t.listUpdate : t.listAdd} <b>{preview.name}</b>
                 </Item>
               ) : (
                 <Item ok={false}>
-                  Minecraft klasörü bulunamadı.{" "}
+                  {t.noMcDir}{" "}
                   <button type="button" className={styles.link} onClick={() => openSheet("settings")}>
-                    Ayarlar'dan seç
+                    {t.pickInSettings}
                   </button>
                 </Item>
               )}
               {!isModded(preview.loader) &&
                 (preview.versionInstalled ? (
-                  <Item ok>Gereken sürüm kurulu ({preview.requiredVersion})</Item>
+                  <Item ok>{t.versionInstalled(preview.requiredVersion)}</Item>
                 ) : (
-                  <Item ok={false}>Minecraft {preview.mcVersion} sürümünü Launcher bir kez indirecek; ilk açılış biraz sürebilir.</Item>
+                  <Item ok={false}>{t.versionDownload(preview.mcVersion)}</Item>
                 ))}
               {isModded(preview.loader) && preview.mods && (
                 <>
                   {preview.mods.required.length > 0 && (
                     <Item ok={false}>
-                      Bu dünyaya girmek için şu modlar gerekiyor, Katıl'a basınca kurulacak:
+                      {t.requiredMods}
                       <ModList items={preview.mods.required} />
                     </Item>
                   )}
@@ -190,35 +190,31 @@ export function JoinDialog() {
                       <Toggle
                         checked={withRecommended}
                         onChange={setWithRecommended}
-                        label={`Önerilen modları da kur (${preview.mods.recommended.length})`}
-                        description="Sunucuda en iyi deneyim için önerilir: ekranlar, tuşlar ya da tarif listesi gibi özellikler ancak sende de kuruluysa görünür. Kurmadan da girebilirsin."
+                        label={t.recommendedMods(preview.mods.recommended.length)}
+                        description={t.recommendedText}
                       />
                       {withRecommended && <ModList items={preview.mods.recommended} />}
                     </li>
                   )}
                   {(preview.mods.required.length > 0 || (withRecommended && preview.mods.recommended.length > 0)) && (
                     <Item ok>
-                      {LOADER_LABELS[preview.loader]} {preview.loaderVersion} kurulacak
                       {preview.mods.launcher === "tLauncher"
-                        ? "; modlar TLauncher'ın mods klasörüne konacak"
-                        : ` ve Launcher'da "${preview.name} · Cubby" profili oluşturulacak`}
-                      .
+                        ? t.loaderTLauncher(`${LOADER_LABELS[preview.loader]} ${preview.loaderVersion ?? ""}`.trim())
+                        : t.loaderProfile(`${LOADER_LABELS[preview.loader]} ${preview.loaderVersion ?? ""}`.trim(), preview.name)}
                     </Item>
                   )}
                   {preview.mods.required.length === 0 && preview.mods.recommended.length === 0 && (
-                    <Item ok>Gereken modlar sende zaten kurulu.</Item>
+                    <Item ok>{t.modsInstalled}</Item>
                   )}
                 </>
               )}
               {isModded(preview.loader) && !preview.mods && (
                 <Item ok={false}>
-                  {preview.modsError
-                    ? `Mod listesi alınamadı: ${preview.modsError}`
-                    : "Modlar, arkadaşının uygulamasına ulaşılınca kontrol edilecek."}
+                  {preview.modsError ? t.modsError(preview.modsError) : t.modsLater}
                 </Item>
               )}
               {preview.minecraftRunning && (
-                <Item ok={false}>Minecraft açık. Kapatmazsan eklediğimiz kayıt silinebilir; oyunu kapatıp tekrar kontrol et.</Item>
+                <Item ok={false}>{t.mcRunning}</Item>
               )}
             </ul>
           )}
@@ -227,12 +223,12 @@ export function JoinDialog() {
               <Progress value={progress.count ? (progress.index - 1) / progress.count : null} />
               <span>
                 {progress.index === 0
-                  ? `${progress.title} kuruluyor; birkaç dakika sürebilir…`
-                  : `${progress.title} kuruluyor · ${progress.index}/${progress.count}`}
+                  ? t.installingLong(progress.title)
+                  : t.installingStep(progress.title, progress.index, progress.count)}
               </span>
             </div>
           )}
-          <p className={styles.note}>Oynarken bu uygulama açık kalmalı; pencereyi kapatınca simge durumunda çalışmaya devam eder.</p>
+          <p className={styles.note}>{t.keepOpen}</p>
         </>
       )}
       {error && <p className={styles.error}>{error}</p>}

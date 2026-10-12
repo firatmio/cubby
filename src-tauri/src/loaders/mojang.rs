@@ -118,9 +118,12 @@ impl MojangApi {
     /// Sürüm JSON'unu indirir ve manifest'teki sha1 ile doğrular (ham hali; istemci başlatma için).
     pub async fn version_json(&self, mc_version: &str) -> AppResult<Vec<u8>> {
         let m = self.manifest().await?;
-        let entry = m
-            .entry(mc_version)
-            .ok_or_else(|| AppError::msg(format!("Sürüm bulunamadı: {mc_version}")))?;
+        let entry = m.entry(mc_version).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Sürüm bulunamadı: {mc_version}",
+                "Version not found: {mc_version}"
+            ))
+        })?;
         let bytes = self
             .http
             .get(&entry.url)
@@ -159,7 +162,10 @@ impl MojangApi {
     ) -> AppResult<u32> {
         let detail = self.version_detail(mc_version).await?;
         let server = detail.downloads.server.as_ref().ok_or_else(|| {
-            AppError::msg(format!("{mc_version} sürümünün resmi sunucu dosyası yok"))
+            AppError::msg(tx!(
+                "{mc_version} sürümünün resmi sunucu dosyası yok",
+                "{mc_version} has no official server file"
+            ))
         })?;
         download_file(
             &self.http,

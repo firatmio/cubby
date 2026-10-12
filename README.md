@@ -1,58 +1,66 @@
 # Cubby
 
-Arkadaşlarınla kendi Minecraft dünyan: terminalle uğraşmadan Java sunucusu kurar, yönetir, arkadaşlarını davet eder ve oyunu doğrudan dünyada açar.
-Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPEC.md).
+**English** · [Türkçe](README.tr.md)
 
-## Durum
+Your own Minecraft world with your friends: Cubby sets up and runs a Java server without any terminal work, invites your friends, and opens the game straight into the world.
+Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](SPEC.md).
 
-- [x] **M1** — Pixel UI temeli, Vanilla sunucu indirme (sha1 doğrulamalı), başlat/durdur, canlı konsol, CPU/RAM
-- [x] **M2** — Loader mimarisi, Fabric + Paper (Fill v3), loader sürümü seçimi, yeniden adlandırma / RAM / silme (Geri Dönüşüm Kutusu), sunucu başına konum
-- [x] **M3** — Java tespiti (PATH, JAVA_HOME, kayıt defteri, yaygın dizinler, Minecraft Launcher runtime'ları) + Adoptium'dan taşınabilir JRE, sunucu başına Java seçimi
-- [x] **Konsol tarzı arayüz** — özel başlık çubuğu, sabit 1200×720 pencere, koyu tema, dünya kutucukları; her dünyanın arka planı o dünyada çekilen oyun içi ekran görüntüsü (F2), oyuncu listesi, LAN davet adresi
-- [x] **M4** — Dünya ayarları (önemli alanlar + tüm `server.properties` tablosu), tek seferlik EULA, TLauncher (premium olmayan) modu, beyaz liste (kurulumda da), yetkililer, oyuncu atma, giremeyenlere tek tıkla izin, kapak = sunucu simgesi, MOTD = dünya adı
-- [x] **M5** — İnternetten katılım: dünya başına "İnternete aç", modemde otomatik port açma (UPnP) ve CGNAT tespiti; modem izin vermiyorsa neden ve çözüm sade dille gösterilir
-- [x] **M6** — NeoForge, Forge (1.17+) ve Quilt: resmi installer'lar Java ile çalıştırılır (hash doğrulamalı), sürüm listeleri ve önerilen sürümler, mod mağazası her altyapı için; "Modlar oyuncunun Minecraft'ına da" akışı NeoForge/Forge istemcisini de kurar
-- [x] **M7a** — Katıl modu: davet linki/kodu (`cubby://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
-- [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
-- [x] **M7b** — Modlar oyuncunun Minecraft'ına da: modlu dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
-- [x] **Başlat ve katıl** — Başlat'ın yanındaki menüden: sunucu açılınca Minecraft Launcher dünyanın profili seçili açılır, Oyna'ya basınca oyun doğrudan dünyaya bağlanır (Quick Play, 1.20+); arkadaşın tarafındaki "Oyna" da aynı
-- [~] **M9** — Oyunu Launcher'sız açma: Microsoft girişi (PKCE, tarayıcıda; yenileme anahtarı Windows Kimlik Bilgisi Yöneticisi'nde), oyunun dosyaları `.minecraft`'la paylaşılarak hash doğrulamalı indirilir, oyun Quick Play ile doğrudan dünyada açılır (vanilla ve NeoForge 26.3'te canlı doğrulandı). Microsoft girişinin son adımı **Mojang onayı bekliyor**: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md). Onaya kadar ve girişsiz oyuncularda Launcher'lı akış çalışır
+## Status
 
-Bütün milestone'lar bitti; sırada isim, web katılım sayfası ve yayın hazırlığı var.
+- [x] **M1** — Pixel UI foundation, vanilla server download (sha1-verified), start/stop, live console, CPU/RAM
+- [x] **M2** — Loader architecture, Fabric + Paper (Fill v3), loader version picker, rename / RAM / delete (Recycle Bin), per-server location
+- [x] **M3** — Java detection (PATH, JAVA_HOME, registry, common folders, Minecraft Launcher runtimes) + portable JRE from Adoptium, per-server Java choice
+- [x] **Console-style UI** — custom title bar, fixed 1200×720 window, dark theme, world tiles; each world's background is an in-game screenshot (F2) taken in that world, player list, LAN invite address
+- [x] **M4** — World settings (key fields + the full `server.properties` table), one-time EULA, TLauncher (non-premium) mode, whitelist (also during setup), operators, kicking players, one-click allow for players who couldn't join, cover = server icon, MOTD = world name
+- [x] **M5** — Joining over the internet: per-world "Open to internet", automatic port opening on the router (UPnP) and CGNAT detection; if the router won't allow it, the reason and the fix are explained in plain words
+- [x] **M6** — NeoForge, Forge (1.17+) and Quilt: official installers run with Java (hash-verified), version lists and recommended versions, a mod store for every loader; "Mods in the player's Minecraft too" also installs the NeoForge/Forge client
+- [x] **M7a** — Join mode: invite link/code (`cubby://join?d=…`), direct app-to-app connection (iroh, with a relay fallback), confirmation dialog, automatic entry in Minecraft's server list, version warning, running in the background (tray)
+- [x] **M8** — Mod/plugin store (Modrinth): search, categories, version-matched installs, dependencies handled automatically, updates, installed-mods list (manually added mods are recognized by hash)
+- [x] **M7b** — Mods in the player's Minecraft too: for modded worlds, mods that players need or are recommended are installed into your own Minecraft with a per-world Launcher profile (can be turned off in Settings; TLauncher uses the shared `mods` folder). When joining, missing mods are checked: required ones are installed, recommended ones are optional; from Modrinth or from your friend's app (hash-verified). "Update" when your friend changes their mods
+- [x] **Start and join** — from the menu next to Start: once the server is up, the Minecraft Launcher opens with the world's profile selected and Play connects straight to the world (Quick Play, 1.20+); "Play" on your friend's side does the same
+- [~] **M9** — Launching without the Launcher: Microsoft sign-in (PKCE in the browser; the refresh token lives in Windows Credential Manager), game files are downloaded hash-verified while sharing `.minecraft`, and the game opens straight into the world with Quick Play (verified live with vanilla and NeoForge 26.3). The last step of Microsoft sign-in is **waiting for Mojang's approval**: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md) (Turkish). Until then, and for players who aren't signed in, the Launcher flow is used
+- [x] **English** — UI and error messages in Turkish and English; follows the computer's language on first launch, changeable in Settings > Language
 
-**Sonra:**
-- Web katılım sayfası (uygulamanın adı belli olunca, yayın hazırlığıyla birlikte)
+All milestones are done; next up are a web join page and release preparation.
 
-**Fikir aşamasında:**
-- Dünya yedekleme: Google hesabı bağlayıp Google Drive'a otomatik yedek
-- Premium hesapla kendi sunucumuzda (VDS) yedekleme
+**Next:**
+- Web join page (together with release preparation)
 
-## Geliştirme
+**Ideas:**
+- World backups: connect a Google account and back up to Google Drive automatically
+- Backups on our own server (VDS) with a premium account
 
-Gerekenler: [bun](https://bun.sh), Rust (stable), Windows'ta WebView2. Sunucuyu çalıştırmak için
-Java gerekmez: uygun sürüm bulunamazsa uygulama Eclipse Temurin JRE'yi kendi klasörüne indirir.
+## Development
+
+Requirements: [bun](https://bun.sh), Rust (stable), WebView2 on Windows. Java isn't needed to run
+servers: if no suitable version is found, the app downloads an Eclipse Temurin JRE into its own folder.
 
 ```bash
 bun install
 bun run tauri dev
 ```
 
-Arayüzü Tauri olmadan, sahte verilerle görmek için `bun run dev` çalıştırıp tarayıcıda
-`http://localhost:1420` açılabilir (yalnız geliştirme modunda; `src/lib/mock.ts`).
+To see the UI without Tauri, using mock data, run `bun run dev` and open
+`http://localhost:1420` in a browser (development mode only; `src/lib/mock.ts`).
 
-Testler ve kontroller:
+Tests and checks:
 
 ```bash
 cd src-tauri && cargo test && cargo clippy --all-targets
 bun run build
 ```
 
-Canlı testler (Mojang, Fabric, Paper, NeoForge, Forge, Quilt, Adoptium JRE): `cargo test -- --ignored live_install`; bu makinedeki Java'ları listelemek için `cargo test -- --ignored live_scan --nocapture`
+Live tests (Mojang, Fabric, Paper, NeoForge, Forge, Quilt, Adoptium JRE): `cargo test -- --ignored live_install`; to list the Java installs on this machine: `cargo test -- --ignored live_scan --nocapture`
 
-## Veri konumu
+### Translations
 
-Varsayılan olarak sunucular uygulama veri dizininde tutulur:
-`%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}`. (Eski `com.firatmio.mc-server-launcher` klasörü ilk açılışta buraya taşınır.)
-Sihirbazda başka bir klasör seçilebilir; hangi sunucunun nerede olduğu `instances.json` kaydında durur.
+UI text lives in `src/i18n/tr.ts` (the source dictionary) and `src/i18n/en.ts`; a missing key in `en.ts` fails `tsc`.
+Rust messages use `tx!("Türkçe", "English")` side by side (`src-tauri/src/i18n.rs`).
 
-Asset lisansları: [ASSETS.md](ASSETS.md).
+## Data location
+
+By default, servers are kept in the app data folder:
+`%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}`. (The old `com.firatmio.mc-server-launcher` folder is moved here on first launch.)
+A different folder can be chosen in the setup wizard; which server lives where is recorded in `instances.json`.
+
+Asset licenses: [ASSETS.md](ASSETS.md).

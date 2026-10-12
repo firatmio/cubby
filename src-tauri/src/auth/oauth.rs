@@ -74,18 +74,39 @@ pub fn parse_callback(request_line: &str, state: &str) -> Option<Result<String, 
     }
     let code = get("code")?;
     if get("state").as_deref() != Some(state) {
-        return Some(Err("Giriş isteği eşleşmedi.".into()));
+        return Some(Err(tx!(
+            "Giriş isteği eşleşmedi.",
+            "The sign-in request didn't match."
+        )));
     }
     Some(Ok(code))
 }
 
-const PAGE_OK: &str = "<!doctype html><meta charset=utf-8><title>Giriş tamam</title>\
+/// Tarayıcıda, yönlendirmeden sonra görünen küçük sayfa.
+fn result_page(ok: bool) -> String {
+    let (title, text) = if ok {
+        (
+            tx!("Giriş tamam", "Signed in"),
+            tx!(
+                "Bu sekmeyi kapatıp uygulamaya dönebilirsin.",
+                "You can close this tab and go back to the app."
+            ),
+        )
+    } else {
+        (
+            tx!("Giriş olmadı", "Sign-in failed"),
+            tx!(
+                "Uygulamaya dönüp tekrar deneyebilirsin.",
+                "Go back to the app and try again."
+            ),
+        )
+    };
+    format!(
+        "<!doctype html><meta charset=utf-8><title>{title}</title>\
 <body style=\"font-family:system-ui;background:#1b1b1b;color:#eee;display:grid;place-items:center;height:100vh;margin:0\">\
-<div style=\"text-align:center\"><h2>Giriş tamam</h2><p>Bu sekmeyi kapatıp uygulamaya dönebilirsin.</p></div>";
-
-const PAGE_FAIL: &str = "<!doctype html><meta charset=utf-8><title>Giriş olmadı</title>\
-<body style=\"font-family:system-ui;background:#1b1b1b;color:#eee;display:grid;place-items:center;height:100vh;margin:0\">\
-<div style=\"text-align:center\"><h2>Giriş olmadı</h2><p>Uygulamaya dönüp tekrar deneyebilirsin.</p></div>";
+<div style=\"text-align:center\"><h2>{title}</h2><p>{text}</p></div>"
+    )
+}
 
 /// Yönlendirmeyi bekler; favicon gibi ilgisiz istekleri geçer.
 pub async fn wait_for_code(listener: TcpListener, state: &str) -> AppResult<String> {
@@ -104,19 +125,29 @@ pub async fn wait_for_code(listener: TcpListener, state: &str) -> AppResult<Stri
                     .await;
                 continue;
             };
-            let page = if result.is_ok() { PAGE_OK } else { PAGE_FAIL };
+            let page = result_page(result.is_ok());
             let resp = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{page}",
                 page.len()
             );
             let _ = sock.write_all(resp.as_bytes()).await;
             let _ = sock.shutdown().await;
-            return result.map_err(|e| AppError::msg(format!("Microsoft girişi olmadı: {e}")));
+            return result.map_err(|e| {
+                AppError::msg(tx!(
+                    "Microsoft girişi olmadı: {e}",
+                    "Microsoft sign-in failed: {e}"
+                ))
+            });
         }
     };
     tokio::time::timeout(LOGIN_TIMEOUT, work)
         .await
-        .map_err(|_| AppError::msg("Giriş zaman aşımına uğradı; tekrar dene."))?
+        .map_err(|_| {
+            AppError::msg(tx!(
+                "Giriş zaman aşımına uğradı; tekrar dene.",
+                "Sign-in timed out; try again."
+            ))
+        })?
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,14 +170,16 @@ async fn token_request(http: &reqwest::Client, form: &[(&str, &str)]) -> AppResu
     let err: Option<MsError> = resp.json().await.ok();
     Err(match err {
         // Yenileme anahtarının süresi dolmuş ya da iptal edilmiş: yeniden giriş gerekir.
-        Some(e) if e.error == "invalid_grant" => {
-            AppError::msg("Microsoft oturumunun süresi doldu; Ayarlar'dan yeniden giriş yap.")
-        }
-        Some(e) => AppError::msg(format!(
+        Some(e) if e.error == "invalid_grant" => AppError::msg(tx!(
+            "Microsoft oturumunun süresi doldu; Ayarlar'dan yeniden giriş yap.",
+            "Your Microsoft session expired; sign in again from Settings."
+        )),
+        Some(e) => AppError::msg(tx!(
             "Microsoft girişi olmadı: {}",
+            "Microsoft sign-in failed: {}",
             e.error_description.unwrap_or(e.error)
         )),
-        None => AppError::msg("Microsoft girişi olmadı."),
+        None => AppError::msg(tx!("Microsoft girişi olmadı.", "Microsoft sign-in failed.")),
     })
 }
 

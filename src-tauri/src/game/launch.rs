@@ -127,8 +127,9 @@ pub fn extract_natives(m: &Merged, natives_dir: &Path) -> AppResult<()> {
     std::fs::create_dir_all(natives_dir)?;
     for lib in &m.libraries {
         let Some(n) = &lib.natives else { continue };
-        let mut zip = zip::ZipArchive::new(std::fs::File::open(&n.path)?)
-            .map_err(|e| crate::error::AppError::msg(format!("{} açılamadı: {e}", lib.name)))?;
+        let mut zip = zip::ZipArchive::new(std::fs::File::open(&n.path)?).map_err(|e| {
+            crate::error::AppError::msg(tx!("{} açılamadı: {e}", "Couldn't open {}: {e}", lib.name))
+        })?;
         for i in 0..zip.len() {
             let mut entry = zip
                 .by_index(i)

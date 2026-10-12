@@ -242,7 +242,7 @@ pub async fn preview_invite(
         let host = invite
             .host
             .parse()
-            .map_err(|_| AppError::msg("Davet bozuk."))?;
+            .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
         crate::join::status_from(p2p.ping(host, &invite.world, &invite.token).await)
     };
     let (mods, mods_error) = if !own && invite.loader.is_modded() && status.reachable == Some(true)
@@ -250,7 +250,7 @@ pub async fn preview_invite(
         let host = invite
             .host
             .parse()
-            .map_err(|_| AppError::msg("Davet bozuk."))?;
+            .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
         match p2p.manifest(host, &invite.world, &invite.token).await {
             Ok(list) => (
                 Some(missing_mods(
@@ -326,8 +326,9 @@ async fn install_client_mods(
         .cloned()
         .collect();
     let lv = w.loader_version.clone().ok_or_else(|| {
-        AppError::msg(format!(
+        AppError::msg(tx!(
             "Arkadaşının {} sürümü bilinmiyor.",
+            "Your friend's {} version is unknown.",
             w.loader.label()
         ))
     })?;
@@ -375,7 +376,10 @@ async fn install_client_mods(
         .collect();
     let http = app.state::<AppState>().http.clone();
     let p2p = app.state::<Arc<P2p>>().inner().clone();
-    let host: iroh::EndpointId = w.host.parse().map_err(|_| AppError::msg("Davet bozuk."))?;
+    let host: iroh::EndpointId = w
+        .host
+        .parse()
+        .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
     let (world, token, id) = (w.world.clone(), w.token.clone(), w.id.clone());
     let all = Arc::new(wanted_mods);
     let mut index = 0usize;
@@ -397,7 +401,9 @@ async fn install_client_mods(
                 .iter()
                 .find(|m| m.sha1 == want.sha1)
                 .cloned()
-                .ok_or_else(|| AppError::msg("Mod listede yok."))?;
+                .ok_or_else(|| {
+                    AppError::msg(tx!("Mod listede yok.", "That mod isn't in the list."))
+                })?;
             let _ = app.emit(
                 EVENT_PROGRESS,
                 ProgressPayload {
@@ -432,8 +438,9 @@ async fn install_client_mods(
                 crate::hash::hash_bytes(crate::hash::HashAlgo::Sha512, &std::fs::read(&dest)?);
             if got != m.sha512 {
                 let _ = std::fs::remove_file(&dest);
-                return Err(AppError::msg(format!(
+                return Err(AppError::msg(tx!(
                     "{} doğrulanamadı (hash tutmadı).",
+                    "Couldn't verify {} (hash mismatch).",
                     m.title
                 )));
             }
@@ -455,12 +462,16 @@ async fn install_client_mods(
 
 fn add_server_entry(app: &AppHandle, w: &JoinedWorld, force: bool) -> AppResult<()> {
     if !force && client::minecraft_running() {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Minecraft açık. Kapatmazsan sunucu listesine eklediğimiz kayıt silinebilir; önce oyunu kapat.",
-        ));
+            "Minecraft is running. If you don't close it, the server-list entry we added may be lost; close the game first."
+        )));
     }
     let dir = entry_dir(app, w).ok_or_else(|| {
-        AppError::msg("Minecraft klasörü bulunamadı. Ayarlar'dan Minecraft klasörünü seç.")
+        AppError::msg(tx!(
+            "Minecraft klasörü bulunamadı. Ayarlar'dan Minecraft klasörünü seç.",
+            "Minecraft folder not found. Choose your Minecraft folder in Settings."
+        ))
     })?;
     let mut root = servers_dat::read(&dir)?;
     servers_dat::upsert(&mut root, &w.address(), &w.name);
@@ -494,14 +505,16 @@ pub async fn join_world(
 ) -> AppResult<JoinedView> {
     let invite = Invite::parse(&code)?;
     if invite.host == app.state::<Arc<P2p>>().id() {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Bu senin kendi dünyan; davet arkadaşın için.",
-        ));
+            "This is your own world; the invite is for your friend."
+        )));
     }
     if !force && client::minecraft_running() {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Minecraft açık. Kapatmazsan sunucu listesine eklediğimiz kayıt silinebilir; önce oyunu kapat.",
-        ));
+            "Minecraft is running. If you don't close it, the server-list entry we added may be lost; close the game first."
+        )));
     }
     let mut joined = joins.inner().join(&app, &invite).await?;
     // Modlu dünya: oyuncuda gereken modlar varsa profile kur (yoksa sunucu listesi ana klasöre).
@@ -510,7 +523,7 @@ pub async fn join_world(
         let host = invite
             .host
             .parse()
-            .map_err(|_| AppError::msg("Davet bozuk."))?;
+            .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
         if let Ok(list) = p2p.manifest(host, &invite.world, &invite.token).await {
             let wants_any = list
                 .iter()
@@ -593,10 +606,18 @@ pub async fn play_joined(
         // Modlar kuruldu: profil ve mod altyapısının sürümü zaten var.
         (Some(_), Some(lv)) if w.loader.is_modded() => {
             let mc = crate::client_cmds::minecraft_dir(&app)?;
-            let launcher = crate::client::detect_launcher(&mc)
-                .ok_or_else(|| AppError::msg("Minecraft Launcher bulunamadı."))?;
-            let base = crate::client::version_id(w.loader, &w.mc_version, lv)
-                .ok_or_else(|| AppError::msg("Dünyanın sürümü bilinmiyor."))?;
+            let launcher = crate::client::detect_launcher(&mc).ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Minecraft Launcher bulunamadı.",
+                    "Minecraft Launcher not found."
+                ))
+            })?;
+            let base = crate::client::version_id(w.loader, &w.mc_version, lv).ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Dünyanın sürümü bilinmiyor.",
+                    "The world's version is unknown."
+                ))
+            })?;
             let version = play_version(&mc, &dir, &w.mc_version, &base, Some(&w.address()))?;
             let game_dir = w.game_dir.as_deref().map(std::path::Path::new);
             let pick = write_profile(
@@ -674,7 +695,10 @@ pub async fn update_joined_mods(
 ) -> AppResult<JoinedView> {
     let w = joins.get(&id).await?;
     let p2p = app.state::<Arc<P2p>>().inner().clone();
-    let host = w.host.parse().map_err(|_| AppError::msg("Davet bozuk."))?;
+    let host = w
+        .host
+        .parse()
+        .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
     let list = p2p.manifest(host, &w.world, &w.token).await?;
     let updated =
         install_client_mods(&app, &w, list, w.with_recommended || w.profile.is_none()).await?;

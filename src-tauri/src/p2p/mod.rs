@@ -83,7 +83,12 @@ impl P2p {
             .alpns(vec![ALPN.to_vec()])
             .bind()
             .await
-            .map_err(|e| AppError::msg(format!("Doğrudan bağlantı başlatılamadı: {e}")))?;
+            .map_err(|e| {
+                AppError::msg(tx!(
+                    "Doğrudan bağlantı başlatılamadı: {e}",
+                    "Couldn't start the direct connection: {e}"
+                ))
+            })?;
         Ok(Arc::new(Self {
             endpoint,
             conns: Mutex::new(HashMap::new()),
@@ -130,8 +135,18 @@ impl P2p {
         }
         let conn = tokio::time::timeout(CONNECT_TIMEOUT, self.endpoint.connect(host, ALPN))
             .await
-            .map_err(|_| AppError::msg("Arkadaşının bilgisayarına ulaşılamadı (zaman aşımı)."))?
-            .map_err(|e| AppError::msg(format!("Arkadaşının bilgisayarına ulaşılamadı: {e}")))?;
+            .map_err(|_| {
+                AppError::msg(tx!(
+                    "Arkadaşının bilgisayarına ulaşılamadı (zaman aşımı).",
+                    "Couldn't reach your friend's computer (timed out)."
+                ))
+            })?
+            .map_err(|e| {
+                AppError::msg(tx!(
+                    "Arkadaşının bilgisayarına ulaşılamadı: {e}",
+                    "Couldn't reach your friend's computer: {e}"
+                ))
+            })?;
         conns.insert(host, conn.clone());
         Ok(conn)
     }
@@ -149,7 +164,12 @@ impl P2p {
         write_line(&mut send, header).await?;
         let reply: Reply = tokio::time::timeout(HEADER_TIMEOUT, read_line(&mut recv))
             .await
-            .map_err(|_| AppError::msg("Arkadaşının uygulaması yanıt vermedi."))??;
+            .map_err(|_| {
+                AppError::msg(tx!(
+                    "Arkadaşının uygulaması yanıt vermedi.",
+                    "Your friend's app didn't respond."
+                ))
+            })??;
         Ok((send, recv, reply, path_kind(&conn)))
     }
 
@@ -186,13 +206,25 @@ impl P2p {
         let (mut send, mut recv, reply, _) = self.open(host, &header).await?;
         let _ = send.finish();
         if !matches!(reply, Reply::Ok { .. }) {
-            return Err(AppError::msg("Davet artık geçerli değil."));
+            return Err(AppError::msg(tx!(
+                "Davet artık geçerli değil.",
+                "This invite is no longer valid."
+            )));
         }
         let body = tokio::time::timeout(CONNECT_TIMEOUT, read_body(&mut recv, MAX_BODY))
             .await
-            .map_err(|_| AppError::msg("Mod listesi alınamadı (zaman aşımı)."))??;
-        serde_json::from_slice(&body)
-            .map_err(|e| AppError::msg(format!("Mod listesi okunamadı: {e}")))
+            .map_err(|_| {
+                AppError::msg(tx!(
+                    "Mod listesi alınamadı (zaman aşımı).",
+                    "Couldn't get the mod list (timed out)."
+                ))
+            })??;
+        serde_json::from_slice(&body).map_err(|e| {
+            AppError::msg(tx!(
+                "Mod listesi okunamadı: {e}",
+                "Couldn't read the mod list: {e}"
+            ))
+        })
     }
 
     /// Listedeki bir mod dosyasını arkadaşın bilgisayarından `dest`'e indirir (en fazla `max` bayt).
@@ -214,8 +246,9 @@ impl P2p {
         let (mut send, recv, reply, _) = self.open(host, &header).await?;
         let _ = send.finish();
         if !matches!(reply, Reply::Ok { .. }) {
-            return Err(AppError::msg(format!(
-                "{file} arkadaşının bilgisayarından alınamadı."
+            return Err(AppError::msg(tx!(
+                "{file} arkadaşının bilgisayarından alınamadı.",
+                "Couldn't get {file} from your friend's computer."
             )));
         }
         let mut out = tokio::fs::File::create(dest).await?;
@@ -224,7 +257,10 @@ impl P2p {
         if copied > max {
             drop(out);
             let _ = std::fs::remove_file(dest);
-            return Err(AppError::msg(format!("{file} beklenenden büyük geldi.")));
+            return Err(AppError::msg(tx!(
+                "{file} beklenenden büyük geldi.",
+                "{file} was larger than expected."
+            )));
         }
         Ok(())
     }
@@ -245,9 +281,10 @@ impl P2p {
         };
         let (send, recv, reply, _) = self.open(host, &header).await?;
         if !matches!(reply, Reply::Ok { .. }) {
-            return Err(AppError::msg(
+            return Err(AppError::msg(tx!(
                 "Arkadaşının dünyası kapalı ya da davet geçersiz.",
-            ));
+                "Your friend's world is offline or the invite is invalid."
+            )));
         }
         let mut stream = tokio::io::join(recv, send);
         let _ = tokio::io::copy_bidirectional(&mut stream, &mut tcp).await;
@@ -262,7 +299,7 @@ async fn handle_stream(
 ) -> std::io::Result<()> {
     let header: StreamHeader = tokio::time::timeout(HEADER_TIMEOUT, read_line(&mut recv))
         .await
-        .map_err(|_| std::io::Error::other("başlık gelmedi"))??;
+        .map_err(|_| std::io::Error::other(tx!("başlık gelmedi", "no header received")))??;
     match decide(&header) {
         Decision::Reply(reply) => {
             write_line(&mut send, &reply).await?;

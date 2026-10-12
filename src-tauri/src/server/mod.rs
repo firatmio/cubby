@@ -258,7 +258,7 @@ impl ServerHandle {
         let mut guard = self.stdin.lock().await;
         let stdin = guard
             .as_mut()
-            .ok_or_else(|| AppError::msg("Sunucu çalışmıyor"))?;
+            .ok_or_else(|| AppError::msg(tx!("Sunucu çalışmıyor", "The server isn't running")))?;
         stdin.write_all(format!("{line}\n").as_bytes()).await?;
         stdin.flush().await?;
         Ok(())
@@ -328,7 +328,10 @@ impl ServerManager {
         {
             let mut s = h.lock();
             if s.status.is_active() {
-                return Err(AppError::msg("Sunucu zaten çalışıyor"));
+                return Err(AppError::msg(tx!(
+                    "Sunucu zaten çalışıyor",
+                    "The server is already running"
+                )));
             }
             s.status = ServerStatus::Starting;
             s.stop_requested = false;
@@ -371,7 +374,10 @@ impl ServerManager {
             h.push_log(
                 app,
                 LogStream::System,
-                "Sunucu yanıt vermedi, zorla kapatılıyor.".into(),
+                tx!(
+                    "Sunucu yanıt vermedi, zorla kapatılıyor.",
+                    "The server didn't respond; forcing it to stop."
+                ),
             );
             h.kill();
             wait_exit(&mut exit_rx, KILL_GRACE).await;
@@ -383,7 +389,7 @@ impl ServerManager {
         let h = self
             .get(id)
             .filter(|h| matches!(h.status(), ServerStatus::Starting | ServerStatus::Running))
-            .ok_or_else(|| AppError::msg("Sunucu çalışmıyor"))?;
+            .ok_or_else(|| AppError::msg(tx!("Sunucu çalışmıyor", "The server isn't running")))?;
         // Tek satır: araya gizlenmiş ikinci bir komut gönderilemesin.
         let command = command.lines().next().unwrap_or("").trim();
         if command.is_empty() {

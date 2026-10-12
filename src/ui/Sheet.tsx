@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
+import { useT } from "../i18n";
 import { spring } from "../lib/motion";
 import { IconButton } from "./IconButton";
 import styles from "./Sheet.module.css";
@@ -17,6 +18,7 @@ type Props = {
 
 /** Sağdan kayan panel; arkası soluklaşır, Esc ya da boşluğa tıklama kapatır. */
 export function Sheet({ open, title, subtitle, onClose, children, width = 560 }: Props) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -53,7 +55,7 @@ export function Sheet({ open, title, subtitle, onClose, children, width = 560 }:
                 <h2 className={styles.title}>{title}</h2>
                 {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
               </div>
-              <IconButton icon={X} label="Kapat" size="sm" variant="ghost" tipBelow onClick={onClose} />
+              <IconButton icon={X} label={t.common.close} size="sm" variant="ghost" tipBelow onClick={onClose} />
             </header>
             <div className={styles.body}>{children}</div>
           </motion.aside>

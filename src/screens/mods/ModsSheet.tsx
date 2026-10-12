@@ -25,7 +25,8 @@ import {
   type ModHit,
   type ModSort,
 } from "../../lib/api";
-import { MOD_CATEGORY_LABELS, compactCount, formatBytesMb } from "../../lib/format";
+import { useT } from "../../i18n";
+import { categoryLabels, compactCount, formatBytesMb } from "../../lib/format";
 import { spring } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
@@ -39,16 +40,12 @@ import styles from "./ModsSheet.module.css";
 
 type Tab = "browse" | "installed";
 
-const SORTS: { id: ModSort; label: string }[] = [
-  { id: "downloads", label: "Popüler" },
-  { id: "relevance", label: "En uygun" },
-  { id: "updated", label: "Güncel" },
-];
 
 /** Oyuncunun da kurması gerekip gerekmediğini gösteren kısa rozet. */
 function NeedBadge({ need }: { need: ClientNeed | null }) {
-  if (need === "required") return <Badge tone="warning">Arkadaşın da kurmalı</Badge>;
-  if (need === "recommended") return <Badge>Oyuncuda da önerilir</Badge>;
+  const t = useT().mods;
+  if (need === "required") return <Badge tone="warning">{t.needRequired}</Badge>;
+  if (need === "recommended") return <Badge>{t.needRecommended}</Badge>;
   return null;
 }
 
@@ -68,14 +65,12 @@ function ModIcon({ icon, plugin }: { icon: string | null; plugin: boolean }) {
 
 function InstallProgress() {
   const p = useAppStore((s) => s.modProgress);
+  const t = useT().mods;
   if (!p) return <Progress value={null} />;
   return (
     <div className={styles.progress}>
       <Progress value={p.total ? p.downloaded / p.total : null} />
-      <span>
-        {p.title} indiriliyor · {formatBytesMb(p.downloaded)}
-        {p.total ? ` / ${formatBytesMb(p.total)}` : ""} MB
-      </span>
+      <span>{t.downloading(p.title, formatBytesMb(p.downloaded), p.total ? formatBytesMb(p.total) : null)}</span>
     </div>
   );
 }
@@ -85,6 +80,8 @@ function ClientLine({ id }: { id: string }) {
   const status = useAppStore((s) => s.clientStatus[id]);
   const setClientStatus = useAppStore((s) => s.setClientStatus);
   const [busy, setBusy] = useState(false);
+  const tt = useT();
+  const t = tt.mods;
 
   useEffect(() => {
     api
@@ -104,22 +101,21 @@ function ClientLine({ id }: { id: string }) {
   };
   return (
     <div className={[styles.clientLine, status.state === "error" && styles.clientError].filter(Boolean).join(" ")}>
-      {status.state === "working" && <span>Senin Minecraft'ına da kuruluyor…</span>}
+      {status.state === "working" && <span>{t.clientWorking}</span>}
       {status.state === "ok" && (
         <span>
-          <Check size={15} aria-hidden /> Senin Minecraft'ına da kuruldu ·{" "}
-          {status.launcher === "tLauncher" ? "TLauncher'da" : "Launcher'da"} <b>{status.pick}</b>{" "}
-          {status.launcher === "tLauncher" ? "sürümünü" : "profilini"} seç.
-          {status.blocked.length > 0 && ` Aynı adlı dosya olduğu için eklenmedi: ${status.blocked.join(", ")}.`}
+          <Check size={15} aria-hidden />{" "}
+          {status.launcher === "tLauncher" ? t.clientOkTL(status.pick ?? "") : t.clientOk(status.pick ?? "")}
+          {status.blocked.length > 0 && t.clientBlocked(status.blocked.join(", "))}
         </span>
       )}
       {status.state === "error" && (
         <>
           <span>
-            <AlertTriangle size={15} aria-hidden /> Senin Minecraft'ına kurulamadı: {status.message}
+            <AlertTriangle size={15} aria-hidden /> {t.clientError(status.message ?? "")}
           </span>
           <Button size="sm" icon={RotateCcw} loading={busy} onClick={retry}>
-            Tekrar dene
+            {tt.common.retry}
           </Button>
         </>
       )}
@@ -136,7 +132,12 @@ export function ModsSheet() {
   const { status } = useServer(instance?.id ?? null);
   const id = instance?.id;
   const plugin = instance?.loader === "paper";
-  const noun = plugin ? "eklenti" : "mod";
+  const t = useT().mods;
+  const sorts: { id: ModSort; label: string }[] = [
+    { id: "downloads", label: t.sortPopular },
+    { id: "relevance", label: t.sortRelevance },
+    { id: "updated", label: t.sortUpdated },
+  ];
   const active = status === "running" || status === "starting";
 
   const [tab, setTab] = useState<Tab>("browse");
@@ -247,14 +248,14 @@ export function ModsSheet() {
 
   const updates = installed?.filter((m) => m.update).length ?? 0;
   const tabs = [
-    { id: "browse" as const, label: "Keşfet" },
-    { id: "installed" as const, label: `Kurulu${installed ? ` (${installed.length})` : ""}` },
+    { id: "browse" as const, label: t.browse },
+    { id: "installed" as const, label: t.installedTab(installed ? installed.length : null) },
   ];
 
   return (
     <Sheet
       open={open && !!instance && instance.loader !== "vanilla"}
-      title={plugin ? "Eklentiler" : "Modlar"}
+      title={plugin ? t.titlePlugins : t.titleMods}
       subtitle={instance ? `${instance.name} · Minecraft ${instance.mcVersion} · Modrinth` : undefined}
       onClose={() => openSheet(null)}
       width={720}
@@ -272,9 +273,9 @@ export function ModsSheet() {
               exit={{ opacity: 0 }}
               transition={spring}
             >
-              <span>Değişiklikler dünya yeniden açılınca geçerli olur.</span>
+              <span>{t.restartHint}</span>
               <Button size="sm" variant="primary" icon={RotateCcw} loading={busy === "restart"} onClick={restart}>
-                Şimdi yeniden başlat
+                {t.restartNow}
               </Button>
             </motion.div>
           )}
@@ -299,11 +300,11 @@ export function ModsSheet() {
                   <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={plugin ? "Eklenti ara" : "Mod ara"}
-                    aria-label="Ara"
+                    placeholder={plugin ? t.searchPlugins : t.searchMods}
+                    aria-label={t.search}
                   />
                 </div>
-                <PillTabs tabs={SORTS} active={sort} onChange={setSort} layoutId="mods-sort" />
+                <PillTabs tabs={sorts} active={sort} onChange={setSort} layoutId="mods-sort" />
               </div>
               <div
                 className={styles.chips}
@@ -317,9 +318,9 @@ export function ModsSheet() {
                   className={[styles.chip, category === null && styles.chipOn].filter(Boolean).join(" ")}
                   onClick={() => setCategory(null)}
                 >
-                  Tümü
+                  {t.all}
                 </button>
-                {Object.entries(MOD_CATEGORY_LABELS).map(([key, label]) => (
+                {Object.entries(categoryLabels()).map(([key, label]) => (
                   <button
                     key={key}
                     type="button"
@@ -342,12 +343,12 @@ export function ModsSheet() {
                           <NeedBadge need={h.clientNeed} />
                         </span>
                         <span className={styles.desc}>{h.description}</span>
-                        <span className={styles.meta}>{compactCount(h.downloads)} indirme</span>
+                        <span className={styles.meta}>{t.downloads(compactCount(h.downloads))}</span>
                       </span>
                     </button>
                     {h.installed ? (
                       <span className={styles.installed}>
-                        <Check size={15} aria-hidden /> Kurulu
+                        <Check size={15} aria-hidden /> {t.installed}
                       </span>
                     ) : (
                       <Button
@@ -357,18 +358,18 @@ export function ModsSheet() {
                         disabled={busy !== null}
                         onClick={() => install(h.projectId)}
                       >
-                        Kur
+                        {t.install}
                       </Button>
                     )}
                   </div>
                 ))}
                 {!loading && hits.length === 0 && !error && (
-                  <p className={styles.empty}>Bu sürüm için uygun {noun} bulunamadı.</p>
+                  <p className={styles.empty}>{plugin ? t.noneFoundPlugins : t.noneFoundMods}</p>
                 )}
                 {loading && <Progress value={null} />}
                 {!loading && hits.length < total && (
                   <Button variant="ghost" className={styles.more} onClick={() => search(hits.length)}>
-                    Daha fazla göster
+                    {t.showMore}
                   </Button>
                 )}
               </div>
@@ -380,12 +381,12 @@ export function ModsSheet() {
             {installed === null ? (
               <Progress value={null} />
             ) : installed.length === 0 ? (
-              <p className={styles.empty}>Henüz {noun} kurulu değil. Keşfet'ten bir tane seç.</p>
+              <p className={styles.empty}>{plugin ? t.emptyPlugins : t.emptyMods}</p>
             ) : (
               <>
                 {updates > 0 && (
                   <div className={styles.updateBar}>
-                    <span>{updates} güncelleme var</span>
+                    <span>{t.updatesAvailable(updates)}</span>
                     <Button
                       size="sm"
                       variant="primary"
@@ -394,7 +395,7 @@ export function ModsSheet() {
                       disabled={busy !== null}
                       onClick={() => run("update-all", () => api.modsUpdateAll(id!))}
                     >
-                      Tümünü güncelle
+                      {t.updateAll}
                     </Button>
                   </div>
                 )}
@@ -405,13 +406,13 @@ export function ModsSheet() {
                       <span className={styles.text}>
                         <span className={styles.title}>
                           {m.title}
-                          {m.dependency && <Badge>Bağımlılık</Badge>}
-                          {!m.known && <Badge>Elle eklenmiş</Badge>}
+                          {m.dependency && <Badge>{t.dependency}</Badge>}
+                          {!m.known && <Badge>{t.manual}</Badge>}
                           <NeedBadge need={m.clientNeed} />
                         </span>
                         <span className={styles.meta}>
                           {m.versionNumber ?? m.file}
-                          {m.update && <span className={styles.update}> → {m.update} hazır</span>}
+                          {m.update && <span className={styles.update}>{t.updateReady(m.update)}</span>}
                         </span>
                       </span>
                     </div>
@@ -423,14 +424,14 @@ export function ModsSheet() {
                         disabled={busy !== null}
                         onClick={() => run(`update:${m.file}`, () => api.modsUpdate(id!, m.file))}
                       >
-                        Güncelle
+                        {t.update}
                       </Button>
                     )}
                     <IconButton
                       icon={Trash2}
                       size="sm"
                       variant="ghost"
-                      label="Kaldır (Geri Dönüşüm Kutusu'na)"
+                      label={t.removeToTrash}
                       disabled={busy !== null}
                       onClick={() => run(`remove:${m.file}`, () => api.modsRemove(id!, m.file))}
                     />
@@ -471,10 +472,11 @@ function DetailView({
   onInstall: () => void;
 }) {
   const blocked = !!detail.error || detail.conflicts.length > 0;
+  const t = useT().mods;
   return (
     <motion.div className={styles.detail} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={spring}>
       <Button variant="ghost" size="sm" icon={ArrowLeft} className={styles.back} onClick={onBack}>
-        Geri
+        {t.back}
       </Button>
       <div className={styles.detailHead}>
         <ModIcon icon={detail.icon} plugin={plugin} />
@@ -482,7 +484,8 @@ function DetailView({
           <h3>{detail.title}</h3>
           <p className={styles.desc}>{detail.description}</p>
           <p className={styles.meta}>
-            {compactCount(detail.downloads)} indirme{detail.license ? ` · ${detail.license}` : ""}
+            {t.downloads(compactCount(detail.downloads))}
+            {detail.license ? ` · ${detail.license}` : ""}
           </p>
         </div>
       </div>
@@ -490,41 +493,39 @@ function DetailView({
       <ul className={styles.facts}>
         {detail.versionNumber && (
           <li>
-            Kurulacak sürüm: <b>{detail.versionNumber}</b>
-            {detail.unstable && <Badge tone="warning">Deneme sürümü</Badge>}
+            {t.versionToInstall} <b>{detail.versionNumber}</b>
+            {detail.unstable && <Badge tone="warning">{t.unstable}</Badge>}
           </li>
         )}
         {detail.with.length > 0 && (
           <li>
-            Bununla birlikte kurulacak: <b>{detail.with.map((w) => w.title).join(", ")}</b>
+            {t.alsoInstalls} <b>{detail.with.map((w) => w.title).join(", ")}</b>
           </li>
         )}
         {detail.clientNeed === "required" && (
           <li className={styles.warn}>
-            <AlertTriangle size={15} aria-hidden /> Oyuna yeni içerik ekliyor: hem senin hem arkadaşının kendi
-            Minecraft'ına kurması gerekir, yoksa dünyaya girilemez. Uygulama bunu kendisi yapar.
+            <AlertTriangle size={15} aria-hidden /> {t.clientRequired}
           </li>
         )}
         {detail.clientNeed === "recommended" && (
           <li>
-            <Info size={15} aria-hidden /> Sunucuda tek başına çalışır, ama ekranlar, tuşlar ya da tarif listesi gibi
-            özellikleri yalnız oyuncunun kendi Minecraft'ında da kuruluysa görünür.
+            <Info size={15} aria-hidden /> {t.clientRecommended}
           </li>
         )}
         {detail.clientNeed === "none" && (
           <li>
-            <Check size={15} aria-hidden /> Yalnız sunucuda çalışır; oyuncuların bir şey kurmasına gerek yok.
+            <Check size={15} aria-hidden /> {t.clientNone}
           </li>
         )}
         {detail.missing.length > 0 && (
           <li className={styles.warn}>
-            <AlertTriangle size={15} aria-hidden /> Bu sürüm için bulunamayan bağımlılık:{" "}
+            <AlertTriangle size={15} aria-hidden /> {t.missingDeps}{" "}
             {detail.missing.map((m) => m.title).join(", ")}
           </li>
         )}
         {detail.conflicts.length > 0 && (
           <li className={styles.warn}>
-            <AlertTriangle size={15} aria-hidden /> Kurulu olan şununla uyumsuz: {detail.conflicts.map((m) => m.title).join(", ")}
+            <AlertTriangle size={15} aria-hidden /> {t.conflicts} {detail.conflicts.map((m) => m.title).join(", ")}
           </li>
         )}
         {detail.error && (
@@ -536,11 +537,11 @@ function DetailView({
 
       <div className={styles.detailActions}>
         <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => openExternal(detail.url)}>
-          Modrinth'te aç
+          {t.openModrinth}
         </Button>
         {detail.installed ? (
           <span className={styles.installed}>
-            <Check size={15} aria-hidden /> Kurulu
+            <Check size={15} aria-hidden /> {t.installed}
           </span>
         ) : (
           <Button
@@ -550,7 +551,7 @@ function DetailView({
             disabled={blocked || busy !== null}
             onClick={onInstall}
           >
-            Kur
+            {t.install}
           </Button>
         )}
       </div>

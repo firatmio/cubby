@@ -109,9 +109,12 @@ impl Loader for QuiltLoader {
         on_stage: &mut (impl FnMut(InstallStage) + Send),
     ) -> AppResult<Installed> {
         on_stage(InstallStage::Meta);
-        let java = req
-            .java
-            .ok_or_else(|| AppError::msg("Kurulum için Java gerekli."))?;
+        let java = req.java.ok_or_else(|| {
+            AppError::msg(tx!(
+                "Kurulum için Java gerekli.",
+                "Java is required for the install."
+            ))
+        })?;
         let loader_version = match req.loader_version {
             Some(v) => v.to_string(),
             None => self
@@ -119,11 +122,18 @@ impl Loader for QuiltLoader {
                 .await?
                 .recommended
                 .ok_or_else(|| {
-                    AppError::msg(format!("{} için Quilt sürümü yok", req.mc_version))
+                    AppError::msg(tx!(
+                        "{} için Quilt sürümü yok",
+                        "No Quilt version for {}",
+                        req.mc_version
+                    ))
                 })?,
         };
         if !crate::util::is_safe_name(&loader_version) {
-            return Err(AppError::msg("Geçersiz Quilt sürümü."));
+            return Err(AppError::msg(tx!(
+                "Geçersiz Quilt sürümü.",
+                "Invalid Quilt version."
+            )));
         }
         let installers: Vec<InstallerEntry> = self.get("/versions/installer").await?;
         let installer = installers
@@ -133,7 +143,12 @@ impl Loader for QuiltLoader {
                     .cmp(&is_stable(&b.version))
                     .then_with(|| cmp_versions(&a.version, &b.version))
             })
-            .ok_or_else(|| AppError::msg("Quilt installer bulunamadı"))?;
+            .ok_or_else(|| {
+                AppError::msg(tx!(
+                    "Quilt installer bulunamadı",
+                    "Quilt installer not found"
+                ))
+            })?;
 
         let java_major = self
             .mojang
@@ -170,9 +185,10 @@ impl Loader for QuiltLoader {
         cleanup(server_dir, &jar).await;
         result?;
         if !server_dir.join(LAUNCHER_JAR).is_file() {
-            return Err(AppError::msg(
+            return Err(AppError::msg(tx!(
                 "Quilt kurulumu bitti ama başlatıcı oluşmadı. Başka bir sürüm deneyebilirsin.",
-            ));
+                "The Quilt install finished but no launcher was created. You can try another version."
+            )));
         }
         tokio::fs::create_dir_all(server_dir.join("mods")).await?;
 

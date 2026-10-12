@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, RefreshCw } from "lucide-react";
+import { getT, useT } from "../../i18n";
 import { api, errorMessage, type Instance, type InstanceJava, type JavaInfo } from "../../lib/api";
 import { useAppStore } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
@@ -14,7 +15,7 @@ type Busy = "scan" | "install" | "save" | null;
 const AUTO = "__auto__";
 
 function javaLabel(j: JavaInfo): string {
-  return `Java ${j.major}${j.managed ? " (uygulamanın indirdiği)" : ""}`;
+  return `Java ${j.major}${j.managed ? getT().instance.javaManaged : ""}`;
 }
 
 /** Ayarlar sekmesi: sunucunun hangi Java ile açılacağı. */
@@ -26,6 +27,7 @@ export function JavaSection({ instance }: { instance: Instance }) {
   const [list, setList] = useState<JavaInfo[] | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   const load = useCallback(
     async (refresh: boolean) => {
@@ -66,7 +68,7 @@ export function JavaSection({ instance }: { instance: Instance }) {
     });
 
   if (!info || !list) {
-    return <Card title="Java" description={error ?? "Java'lar aranıyor…"} />;
+    return <Card title="Java" description={error ?? t.instance.javaSearching} />;
   }
 
   const hasExact = list.some((j) => j.major === info.required);
@@ -77,8 +79,8 @@ export function JavaSection({ instance }: { instance: Instance }) {
       title="Java"
       description={
         <>
-          Bu sürüm Java {info.required}+ istiyor.{" "}
-          {selected ? `Başlatınca ${javaLabel(selected)} kullanılacak.` : "Uygun Java bulunamadı, indirmen gerekiyor."}
+          {t.instance.javaRequires(info.required)}{" "}
+          {selected ? t.instance.javaWillUse(javaLabel(selected)) : t.instance.javaMissing}
         </>
       }
       actions={
@@ -91,11 +93,11 @@ export function JavaSection({ instance }: { instance: Instance }) {
             disabled={busy !== null}
             onClick={() => run("scan", () => load(true))}
           >
-            Yeniden tara
+            {t.instance.rescan}
           </Button>
           {!hasExact && (
             <Button size="sm" icon={Download} disabled={busy !== null} onClick={download}>
-              Java {info.required} indir
+              {t.instance.downloadJava(info.required)}
             </Button>
           )}
         </>
@@ -107,7 +109,7 @@ export function JavaSection({ instance }: { instance: Instance }) {
         value={info.pinned ?? AUTO}
         onSelect={(key) => busy === null && choose(key)}
         items={[
-          { key: AUTO, label: "Otomatik", meta: "her açılışta en uygununu seç" },
+          { key: AUTO, label: t.instance.auto, meta: t.instance.autoMeta },
           ...list.map((j) => {
             const tooOld = j.major < info.required;
             return {
@@ -115,7 +117,7 @@ export function JavaSection({ instance }: { instance: Instance }) {
               title: j.path,
               disabled: tooOld,
               label: javaLabel(j),
-              badges: tooOld ? <Badge tone="neutral">Eski</Badge> : undefined,
+              badges: tooOld ? <Badge tone="neutral">{t.instance.old}</Badge> : undefined,
               meta: j.path,
             };
           }),

@@ -110,8 +110,12 @@ pub async fn ensure_meta_version(
     mc: &str,
     loader: &str,
 ) -> AppResult<String> {
-    let id = version_id(kind, mc, loader)
-        .ok_or_else(|| AppError::msg("Bu dünya türü için istemci sürümü yok."))?;
+    let id = version_id(kind, mc, loader).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Bu dünya türü için istemci sürümü yok.",
+            "There's no client version for this kind of world."
+        ))
+    })?;
     let file = version_file(mc_dir, &id);
     if file.is_file() {
         return Ok(id);
@@ -127,13 +131,24 @@ pub async fn ensure_meta_version(
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| AppError::msg(format!("{name} istemci profili alınamadı: {e}")))?
+        .map_err(|e| {
+            AppError::msg(tx!(
+                "{name} istemci profili alınamadı: {e}",
+                "Couldn't fetch the {name} client profile: {e}"
+            ))
+        })?
         .json()
         .await
-        .map_err(|e| AppError::msg(format!("{name} istemci profili okunamadı: {e}")))?;
+        .map_err(|e| {
+            AppError::msg(tx!(
+                "{name} istemci profili okunamadı: {e}",
+                "Couldn't read the {name} client profile: {e}"
+            ))
+        })?;
     if profile.get("id").and_then(Value::as_str) != Some(id.as_str()) {
-        return Err(AppError::msg(format!(
-            "{name} istemci profili beklenmedik bir sürüm döndürdü."
+        return Err(AppError::msg(tx!(
+            "{name} istemci profili beklenmedik bir sürüm döndürdü.",
+            "The {name} client profile returned an unexpected version."
         )));
     }
     std::fs::create_dir_all(file.parent().unwrap_or(mc_dir))?;
@@ -178,7 +193,10 @@ pub fn ensure_quickplay_version(
     addr: &str,
 ) -> AppResult<String> {
     if !crate::util::is_safe_name(id) {
-        return Err(AppError::msg("Geçersiz sürüm adı."));
+        return Err(AppError::msg(tx!(
+            "Geçersiz sürüm adı.",
+            "Invalid version name."
+        )));
     }
     let file = version_file(mc_dir, id);
     let old: Option<Value> = std::fs::read(&file)
@@ -237,8 +255,12 @@ pub async fn install_forge_client(
     work: &Path,
     on_line: &mut (impl FnMut(String) + Send),
 ) -> AppResult<String> {
-    let id = version_id(kind, mc, loader)
-        .ok_or_else(|| AppError::msg("Bu dünya türü için istemci sürümü yok."))?;
+    let id = version_id(kind, mc, loader).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Bu dünya türü için istemci sürümü yok.",
+            "There's no client version for this kind of world."
+        ))
+    })?;
     if version_exists(mc_dir, &id) {
         return Ok(id);
     }
@@ -246,16 +268,21 @@ pub async fn install_forge_client(
         LoaderKind::NeoForge => "--install-client",
         _ => "--installClient",
     };
-    let url = loaders::installer_url(kind, mc, loader)
-        .ok_or_else(|| AppError::msg("Bu dünya türü installer kullanmıyor."))?;
+    let url = loaders::installer_url(kind, mc, loader).ok_or_else(|| {
+        AppError::msg(tx!(
+            "Bu dünya türü installer kullanmıyor.",
+            "This kind of world doesn't use an installer."
+        ))
+    })?;
     std::fs::create_dir_all(work)?;
     let jar = work.join("mcsm-installer.jar");
     loaders::download_maven(http, &url, &jar, |_, _| {}).await?;
     let result = async {
         let real = loaders::installer_version_id(&jar)?;
         if real != id {
-            return Err(AppError::msg(format!(
-                "Installer beklenmedik bir sürüm kuruyor ({real})."
+            return Err(AppError::msg(tx!(
+                "Installer beklenmedik bir sürüm kuruyor ({real}).",
+                "The installer is installing an unexpected version ({real})."
             )));
         }
         // Forge installer'ı bu dosya olmadan çalışmıyor (TLauncher'da olmayabilir).
@@ -286,8 +313,9 @@ pub async fn install_forge_client(
     let _ = std::fs::remove_dir(work);
     result?;
     if !version_exists(mc_dir, &id) {
-        return Err(AppError::msg(format!(
+        return Err(AppError::msg(tx!(
             "{} istemci kurulumu tamamlanamadı.",
+            "The {} client install couldn't be completed.",
             kind.label()
         )));
     }
@@ -352,8 +380,12 @@ pub fn remove_profile(root: &mut Value, key: &str) -> bool {
 pub fn edit_profiles(mc_dir: &Path, f: impl FnOnce(&mut Value)) -> AppResult<()> {
     let path = mc_dir.join(PROFILES_FILE);
     let mut root: Value = match std::fs::read(&path) {
-        Ok(bytes) => serde_json::from_slice(&bytes)
-            .map_err(|e| AppError::msg(format!("launcher_profiles.json okunamadı: {e}")))?,
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| {
+            AppError::msg(tx!(
+                "launcher_profiles.json okunamadı: {e}",
+                "Couldn't read launcher_profiles.json: {e}"
+            ))
+        })?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => json!({ "profiles": {} }),
         Err(e) => return Err(e.into()),
     };
@@ -568,23 +600,31 @@ where
     for f in &ops.remove {
         for p in [mods.join(f), disabled_dir.join(f)] {
             if p.exists() {
-                trash::delete(&p).map_err(|e| AppError::msg(format!("{f} kaldırılamadı: {e}")))?;
+                trash::delete(&p).map_err(|e| {
+                    AppError::msg(tx!("{f} kaldırılamadı: {e}", "Couldn't remove {f}: {e}"))
+                })?;
             }
         }
         record.files.retain(|m| !(m.world == world && &m.file == f));
     }
     let staging = mods.join(".mcsm-downloads");
     for w in &ops.add {
-        let name = crate::mods::sanitize_filename(&w.file)
-            .ok_or_else(|| AppError::msg(format!("Güvenli olmayan dosya adı: {}", w.file)))?;
+        let name = crate::mods::sanitize_filename(&w.file).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Güvenli olmayan dosya adı: {}",
+                "Unsafe file name: {}",
+                w.file
+            ))
+        })?;
         std::fs::create_dir_all(&staging)?;
         let tmp = staging.join(&name);
         fetch(w.clone(), tmp.clone()).await?;
         let got = hash_bytes(HashAlgo::Sha1, &std::fs::read(&tmp)?);
         if got != w.sha1 {
             let _ = std::fs::remove_file(&tmp);
-            return Err(AppError::msg(format!(
-                "{name} doğrulanamadı (hash tutmadı)."
+            return Err(AppError::msg(tx!(
+                "{name} doğrulanamadı (hash tutmadı).",
+                "Couldn't verify {name} (hash mismatch)."
             )));
         }
         std::fs::rename(&tmp, mods.join(&name))?;

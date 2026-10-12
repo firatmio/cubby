@@ -11,7 +11,10 @@ pub fn validate_id(id: &str) -> AppResult<()> {
     if valid {
         Ok(())
     } else {
-        Err(AppError::msg("Geçersiz sunucu kimliği"))
+        Err(AppError::msg(tx!(
+            "Geçersiz sunucu kimliği",
+            "Invalid server ID"
+        )))
     }
 }
 
@@ -19,7 +22,7 @@ pub fn instance_dir(app: &AppHandle, id: &str) -> AppResult<PathBuf> {
     validate_id(id)?;
     app.state::<Registry>()
         .path_of(id)
-        .ok_or_else(|| AppError::msg("Sunucu bulunamadı"))
+        .ok_or_else(|| AppError::msg(tx!("Sunucu bulunamadı", "Server not found")))
 }
 
 pub fn server_dir(app: &AppHandle, id: &str) -> AppResult<PathBuf> {

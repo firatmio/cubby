@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Crown, LogOut, Plus, UserPlus, X } from "lucide-react";
 import { api, errorMessage, type AccessView } from "../../lib/api";
+import { useT } from "../../i18n";
 import { rise } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
@@ -23,6 +24,7 @@ export function PlayersSheet() {
   const instance = useSelected();
   const { status, players, rejected } = useServer(instance?.id ?? null);
   const running = status === "running";
+  const t = useT().players;
 
   const [view, setView] = useState<AccessView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export function PlayersSheet() {
   return (
     <Sheet
       open={open && !!instance}
-      title="Oyuncular"
+      title={t.title}
       subtitle={instance?.name}
       onClose={() => openSheet(null)}
       width={560}
@@ -85,14 +87,14 @@ export function PlayersSheet() {
         <AnimatePresence>
           {rejected.length > 0 && (
             <motion.section className={styles.section} variants={rise} initial="hidden" animate="show" exit="exit">
-              <h3>Girmeye çalışanlar</h3>
-              <p className={styles.hint}>Beyaz listede olmadıkları için oyuna giremediler.</p>
+              <h3>{t.triedTitle}</h3>
+              <p className={styles.hint}>{t.triedHint}</p>
               {rejected.map((n) => (
                 <div key={n} className={[styles.row, styles.attention].join(" ")}>
                   <Avatar name={n} />
                   <span className={styles.name}>{n}</span>
                   <Button size="sm" variant="primary" icon={UserPlus} loading={busy === `add:${n}`} onClick={() => add(n)}>
-                    İzin ver
+                    {t.allow}
                   </Button>
                 </div>
               ))}
@@ -101,22 +103,22 @@ export function PlayersSheet() {
         </AnimatePresence>
 
         <section className={styles.section}>
-          <h3>Şu an oyunda</h3>
+          <h3>{t.nowPlaying}</h3>
           {!running ? (
-            <p className={styles.hint}>Dünya kapalı.</p>
+            <p className={styles.hint}>{t.worldOff}</p>
           ) : players.length === 0 ? (
-            <p className={styles.hint}>Henüz kimse yok.</p>
+            <p className={styles.hint}>{t.nobody}</p>
           ) : (
             players.map((n) => (
               <div key={n} className={styles.row}>
                 <Avatar name={n} />
                 <span className={styles.name}>{n}</span>
-                {isOp(n) && <Badge>Yetkili</Badge>}
+                {isOp(n) && <Badge>{t.op}</Badge>}
                 <IconButton
                   icon={Crown}
                   size="sm"
                   variant="ghost"
-                  label={isOp(n) ? "Yetkiyi al" : "Yetkili yap"}
+                  label={isOp(n) ? t.takeOp : t.makeOp}
                   className={isOp(n) ? styles.crownOn : undefined}
                   disabled={busy !== null}
                   onClick={() => id && run(`op:${n}`, () => api.setOp(id, n, !isOp(n)))}
@@ -125,7 +127,7 @@ export function PlayersSheet() {
                   icon={LogOut}
                   size="sm"
                   variant="ghost"
-                  label="Oyundan at"
+                  label={t.kick}
                   disabled={busy !== null}
                   onClick={() => id && run(`kick:${n}`, () => api.kickPlayer(id, n))}
                 />
@@ -136,19 +138,13 @@ export function PlayersSheet() {
 
         {view && (
           <section className={styles.section}>
-            <h3>Kimler girebilir</h3>
+            <h3>{t.whoCanJoin}</h3>
             <Toggle
               checked={view.whitelistEnabled}
               disabled={busy !== null || (view.offlineMode && view.whitelistEnabled)}
               onChange={(on) => id && run("toggle", () => api.setWhitelistEnabled(id, on))}
-              label="Sadece listedekiler (beyaz liste)"
-              description={
-                view.offlineMode
-                  ? "Premium olmayanlar girebildiği için açık kalmalı: adresi bilen biri adını taklit edebilir."
-                  : view.whitelistEnabled
-                    ? "Yalnız aşağıdaki oyuncular girebilir."
-                    : "Kapalı: adresi bilen herkes girebilir."
-              }
+              label={t.whitelistOnly}
+              description={view.offlineMode ? t.whitelistForced : view.whitelistEnabled ? t.whitelistOn : t.whitelistOff}
             />
 
             {view.whitelistEnabled && (
@@ -157,19 +153,19 @@ export function PlayersSheet() {
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Oyuncu adı"
+                    placeholder={t.playerName}
                     maxLength={16}
                     spellCheck={false}
                     autoComplete="off"
                   />
                   <Button type="submit" icon={Plus} loading={busy === "add-input"} disabled={!name.trim()}>
-                    Ekle
+                    {t.add}
                   </Button>
                 </form>
 
                 {suggestions.length > 0 && (
                   <div className={styles.chips}>
-                    <span className={styles.hint}>Daha önce girenler:</span>
+                    <span className={styles.hint}>{t.seenBefore}</span>
                     {suggestions.map((n) => (
                       <button
                         key={n}
@@ -185,18 +181,18 @@ export function PlayersSheet() {
                 )}
 
                 {view.whitelist.length === 0 ? (
-                  <p className={styles.warn}>Liste boş: şu an kimse giremez. Kendini ve arkadaşını ekle.</p>
+                  <p className={styles.warn}>{t.emptyList}</p>
                 ) : (
                   view.whitelist.map((p) => (
                     <div key={p.name} className={styles.row}>
                       <Avatar name={p.name} />
                       <span className={styles.name}>{p.name}</span>
-                      {isOp(p.name) && <Badge>Yetkili</Badge>}
+                      {isOp(p.name) && <Badge>{t.op}</Badge>}
                       <IconButton
                         icon={Crown}
                         size="sm"
                         variant="ghost"
-                        label={isOp(p.name) ? "Yetkiyi al" : "Yetkili yap"}
+                        label={isOp(p.name) ? t.takeOp : t.makeOp}
                         className={isOp(p.name) ? styles.crownOn : undefined}
                         disabled={busy !== null}
                         onClick={() => id && run(`op:${p.name}`, () => api.setOp(id, p.name, !isOp(p.name)))}
@@ -205,7 +201,7 @@ export function PlayersSheet() {
                         icon={X}
                         size="sm"
                         variant="ghost"
-                        label="Listeden çıkar"
+                        label={t.removeFromList}
                         disabled={busy !== null}
                         onClick={() => id && run(`rm:${p.name}`, () => api.whitelistRemove(id, p.name))}
                       />
@@ -220,11 +216,9 @@ export function PlayersSheet() {
         {view && (
           <section className={styles.section}>
             <p className={styles.hint}>
-              {view.offlineMode
-                ? "Premium olmayanlar (TLauncher) de girebilir."
-                : "Yalnız premium Minecraft hesapları girebilir."}{" "}
+              {view.offlineMode ? t.offlineOn : t.premiumOnly}{" "}
               <button type="button" className={styles.link} onClick={() => openSheet("world")}>
-                Dünya ayarlarından değiştir
+                {t.changeInWorld}
               </button>
             </p>
           </section>

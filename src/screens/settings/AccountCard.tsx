@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LogIn, LogOut } from "lucide-react";
-import { api, errorMessage, type AccountStatus } from "../../lib/api";
+import { useT } from "../../i18n";
+import { api, errorCode, errorMessage, type AccountStatus } from "../../lib/api";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import sections from "../instance/sections.module.css";
@@ -12,7 +13,8 @@ import styles from "./AccountCard.module.css";
 export function AccountCard() {
   const [status, setStatus] = useState<AccountStatus | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ text: string; calm: boolean } | null>(null);
+  const t = useT();
   const setCelebrate = useAppStore((s) => s.setCelebrate);
 
   useEffect(() => {
@@ -30,7 +32,9 @@ export function AccountCard() {
       setStatus({ ...status, account: a });
       setCelebrate(a);
     } catch (e) {
-      setError(errorMessage(e));
+      // Mojang onayı beklemek bir hata değil, bilinen bir durum: sakin renkte.
+      const pending = errorCode(e) === "NOT_APPROVED";
+      setError({ text: pending ? t.settings.notApproved : errorMessage(e), calm: pending });
     } finally {
       setBusy(false);
     }
@@ -43,30 +47,25 @@ export function AccountCard() {
 
   return (
     <Card
-      title="Microsoft hesabı"
-      description={
-        account
-          ? "\"Başlat ve katıl\" ve arkadaşının dünyasında \"Oyna\", oyunu Launcher'a uğramadan doğrudan dünyada açar."
-          : "Giriş yaparsan oyun Launcher'a uğramadan, tek tıkla doğrudan dünyada açılır. Giriş Microsoft'un kendi sayfasında olur; şifren uygulamaya gelmez."
-      }
+      title={t.settings.account}
+      description={account ? t.settings.accountOn : t.settings.accountOff}
     >
       {account ? (
         <div className={styles.row}>
           <SkinHead url={account.skin} />
           <span className={styles.name}>{account.name}</span>
           <Button size="sm" variant="ghost" icon={LogOut} onClick={logout}>
-            Çıkış yap
+            {t.settings.logout}
           </Button>
         </div>
       ) : (
         <div className={sections.row}>
           <Button size="sm" icon={LogIn} loading={busy} onClick={login}>
-            {busy ? "Tarayıcıda giriş bekleniyor…" : "Microsoft ile giriş yap"}
+            {busy ? t.settings.waitingBrowser : t.settings.login}
           </Button>
         </div>
       )}
-      {/* Mojang onayı beklemek bir hata değil, bilinen bir durum: sakin renkte. */}
-      {error && <p className={error.includes("Mojang onayı") ? sections.dim : sections.error}>{error}</p>}
+      {error && <p className={error.calm ? sections.dim : sections.error}>{error.text}</p>}
     </Card>
   );
 }

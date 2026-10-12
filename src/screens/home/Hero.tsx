@@ -3,7 +3,8 @@ import type { Instance } from "../../lib/api";
 import { kindCaption, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
 import { useServer } from "../../store/appStore";
-import { STATUS_LABELS } from "../../ui/Badge";
+import { statusLabel } from "../../ui/Badge";
+import { useT } from "../../i18n";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./Hero.module.css";
 
@@ -11,16 +12,17 @@ import styles from "./Hero.module.css";
 export function Hero({ instance }: { instance: Instance }) {
   const { status, players } = useServer(instance.id);
   const stats = usePlayStats(instance.id, status);
+  const t = useT().home;
 
   const detail =
     status === "running"
       ? players.length > 0
-        ? `${players.length} oyuncu bağlı`
-        : "Arkadaşın katılabilir"
+        ? t.playersOnline(players.length)
+        : t.friendCanJoin
       : status === "crashed"
-        ? "Ayrıntılar Gelişmiş > Konsol'da"
+        ? t.crashDetails
         : status === "stopped" && stats?.lastPlayedAt
-          ? `Son oynanma ${relativeTime(stats.lastPlayedAt)}`
+          ? t.lastPlayed(relativeTime(stats.lastPlayedAt))
           : null;
 
   return (
@@ -32,7 +34,7 @@ export function Hero({ instance }: { instance: Instance }) {
         {instance.name}
       </motion.h1>
       <motion.p className={[styles.status, styles[status]].join(" ")} variants={rise}>
-        {STATUS_LABELS[status]}
+        {statusLabel(status)}
         {detail && <span className={styles.detail}>{detail}</span>}
       </motion.p>
     </motion.div>

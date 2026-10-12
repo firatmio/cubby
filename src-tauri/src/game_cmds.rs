@@ -65,9 +65,12 @@ pub fn account_status(auth: State<'_, AuthManager>) -> AccountStatus {
 pub async fn account_login(app: AppHandle, auth: State<'_, AuthManager>) -> AppResult<Account> {
     auth.login(
         |url| {
-            app.opener()
-                .open_url(url, None::<&str>)
-                .map_err(|e| AppError::msg(format!("Tarayıcı açılamadı: {e}")))
+            app.opener().open_url(url, None::<&str>).map_err(|e| {
+                AppError::msg(tx!(
+                    "Tarayıcı açılamadı: {e}",
+                    "Couldn't open the browser: {e}"
+                ))
+            })
         },
         // Tarayıcıdan dönmeye gerek kalmasın: giriş biter bitmez uygulama öne gelir.
         || crate::focus_main(&app),
@@ -165,7 +168,10 @@ pub async fn prepare(
         .unwrap_or_else(|e| e.into_inner())
         .is_some()
     {
-        return Err(AppError::msg("Minecraft zaten açık."));
+        return Err(AppError::msg(tx!(
+            "Minecraft zaten açık.",
+            "Minecraft is already running."
+        )));
     }
     let session = app.state::<AuthManager>().session().await?;
     let state = app.state::<AppState>();
@@ -244,7 +250,10 @@ pub fn start(app: &AppHandle, p: Prepared) -> AppResult<()> {
     let games = app.state::<GameState>();
     let mut running = games.0.lock().unwrap_or_else(|e| e.into_inner());
     if running.is_some() {
-        return Err(AppError::msg("Minecraft zaten açık."));
+        return Err(AppError::msg(tx!(
+            "Minecraft zaten açık.",
+            "Minecraft is already running."
+        )));
     }
     emit_progress(app, "starting", 0, 0);
     let logs = app.path().app_data_dir()?.join("logs");
@@ -270,9 +279,12 @@ pub fn start(app: &AppHandle, p: Prepared) -> AppResult<()> {
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| AppError::msg(format!("Minecraft başlatılamadı: {e}")))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        AppError::msg(tx!(
+            "Minecraft başlatılamadı: {e}",
+            "Couldn't start Minecraft: {e}"
+        ))
+    })?;
     *running = Some(child.id());
     drop(running);
     let _ = app.emit(

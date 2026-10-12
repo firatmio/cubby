@@ -373,8 +373,9 @@ async fn ensure_jar(path: &Path) -> AppResult<()> {
     };
     if !ok {
         let _ = tokio::fs::remove_file(path).await;
-        return Err(crate::error::AppError::msg(format!(
+        return Err(crate::error::AppError::msg(tx!(
             "İndirilen dosya geçerli bir jar değil: {}",
+            "The downloaded file isn't a valid jar: {}",
             path.file_name().unwrap_or_default().to_string_lossy()
         )));
     }

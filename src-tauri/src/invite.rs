@@ -29,7 +29,10 @@ pub struct Invite {
 }
 
 fn bad() -> AppError {
-    AppError::msg("Davet kodu bozuk ya da eksik. Arkadaşından yeni bir davet iste.")
+    AppError::msg(tx!(
+        "Davet kodu bozuk ya da eksik. Arkadaşından yeni bir davet iste.",
+        "The invite code is broken or incomplete. Ask your friend for a new invite."
+    ))
 }
 
 impl Invite {
@@ -74,9 +77,10 @@ impl Invite {
         }
         let version: Version = serde_json::from_slice(&bytes).map_err(|_| bad())?;
         if version.v != INVITE_VERSION {
-            return Err(AppError::msg(
+            return Err(AppError::msg(tx!(
                 "Bu davet uygulamanın başka bir sürümüyle oluşturulmuş. İkiniz de uygulamayı güncelleyin.",
-            ));
+                "This invite was made with a different version of the app. Both of you should update."
+            )));
         }
         let invite: Invite = serde_json::from_slice(&bytes).map_err(|_| bad())?;
         invite.validate()?;

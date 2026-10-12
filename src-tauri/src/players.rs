@@ -41,9 +41,10 @@ pub fn is_valid_name(name: &str) -> bool {
 pub fn validate_name(name: &str) -> AppResult<String> {
     let name = name.trim();
     if !is_valid_name(name) {
-        return Err(AppError::msg(
+        return Err(AppError::msg(tx!(
             "Oyuncu adı 3–16 karakter olmalı; yalnız harf, rakam ve alt çizgi",
-        ));
+            "Player names must be 3–16 characters: letters, digits and underscores only"
+        )));
     }
     Ok(name.to_string())
 }
@@ -80,8 +81,9 @@ pub async fn lookup_premium(http: &reqwest::Client, name: &str) -> AppResult<Pro
     for base in PROFILE_URLS {
         match http.get(format!("{base}{name}")).send().await {
             Ok(resp) if resp.status() == reqwest::StatusCode::NOT_FOUND => {
-                return Err(AppError::msg(format!(
-                    "\"{name}\" adında bir Minecraft hesabı yok. Arkadaşın TLauncher kullanıyorsa \"Premium olmayanlar da girebilsin\"i aç."
+                return Err(AppError::msg(tx!(
+                    "\"{name}\" adında bir Minecraft hesabı yok. Arkadaşın TLauncher kullanıyorsa \"Premium olmayanlar da girebilsin\"i aç.",
+                    "There's no Minecraft account named \"{name}\". If your friend uses TLauncher, turn on \"Allow non-premium players\"."
                 )));
             }
             Ok(resp) => match resp.error_for_status() {
@@ -100,8 +102,14 @@ pub async fn lookup_premium(http: &reqwest::Client, name: &str) -> AppResult<Pro
         }
     }
     Err(match last_err {
-        Some(e) => AppError::msg(format!("Mojang'a ulaşılamadı: {e}")),
-        None => AppError::msg("Mojang'dan geçersiz yanıt"),
+        Some(e) => AppError::msg(tx!(
+            "Mojang'a ulaşılamadı: {e}",
+            "Couldn't reach Mojang: {e}"
+        )),
+        None => AppError::msg(tx!(
+            "Mojang'dan geçersiz yanıt",
+            "Invalid response from Mojang"
+        )),
     })
 }
 

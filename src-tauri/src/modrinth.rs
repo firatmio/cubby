@@ -201,7 +201,10 @@ pub struct Modrinth<'a> {
 }
 
 fn api_error(e: reqwest::Error) -> AppError {
-    AppError::msg(format!("Modrinth'e ulaşılamadı: {e}"))
+    AppError::msg(tx!(
+        "Modrinth'e ulaşılamadı: {e}",
+        "Couldn't reach Modrinth: {e}"
+    ))
 }
 
 impl<'a> Modrinth<'a> {

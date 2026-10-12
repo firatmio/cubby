@@ -1,21 +1,27 @@
 import { useEffect, useState } from "react";
 import { FolderOpen, RotateCcw } from "lucide-react";
+import { useLang, useT } from "../../i18n";
 import { api, errorMessage, pickFolder, type AppSettings, type SettingsView } from "../../lib/api";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
+import { PillTabs } from "../../ui/PillTabs";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
 import { AccountCard } from "./AccountCard";
 import styles from "../instance/sections.module.css";
 import own from "./AppSettingsSheet.module.css";
 
-/** Uygulama geneli: Minecraft klasörü ve ekran görüntülerinin kapak olarak kullanılması. */
+type LangChoice = "auto" | "tr" | "en";
+
+/** Uygulama geneli: dil, hesap, Minecraft klasörü ve ekran görüntülerinin kapak olarak kullanılması. */
 export function AppSettingsSheet() {
   const open = useAppStore((s) => s.sheet === "settings");
   const openSheet = useAppStore((s) => s.openSheet);
   const [view, setView] = useState<SettingsView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  const setLang = useLang((s) => s.setLang);
 
   useEffect(() => {
     if (!open) return;
@@ -26,7 +32,9 @@ export function AppSettingsSheet() {
   const save = async (settings: AppSettings) => {
     setError(null);
     try {
-      setView(await api.updateSettings(settings));
+      const v = await api.updateSettings(settings);
+      setView(v);
+      setLang(v.language);
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -34,21 +42,33 @@ export function AppSettingsSheet() {
 
   const chooseDir = async () => {
     if (!view) return;
-    const dir = await pickFolder("Minecraft oyun klasörü (.minecraft)");
+    const dir = await pickFolder(t.settings.mcFolderPick);
     if (dir) await save({ ...view.settings, minecraftDir: dir });
   };
 
   return (
-    <Sheet open={open} title="Ayarlar" onClose={() => openSheet(null)}>
+    <Sheet open={open} title={t.settings.title} onClose={() => openSheet(null)}>
       {view && (
         <div className={styles.stack}>
+          <Card title={t.settings.language} description={t.settings.languageText}>
+            <PillTabs<LangChoice>
+              tabs={[
+                { id: "auto", label: t.settings.langAuto },
+                { id: "tr", label: "Türkçe" },
+                { id: "en", label: "English" },
+              ]}
+              active={view.settings.language ?? "auto"}
+              onChange={(c) => save({ ...view.settings, language: c === "auto" ? null : c })}
+              layoutId="language-tab"
+            />
+          </Card>
           <AccountCard />
           <Card>
             <Toggle
               checked={view.settings.useScreenshots}
               onChange={(useScreenshots) => save({ ...view.settings, useScreenshots })}
-              label="Ekran görüntülerimi kapak yap"
-              description="Bir dünya açıkken oyunda F2 ile çektiğin görüntü, o dünyanın arka planı olur. Görüntüler bilgisayarından çıkmaz."
+              label={t.settings.screenshots}
+              description={t.settings.screenshotsText}
             />
           </Card>
 
@@ -56,24 +76,24 @@ export function AppSettingsSheet() {
             <Toggle
               checked={view.settings.clientSync}
               onChange={(clientSync) => save({ ...view.settings, clientSync })}
-              label="Modları kendi Minecraft'ıma da kur"
-              description="Modlu dünyalarda oyuncuda gereken ve önerilen modlar, mod altyapısıyla (Fabric, NeoForge, Forge, Quilt) birlikte senin Minecraft'ına da kurulur. Resmi Launcher'da her dünyanın kendi profili olur, böylece modlar karışmaz."
+              label={t.settings.clientSync}
+              description={t.settings.clientSyncText}
             />
           </Card>
 
           <Card
-            title="Minecraft klasörü"
-            description="Ekran görüntüleri buradan okunur. TLauncher başka bir klasör kullanıyorsa değiştir."
+            title={t.settings.mcFolder}
+            description={t.settings.mcFolderText}
           >
             <p className={own.path} title={view.minecraftDir ?? undefined}>
-              {view.minecraftDir ?? "Bulunamadı"}
+              {view.minecraftDir ?? t.settings.notFound}
             </p>
             {!view.screenshotsFound && (
-              <p className={styles.dim}>Bu klasörde henüz "screenshots" klasörü yok; ilk F2'de oluşur.</p>
+              <p className={styles.dim}>{t.settings.noScreenshots}</p>
             )}
             <div className={styles.row}>
               <Button size="sm" icon={FolderOpen} onClick={chooseDir}>
-                Değiştir
+                {t.settings.change}
               </Button>
               {view.settings.minecraftDir && (
                 <Button
@@ -82,7 +102,7 @@ export function AppSettingsSheet() {
                   icon={RotateCcw}
                   onClick={() => save({ ...view.settings, minecraftDir: null })}
                 >
-                  Varsayılana dön
+                  {t.settings.reset}
                 </Button>
               )}
             </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Check, Copy, Globe, Home, Link2, Loader2, RotateCcw, Router, Send } from "lucide-react";
 import { api, errorMessage, type AccessView, type InviteLinks, type Route } from "../../lib/api";
+import { useT } from "../../i18n";
 import { rise } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -14,6 +15,7 @@ import styles from "./ConnectionSheet.module.css";
 
 function Address({ address }: { address: string }) {
   const [copied, setCopied] = useState(false);
+  const tt = useT();
   const copy = async () => {
     await navigator.clipboard.writeText(address);
     setCopied(true);
@@ -26,7 +28,7 @@ function Address({ address }: { address: string }) {
         icon={copied ? Check : Copy}
         size="sm"
         variant="ghost"
-        label={copied ? "Kopyalandı" : "Kopyala"}
+        label={copied ? tt.common.copied : tt.connection.copy}
         onClick={copy}
       />
     </div>
@@ -43,20 +45,18 @@ function Working({ text }: { text: string }) {
 }
 
 function DirectRoute({ route }: { route: Route }) {
+  const t = useT().connection;
   return (
     <div className={styles.route}>
       <div className={styles.routeHead}>
         <Router size={16} aria-hidden />
-        <span>Modem üzerinden</span>
+        <span>{t.viaRouter}</span>
       </div>
-      {route.state === "working" && <Working text="Modem kontrol ediliyor…" />}
+      {route.state === "working" && <Working text={t.checkingRouter} />}
       {route.state === "ok" && route.address && (
         <>
           <Address address={route.address} />
-          <p className={styles.hint}>
-            Arkadaşın Çok Oyunculu › Sunucu Ekle'ye bunu yazar. Ev IP'n değişirse (ör. modem yeniden başlayınca) adres de
-            değişir.
-          </p>
+          <p className={styles.hint}>{t.routerHint}</p>
         </>
       )}
       {route.state === "error" && (
@@ -64,12 +64,11 @@ function DirectRoute({ route }: { route: Route }) {
           <p className={styles.hint}>{route.message}</p>
           <ul className={styles.options}>
             <li>
-              Modeminin yönetim sayfasında (genelde 192.168.0.1 ya da 192.168.1.1) <b>UPnP</b>'yi açıp dünyayı yeniden
-              başlatırsan bu yol çalışır.
+              {t.upnpTipBefore}
+              <b>UPnP</b>
+              {t.upnpTipAfter}
             </li>
-            <li>
-              Ya da arkadaşın da bu uygulamayı kursun: yukarıdaki davet linkiyle modem ayarına gerek kalmadan girer.
-            </li>
+            <li>{t.appTip}</li>
           </ul>
         </>
       )}
@@ -83,6 +82,8 @@ function InviteSection({ id }: { id: string }) {
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tt = useT();
+  const t = tt.connection;
 
   useEffect(() => {
     setLinks(null);
@@ -109,43 +110,37 @@ function InviteSection({ id }: { id: string }) {
   return (
     <section className={styles.section}>
       <h3>
-        <Send size={17} aria-hidden /> Uygulamayla davet et
-        <span className={styles.recommended}>Önerilen</span>
+        <Send size={17} aria-hidden /> {t.inviteTitle}
+        <span className={styles.recommended}>{t.recommended}</span>
       </h3>
-      <p className={styles.hint}>
-        Arkadaşın bu uygulamayı kurup linke tıklar; modem ayarı gerekmez ve dünyan Minecraft'taki sunucu listesine
-        kendiliğinden eklenir. Bağlantı mümkünse doğrudan kurulur.
-      </p>
+      <p className={styles.hint}>{t.inviteText}</p>
       <div className={styles.buttons}>
         <Button size="sm" variant="primary" icon={copied === "link" ? Check : Link2} disabled={!links} onClick={() => copy("link")}>
-          {copied === "link" ? "Kopyalandı" : "Linki kopyala"}
+          {copied === "link" ? tt.common.copied : t.copyLink}
         </Button>
         <Button size="sm" icon={copied === "code" ? Check : Copy} disabled={!links} onClick={() => copy("code")}>
-          {copied === "code" ? "Kopyalandı" : "Kodu kopyala"}
+          {copied === "code" ? tt.common.copied : t.copyCode}
         </Button>
         <Button size="sm" variant="ghost" icon={RotateCcw} disabled={!links} onClick={() => setConfirmReset(true)}>
-          Daveti yenile
+          {t.resetInvite}
         </Button>
       </div>
       {error && <p className={styles.error}>{error}</p>}
       {confirmReset && (
         <Dialog
-          title="Daveti yenile"
+          title={t.resetInvite}
           actions={
             <>
               <Button variant="ghost" onClick={() => setConfirmReset(false)}>
-                Vazgeç
+                {tt.common.cancel}
               </Button>
               <Button variant="danger" onClick={reset}>
-                Yenile
+                {t.reset}
               </Button>
             </>
           }
         >
-          <p>
-            Daha önce gönderdiğin linkler ve kodlar çalışmaz olur; bu dünyaya katılmış olanlar da giremez. Girmesini
-            istediklerine yeni linki göndermen gerekir.
-          </p>
+          <p>{t.resetText}</p>
         </Dialog>
       )}
     </section>
@@ -165,6 +160,7 @@ export function ConnectionSheet() {
   const [error, setError] = useState<string | null>(null);
   const running = status === "running";
   const id = instance?.id;
+  const t = useT().connection;
 
   useEffect(() => {
     if (!open || !id) return;
@@ -188,29 +184,29 @@ export function ConnectionSheet() {
   const openToEveryone = access && !access.offlineMode && !access.whitelistEnabled;
 
   return (
-    <Sheet open={open && !!instance} title="Bağlantı" subtitle={instance?.name} onClose={() => openSheet(null)}>
+    <Sheet open={open && !!instance} title={t.title} subtitle={instance?.name} onClose={() => openSheet(null)}>
       {view && (
         <div className={styles.scroll}>
           {id && <InviteSection id={id} />}
 
           <section className={styles.section}>
             <h3>
-              <Home size={17} aria-hidden /> Aynı evdeyseniz
+              <Home size={17} aria-hidden /> {t.sameHome}
             </h3>
-            {view.lan ? <Address address={view.lan} /> : <p className={styles.hint}>Yerel ağ adresi bulunamadı.</p>}
-            <p className={styles.hint}>Aynı modeme bağlı arkadaşın Minecraft'ta Çok Oyunculu › Sunucu Ekle'ye bunu yazar.</p>
+            {view.lan ? <Address address={view.lan} /> : <p className={styles.hint}>{t.noLan}</p>}
+            <p className={styles.hint}>{t.lanHint}</p>
           </section>
 
           <section className={styles.section}>
             <h3>
-              <Globe size={17} aria-hidden /> İnternetten
+              <Globe size={17} aria-hidden /> {t.internet}
             </h3>
             <Toggle
               checked={view.internet}
               onChange={setInternet}
               disabled={busy}
-              label="İnternete aç"
-              description="Arkadaşın başka bir evden de girebilsin."
+              label={t.openInternet}
+              description={t.openInternetText}
             />
             {error && <p className={styles.error}>{error}</p>}
 
@@ -226,16 +222,16 @@ export function ConnectionSheet() {
                   {running ? (
                     <DirectRoute route={view.direct} />
                   ) : (
-                    <p className={styles.hint}>Dünyayı başlattığında modemde port açılır ve adres burada görünür.</p>
+                    <p className={styles.hint}>{t.startToOpen}</p>
                   )}
 
                   {openToEveryone && (
                     <div className={styles.warn}>
                       <AlertTriangle size={15} aria-hidden />
                       <span>
-                        Beyaz liste kapalı: adresi bilen her premium oyuncu girebilir.{" "}
+                        {t.whitelistOff}{" "}
                         <button type="button" className={styles.link} onClick={() => openSheet("players")}>
-                          Beyaz listeyi aç
+                          {t.turnOnWhitelist}
                         </button>
                       </span>
                     </div>
