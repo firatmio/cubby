@@ -126,6 +126,25 @@ export function JoinedActions({ view }: { view: JoinedView }) {
     <div className={bar.bar}>
       <NoticeBar notice={shown} />
 
+      {modsChanged && (
+        <Button
+          icon={Download}
+          loading={busy === "mods"}
+          disabled={busy !== null}
+          className={bar.power}
+          onClick={() =>
+            run("mods", async () => {
+              upsertJoined(await api.updateJoinedMods(id));
+              setMessage({ tone: "info", text: "Modlar arkadaşınınkiyle aynı oldu." });
+            })
+          }
+        >
+          Modlar değişti · Güncelle
+        </Button>
+      )}
+      <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
+        Oyna
+      </Button>
       <div className={bar.buttons}>
         <IconButton
           icon={RefreshCw}
@@ -145,24 +164,6 @@ export function JoinedActions({ view }: { view: JoinedView }) {
           }
         />
         <IconButton icon={Trash2} label="Listemden kaldır" disabled={busy !== null} onClick={() => setConfirmRemove(true)} />
-        {modsChanged && (
-          <Button
-            icon={Download}
-            loading={busy === "mods"}
-            disabled={busy !== null}
-            onClick={() =>
-              run("mods", async () => {
-                upsertJoined(await api.updateJoinedMods(id));
-                setMessage({ tone: "info", text: "Modlar arkadaşınınkiyle aynı oldu." });
-              })
-            }
-          >
-            Arkadaşın modları değiştirdi · Güncelle
-          </Button>
-        )}
-        <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
-          Oyna
-        </Button>
       </div>
 
       {confirmRemove && (

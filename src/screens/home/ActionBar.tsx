@@ -35,7 +35,8 @@ function saveMode(id: string, mode: StartMode) {
   }
 }
 
-/** Sağ alt: ana eylem (Başlat/Durdur) ve solunda ikincil yuvarlak butonlar. */
+/** Sağ alt: üstte ana eylem (Başlat/Durdur), altında ikincil yuvarlak butonlar. Dar kalsın ki
+ *  soldaki bilgi kartları sıkışmasın. */
 export function ActionBar({ instance }: { instance: Instance }) {
   const openSheet = useAppStore((s) => s.openSheet);
   const launch = useAppStore((s) => s.launchResults[instance.id]);
@@ -55,6 +56,30 @@ export function ActionBar({ instance }: { instance: Instance }) {
     <div className={styles.bar}>
       <NoticeBar notice={shown} />
 
+      {active ? (
+        <Button
+          variant="secondary"
+          size="lg"
+          icon={Square}
+          loading={status === "stopping"}
+          onClick={control.stop}
+          className={styles.power}
+        >
+          {status === "stopping" ? "Kapanıyor" : status === "starting" ? "Açılıyor…" : "Durdur"}
+        </Button>
+      ) : (
+        <SplitButton
+          options={START_OPTIONS}
+          value={mode}
+          loading={control.starting}
+          className={styles.power}
+          onRun={(m) => {
+            setMode(m);
+            saveMode(instance.id, m);
+            void control.start(m === "join");
+          }}
+        />
+      )}
       <div className={styles.buttons}>
         <IconButton icon={Users} label="Oyuncular" onClick={() => openSheet("players")} />
         <IconButton icon={Settings2} label="Dünya ayarları" onClick={() => openSheet("world")} />
@@ -67,30 +92,6 @@ export function ActionBar({ instance }: { instance: Instance }) {
         )}
         <IconButton icon={ImageIcon} label="Kapak resmi" onClick={() => openSheet("cover")} />
         <IconButton icon={Wrench} label="Gelişmiş" onClick={() => openSheet("advanced")} />
-        {active ? (
-          <Button
-            variant="secondary"
-            size="lg"
-            icon={Square}
-            loading={status === "stopping"}
-            onClick={control.stop}
-            className={styles.power}
-          >
-            {status === "stopping" ? "Kapanıyor" : status === "starting" ? "Açılıyor…" : "Durdur"}
-          </Button>
-        ) : (
-          <SplitButton
-            options={START_OPTIONS}
-            value={mode}
-            loading={control.starting}
-            className={styles.power}
-            onRun={(m) => {
-              setMode(m);
-              saveMode(instance.id, m);
-              void control.start(m === "join");
-            }}
-          />
-        )}
       </div>
       {control.dialogs}
     </div>
