@@ -14,6 +14,7 @@ const SHELVES: Record<ContentKind, string[]> = {
   resourcePack: ["vanilla-like", "realistic", "simplistic", "themed", "gui", "fonts", "combat", "decoration"],
   shader: ["realistic", "semi-realistic", "fantasy", "cartoon", "vanilla-like", "potato", "low"],
   dataPack: ["adventure", "worldgen", "game-mechanics", "utility", "magic", "mobs"],
+  modpack: ["adventure", "technology", "magic", "quests", "challenging", "lightweight", "kitchen-sink", "multiplayer"],
 };
 const PLUGIN_SHELVES = ["management", "economy", "social", "minigame", "utility", "game-mechanics", "optimization"];
 /** Öne çıkan bandında en fazla kaç proje. */
@@ -72,7 +73,7 @@ export function Showcase({ world, kind, plugin, scrollRoot, selectedId, actions,
         isInstalled={actions.isInstalled}
         installing={installing}
         busy={actions.busy !== null}
-        onInstall={actions.install}
+        onInstall={kind === "modpack" ? undefined : actions.install}
         onOpen={onOpen}
       />
       {defs.map((d) => (

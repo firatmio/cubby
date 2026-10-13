@@ -18,6 +18,7 @@ import {
   type LaunchResult,
   type GameProgress,
   type Account,
+  type LoaderKind,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -46,9 +47,23 @@ export interface ServerRuntime {
 
 const EMPTY_RUNTIME: ServerRuntime = { status: "stopped", logs: [], stats: null, players: [], rejected: [] };
 
+/** Keşfet'ten "Yeni dünya olarak kur": sihirbaz bu paketle, altyapı ve sürüm sormadan açılır. */
+export interface ModpackPreset {
+  projectId: string;
+  versionId: string;
+  title: string;
+  icon: string | null;
+  mc: string;
+  loader: LoaderKind;
+  loaderVersion: string | null;
+  ramMb: number;
+}
+
 interface AppStore {
   view: View;
   setView: (view: View) => void;
+  setupPreset: ModpackPreset | null;
+  startModpackSetup: (preset: ModpackPreset) => void;
 
   sheet: SheetName | null;
   openSheet: (sheet: SheetName | null) => void;
@@ -136,7 +151,15 @@ export const useAppStore = create<AppStore>((set, get) => {
 
   return {
     view: "home",
-    setView: (view) => set((st) => ({ view, sheet: null, page: view === "setup" ? "play" : st.page })),
+    setView: (view) =>
+      set((st) => ({
+        view,
+        sheet: null,
+        page: view === "setup" ? "play" : st.page,
+        setupPreset: view === "setup" ? st.setupPreset : null,
+      })),
+    setupPreset: null,
+    startModpackSetup: (setupPreset) => set({ setupPreset, view: "setup", sheet: null, page: "play" }),
 
     sheet: null,
     openSheet: (sheet) => set({ sheet }),

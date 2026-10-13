@@ -13,6 +13,8 @@ use crate::properties::Properties;
 const RECORD_FILE: &str = "content.json";
 /// Shader için kurulan istemci modlarının (Iris, Sodium…) saklandığı klasör; eşitleme buradan kopyalar.
 pub const EXTRAS_DIR: &str = "client-extras";
+/// Mod paketinin oyuncu dosyaları (ayarlar, kaynak paketleri, shader'lar); oyun klasörüne bir kez kopyalanır.
+pub const PACK_CLIENT_DIR: &str = "pack-client";
 
 /// Kurulu bir paket.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,6 +42,31 @@ pub struct Record {
     pub active_shader: Option<String>,
     /// Sunucunun girenlere zorunlu gönderdiği kaynak paketi (dosya adı).
     pub forced_pack: Option<String>,
+    /// Dünya bir mod paketinden kurulduysa: paketin yalnız oyuncuda çalışan modları (ekstralarda).
+    /// Shader ekstralarından ayrı tutulur; arkadaşlara "önerilen" olarak gider.
+    pub pack_client: Vec<ModRecord>,
+    /// Dünyanın kurulduğu mod paketi.
+    pub modpack: Option<PackOrigin>,
+    /// Paketin oyuncu dosyaları oyun klasörüne kopyalandı mı.
+    pub pack_client_applied: bool,
+    /// Paketten gelen, oyun klasörüne kopyalanınca kayda geçecek kaynak paketi ve shader'lar.
+    pub pack_pending: Vec<PendingItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackOrigin {
+    pub project_id: String,
+    pub version_id: String,
+    pub title: String,
+    pub version_number: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingItem {
+    pub kind: ContentKind,
+    pub item: Item,
 }
 
 impl Record {
@@ -63,7 +90,7 @@ impl Record {
             ContentKind::ResourcePack => &self.resourcepacks,
             ContentKind::Shader => &self.shaders,
             ContentKind::DataPack => &self.datapacks,
-            ContentKind::Mod => &[],
+            ContentKind::Mod | ContentKind::Modpack => &[],
         }
     }
 
@@ -72,8 +99,19 @@ impl Record {
             ContentKind::ResourcePack => &mut self.resourcepacks,
             ContentKind::Shader => &mut self.shaders,
             // Modların kendi kaydı var (`mods::ModRecord`); buraya düşmez.
-            ContentKind::DataPack | ContentKind::Mod => &mut self.datapacks,
+            ContentKind::DataPack | ContentKind::Mod | ContentKind::Modpack => &mut self.datapacks,
         }
+    }
+
+    /// Paketten gelenler oyun klasörüne kopyalandı: bekleyen kaynak paketi ve shader'lar kayda geçer.
+    pub fn apply_pending(&mut self) {
+        for p in std::mem::take(&mut self.pack_pending) {
+            let list = self.items_mut(p.kind);
+            if !list.iter().any(|i| i.file == p.item.file) {
+                list.push(p.item);
+            }
+        }
+        self.pack_client_applied = true;
     }
 
     /// Kaydı klasörle eşitler: elle silinmiş dosyaların kaydı düşer.
@@ -291,6 +329,43 @@ mod tests {
         // Dosya klasörde yoksa kaydı ve zorunlu işareti düşer.
         r.prune(ContentKind::ResourcePack, &d);
         assert!(r.resourcepacks.is_empty() && r.forced_pack.is_none());
+        // M10b'den kalan kayıt (paket alanları yok) okunur.
+        std::fs::write(
+            d.join(RECORD_FILE),
+            r#"{"resourcepacks":[],"shaders":[],"datapacks":[],"clientMods":[],"activeShader":null}"#,
+        )
+        .unwrap();
+        assert_eq!(Record::load(&d), Record::default());
         let _ = std::fs::remove_dir_all(d);
+    }
+
+    #[test]
+    fn pending_pack_items_move_into_record() {
+        let item = |f: &str| Item {
+            file: f.into(),
+            sha1: "x".into(),
+            project_id: "p".into(),
+            version_id: "v".into(),
+            title: "A".into(),
+            url: String::new(),
+        };
+        let mut r = Record {
+            pack_pending: vec![
+                PendingItem {
+                    kind: ContentKind::Shader,
+                    item: item("s.zip"),
+                },
+                PendingItem {
+                    kind: ContentKind::ResourcePack,
+                    item: item("r.zip"),
+                },
+            ],
+            ..Default::default()
+        };
+        r.shaders.push(item("s.zip"));
+        r.apply_pending();
+        assert_eq!(r.shaders.len(), 1);
+        assert_eq!(r.resourcepacks.len(), 1);
+        assert!(r.pack_pending.is_empty() && r.pack_client_applied);
     }
 }

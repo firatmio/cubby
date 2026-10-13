@@ -46,7 +46,7 @@ fn parse_metadata(xml: &str) -> Vec<String> {
 }
 
 /// `1.17` ve sonrası ya da yeni (yıl tabanlı, 26+) sürüm adları.
-fn mc_supported(mc: &str) -> bool {
+pub(crate) fn mc_supported(mc: &str) -> bool {
     let mut it = mc.split('.').map(|p| p.parse::<u32>().ok());
     match (it.next().flatten(), it.next().flatten()) {
         (Some(1), Some(minor)) => minor >= 17,

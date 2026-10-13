@@ -370,6 +370,8 @@ mod tests {
                 })
                 .collect(),
             files: vec![file(&format!("{project}-{id}.jar"), true)],
+            loaders: Vec::new(),
+            game_versions: Vec::new(),
         }
     }
 

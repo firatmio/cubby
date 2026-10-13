@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, Download, ExternalLink, Info, X } from "lucide-react";
-import { mediaUrl, openExternal, type ContentKind } from "../../lib/api";
+import { AlertTriangle, Check, ChevronDown, Download, ExternalLink, Info, Plus, Users, X } from "lucide-react";
+import { mediaUrl, openExternal, type ContentKind, type ModHit, type ModInfo, type PackPlan } from "../../lib/api";
 import { useT } from "../../i18n";
-import { compactCount } from "../../lib/format";
+import { LOADER_LABELS, compactCount, formatBytesMb } from "../../lib/format";
+import { useAppStore } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
 import { Markdown } from "../../ui/Markdown";
+import { SelectList } from "../../ui/SelectList";
 import { Toggle } from "../../ui/Toggle";
 import { ModIcon } from "./parts";
 import { TileArt } from "./ProjectTile";
@@ -27,7 +29,7 @@ type Props = {
  * Kutucuğun bilgileriyle hemen açılır; galeri/açıklama ve sürüm planı arkadan dolar.
  */
 export function Preview({ preview, kind, plugin, own, actions }: Props) {
-  const { hit, info, plan, close } = preview;
+  const { hit, info, plan, pack, close } = preview;
   const tt = useT();
   const t = tt.mods;
   const d = tt.discover;
@@ -85,6 +87,10 @@ export function Preview({ preview, kind, plugin, own, actions }: Props) {
           </div>
         </div>
 
+        {kind === "modpack" ? (
+          <PackFacts hit={hit} info={info} pack={pack} onPickVersion={preview.pickVersion} />
+        ) : (
+        <>
         <div className={styles.previewActions}>
           {installed ? (
             <span className={styles.installed}>
@@ -189,6 +195,8 @@ export function Preview({ preview, kind, plugin, own, actions }: Props) {
             </li>
           )}
         </ul>
+        </>
+        )}
 
         {info ? (
           info.body ? <Markdown source={info.body} /> : <p className={styles.previewDesc}>{info.description}</p>
@@ -204,5 +212,122 @@ export function Preview({ preview, kind, plugin, own, actions }: Props) {
         )}
       </div>
     </aside>
+  );
+}
+
+type PackProps = {
+  hit: ModHit;
+  info: ModInfo | null;
+  pack: PackPlan | null;
+  onPickVersion: (versionId: string) => void;
+};
+
+/** Mod paketi: nasıl bir dünya kurulacağı, sürüm seçimi ve "Yeni dünya olarak kur". */
+function PackFacts({ hit, info, pack, onPickVersion }: PackProps) {
+  const startModpackSetup = useAppStore((s) => s.startModpackSetup);
+  const tt = useT();
+  const t = tt.mods;
+  const d = tt.discover;
+  const [versionsOpen, setVersionsOpen] = useState(false);
+
+  useEffect(() => setVersionsOpen(false), [hit.projectId]);
+  const ready = !!pack && !pack.error && !!pack.versionId && !!pack.mc && !!pack.loader;
+
+  const start = () => {
+    if (!ready) return;
+    startModpackSetup({
+      projectId: hit.projectId,
+      versionId: pack.versionId!,
+      title: hit.title,
+      icon: info?.icon ?? hit.icon,
+      mc: pack.mc!,
+      loader: pack.loader!,
+      loaderVersion: pack.loaderVersion,
+      ramMb: pack.ramMb,
+    });
+  };
+
+  return (
+    <>
+      <div className={styles.previewActions}>
+        <Button variant="primary" icon={Plus} loading={!pack} disabled={!ready} onClick={start}>
+          {pack ? d.installAsWorld : tt.common.preparing}
+        </Button>
+        {info && (
+          <Button variant="ghost" icon={ExternalLink} onClick={() => openExternal(info.url)}>
+            {t.openModrinth}
+          </Button>
+        )}
+      </div>
+      <ul className={styles.facts}>
+        {!pack ? (
+          <>
+            <li className={styles.line} style={{ width: "60%" }} />
+            <li className={styles.line} style={{ width: "85%" }} />
+            <li className={styles.line} style={{ width: "50%" }} />
+          </>
+        ) : (
+          <>
+            {pack.versionNumber && (
+              <li>
+                {d.packVersion} <b>{pack.versionNumber}</b>
+                {pack.unstable && <Badge tone="warning">{t.unstable}</Badge>}
+                {pack.versions.length > 1 && (
+                  <button type="button" className={styles.factLink} onClick={() => setVersionsOpen((v) => !v)}>
+                    {d.otherVersion}
+                    <ChevronDown size={14} aria-hidden style={{ rotate: versionsOpen ? "180deg" : "0deg" }} />
+                  </button>
+                )}
+              </li>
+            )}
+            {versionsOpen && (
+              <li className={styles.factList}>
+                <SelectList
+                  maxHeight={200}
+                  value={pack.versionId}
+                  onSelect={(id) => {
+                    setVersionsOpen(false);
+                    if (id !== pack.versionId) onPickVersion(id);
+                  }}
+                  items={pack.versions.map((v) => ({
+                    key: v.id,
+                    label: v.number,
+                    meta: `${LOADER_LABELS[v.loader]} · ${v.mc}`,
+                    badges: v.unstable ? <Badge tone="warning">{t.unstable}</Badge> : undefined,
+                  }))}
+                />
+              </li>
+            )}
+            {pack.mc && pack.loader && (
+              <li>
+                <Check size={15} aria-hidden />
+                Minecraft <b>{pack.mc}</b> · {LOADER_LABELS[pack.loader]}
+                {pack.loaderVersion ? ` ${pack.loaderVersion}` : ""}
+              </li>
+            )}
+            {!pack.error && (
+              <li>
+                <Check size={15} aria-hidden />
+                {d.packMods(pack.serverMods, pack.clientMods)} · {d.packSize(formatBytesMb(pack.size))}
+              </li>
+            )}
+            {pack.error && (
+              <li className={styles.warn}>
+                <AlertTriangle size={15} aria-hidden />
+                {pack.error}
+              </li>
+            )}
+          </>
+        )}
+        <li>
+          <Info size={15} aria-hidden />
+          {d.modpackInfo}
+        </li>
+        <li>
+          <Users size={15} aria-hidden />
+          {d.packFriends}
+        </li>
+      </ul>
+    </>
   );
 }

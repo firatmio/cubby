@@ -1034,6 +1034,34 @@
   font-weight: 600;
 }
 
+/* Mod paketinde "Başka sürüm": satır içi küçük bağlantı düğmesi ve açılan liste. */
+.factLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.factLink:hover {
+  color: var(--text);
+}
+
+.factLink svg {
+  transition: rotate 0.2s ease;
+}
+
+.facts li.factList {
+  margin: 2px 0 var(--sp-1);
+}
+
 .warn {
   color: var(--warning) !important;
 }

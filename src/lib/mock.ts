@@ -343,7 +343,22 @@ const PACKS: MockPack[] = [
   { projectId: "DP000002", kind: "dataPack", title: "Dungeons and Taverns", description: "New structures to explore.", downloads: 4_400_000 },
   { projectId: "DP000003", kind: "dataPack", title: "VeinMiner", description: "Mine a whole vein at once.", downloads: 2_500_000 },
   { projectId: "DP000004", kind: "dataPack", title: "Incendium", description: "A Nether overhaul.", downloads: 2_200_000 },
+  { projectId: "MP000001", kind: "modpack", title: "Cobblemon Official Modpack", description: "The official modpack of the Cobblemon mod, for Fabric!", downloads: 9_900_000 },
+  { projectId: "MP000002", kind: "modpack", title: "Better MC [FABRIC]", description: "Adventure, exploration and quality of life.", downloads: 7_300_000 },
+  { projectId: "MP000003", kind: "modpack", title: "All the Mods 10", description: "A kitchen sink pack with hundreds of mods.", downloads: 5_100_000 },
+  { projectId: "MP000004", kind: "modpack", title: "Create: Above and Beyond", description: "A Create-focused tech pack with quests.", downloads: 3_400_000 },
+  { projectId: "MP000005", kind: "modpack", title: "Pixelmon Classic 1.12", description: "An old Forge pack (not supported).", downloads: 2_000_000 },
+  { projectId: "MP000006", kind: "modpack", title: "Cozy Survival", description: "A lightweight pack for playing with friends.", downloads: 1_200_000 },
 ];
+/** Sahte mod paketlerinin sürümleri: [sürüm, altyapı, Minecraft, sunucu modu, oyuncu modu]. */
+const PACK_VERSIONS: Record<string, [string, string, string, number, number][]> = {
+  MP000001: [["1.8.2", "fabric", "1.21.1", 34, 41], ["1.7.0", "fabric", "1.21.1", 31, 38], ["1.5.2", "fabric", "1.20.1", 28, 30]],
+  MP000002: [["v34", "fabric", "1.21.1", 180, 62]],
+  MP000003: [["4.2", "neoforge", "1.21.1", 410, 25], ["4.1", "neoforge", "1.21.1", 402, 25]],
+  MP000004: [["1.3", "forge", "1.18.2", 160, 12]],
+  MP000005: [],
+  MP000006: [["2.0", "quilt", "26.3", 22, 9]],
+};
 const packById = (pid: string) => PACKS.find((p) => p.projectId === pid);
 /** Dünya → tür → kurulu paketler. */
 const packsInstalled: Record<string, { file: string; projectId: string; kind: string; active?: boolean; forced?: boolean }[]> = {};
@@ -489,6 +504,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       emit("install://progress", { id, stage: "meta", file: null, downloaded: 0, total: null });
       await progress("install://progress", { id, file: "server" }, 12);
       if (req.loader === "fabric") await progress("install://progress", { id, file: "fabric" }, 3);
+      if (req.modpack) await progress("install://progress", { id, file: "modpack" }, 20);
       if (["neoforge", "forge", "quilt"].includes(req.loader)) {
         await progress("install://progress", { id, file: "installer" }, 4);
         for (const line of [
@@ -753,6 +769,44 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "client_resync":
       await sleep(500);
       return null;
+    case "modpack_plan": {
+      await sleep(600);
+      const list = PACK_VERSIONS[args.projectId] ?? [];
+      const versions = list.map(([number, loader, mc], i) => ({ id: `${args.projectId}-v${i}`, number, mc, loader, unstable: i === 2 }));
+      const chosen = versions.find((v) => v.id === args.versionId) ?? versions[0];
+      if (!chosen)
+        return {
+          versions: [],
+          versionId: null,
+          versionNumber: null,
+          unstable: false,
+          mc: null,
+          loader: null,
+          loaderVersion: null,
+          serverMods: 0,
+          clientMods: 0,
+          size: 0,
+          ramMb: 0,
+          error: "Bu paket Forge 1.12.2 istiyor; Cubby henüz desteklemiyor.",
+        };
+      const [, , , server, client] = list[versions.indexOf(chosen)];
+      const mods = server + client;
+      const loaderVersions: Record<string, string> = { fabric: "0.19.5", neoforge: "21.1.77", forge: "40.2.0", quilt: "0.29.1" };
+      return {
+        versions,
+        versionId: chosen.id,
+        versionNumber: chosen.number,
+        unstable: chosen.unstable,
+        mc: chosen.mc,
+        loader: chosen.loader,
+        loaderVersion: loaderVersions[chosen.loader] ?? null,
+        serverMods: server,
+        clientMods: client,
+        size: mods * 2_800_000,
+        ramMb: mods < 50 ? 4096 : mods < 150 ? 6144 : 8192,
+        error: null,
+      };
+    }
     case "content_search": {
       await sleep(300);
       const q = String(args.query).toLowerCase();

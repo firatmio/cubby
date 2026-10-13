@@ -17,7 +17,8 @@ type Props = {
   isInstalled: (hit: ModHit) => boolean;
   installing: string | null;
   busy: boolean;
-  onInstall: (projectId: string) => void;
+  /** Yoksa (mod paketleri) yalnız "Ayrıntı": kurulum önizlemeden, sürümüyle yapılır. */
+  onInstall?: (projectId: string) => void;
   onOpen: (hit: ModHit) => void;
 };
 
@@ -81,7 +82,7 @@ export function Featured({ hits, plugin, showNeed = true, isInstalled, installin
                 {showNeed && <NeedBadge need={hit.clientNeed} />}
               </span>
               <div className={styles.featuredActions}>
-                {isInstalled(hit) ? (
+                {!onInstall ? null : isInstalled(hit) ? (
                   <span className={styles.installed}>
                     <Check size={15} aria-hidden /> {t.installed}
                   </span>
@@ -96,7 +97,7 @@ export function Featured({ hits, plugin, showNeed = true, isInstalled, installin
                     {t.install}
                   </Button>
                 )}
-                <Button variant="ghost" icon={Info} onClick={() => onOpen(hit)}>
+                <Button variant={onInstall ? "ghost" : "primary"} icon={Info} onClick={() => onOpen(hit)}>
                   {tt.discover.details}
                 </Button>
               </div>

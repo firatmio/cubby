@@ -130,7 +130,7 @@ export interface AccessView {
 export type ClientNeed = "required" | "recommended" | "none" | "clientOnly" | "unknown";
 export type ModSort = "relevance" | "downloads" | "updated";
 /** Keşfet'teki içerik türleri (Rust `ContentKind`). */
-export type ContentKind = "mod" | "resourcePack" | "shader" | "dataPack";
+export type ContentKind = "mod" | "resourcePack" | "shader" | "dataPack" | "modpack";
 
 export interface ModHit {
   projectId: string;
@@ -404,6 +404,34 @@ export interface CreateInstanceRequest {
   offlineMode: boolean;
   /** null: beyaz liste kapalı */
   whitelist: string[] | null;
+  /** Mod paketinden kurulum; altyapı ve sürümler paketten alınır */
+  modpack?: { projectId: string; versionId: string } | null;
+}
+
+/** Mod paketinin bir sürümü (önizlemedeki sürüm seçici). */
+export interface PackVersion {
+  id: string;
+  number: string;
+  mc: string;
+  loader: LoaderKind;
+  unstable: boolean;
+}
+
+/** Önizlemedeki mod paketi bilgisi: nasıl bir dünya kurulacak. */
+export interface PackPlan {
+  versions: PackVersion[];
+  versionId: string | null;
+  versionNumber: string | null;
+  unstable: boolean;
+  mc: string | null;
+  loader: LoaderKind | null;
+  loaderVersion: string | null;
+  serverMods: number;
+  clientMods: number;
+  /** bayt */
+  size: number;
+  ramMb: number;
+  error: string | null;
 }
 
 export interface UpdateInstanceRequest {
@@ -453,7 +481,7 @@ export interface InstallProgress {
   id: string;
   stage: "meta" | "download" | "extract" | "installer" | "done";
   /** download/extract aşamasında hangi dosya */
-  file: "server" | "fabric" | "paper" | "installer" | "java" | null;
+  file: "server" | "fabric" | "paper" | "installer" | "java" | "modpack" | null;
   downloaded: number;
   total: number | null;
   /** installer aşamasında installer çıktısının son satırı */
@@ -542,6 +570,8 @@ export const api = {
     invoke<ModInfo>("content_project", { world, kind, projectId }),
   contentPlan: (world: string, kind: ContentKind, projectId: string) =>
     invoke<ModPlan>("content_plan", { world, kind, projectId }),
+  modpackPlan: (projectId: string, versionId: string | null) =>
+    invoke<PackPlan>("modpack_plan", { projectId, versionId }),
   contentInstalled: (world: string, kind: ContentKind) => invoke<PackList>("content_installed", { world, kind }),
   contentInstall: (world: string, kind: ContentKind, projectId: string) =>
     invoke<PackList>("content_install", { world, kind, projectId }),

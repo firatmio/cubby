@@ -94,6 +94,8 @@ pub enum ContentKind {
     ResourcePack,
     Shader,
     DataPack,
+    /// Mod paketi (`.mrpack`): bir dünyaya kurulmaz, yeni dünya olarak kurulur.
+    Modpack,
 }
 
 impl ContentKind {
@@ -104,6 +106,7 @@ impl ContentKind {
             Self::ResourcePack => &["minecraft"],
             Self::Shader => &["iris", "optifine"],
             Self::DataPack => &["datapack"],
+            Self::Modpack => &["fabric", "forge", "neoforge", "quilt"],
         }
     }
 
@@ -111,6 +114,7 @@ impl ContentKind {
     pub fn ext(self) -> &'static str {
         match self {
             Self::Mod => "jar",
+            Self::Modpack => "mrpack",
             _ => "zip",
         }
     }
@@ -132,8 +136,27 @@ pub fn content_facets(
             vec!["categories:iris".into(), "categories:optifine".into()],
         ],
         ContentKind::DataPack => vec![vec!["project_type:datapack".into()]],
+        ContentKind::Modpack => return modpack_facets(category),
     };
     groups.push(vec![format!("versions:{mc}")]);
+    if let Some(c) = category {
+        groups.push(vec![format!("categories:{c}")]);
+    }
+    serde_json::to_string(&groups).expect("facet serileştirilemedi")
+}
+
+/// Mod paketleri: sunucuda çalışabilen ve Cubby'nin kurabildiği altyapılardan olanlar.
+/// Sürüm filtresi yok; paket kendi sürümüyle yeni bir dünya olarak kurulur.
+fn modpack_facets(category: Option<&str>) -> String {
+    let mut groups: Vec<Vec<String>> = vec![
+        vec!["project_type:modpack".into()],
+        vec!["server_side:required".into(), "server_side:optional".into()],
+        ContentKind::Modpack
+            .loaders(LoaderKind::Vanilla)
+            .iter()
+            .map(|l| format!("categories:{l}"))
+            .collect(),
+    ];
     if let Some(c) = category {
         groups.push(vec![format!("categories:{c}")]);
     }
@@ -276,6 +299,10 @@ pub struct Version {
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
     pub files: Vec<VersionFile>,
+    #[serde(default)]
+    pub loaders: Vec<String>,
+    #[serde(default)]
+    pub game_versions: Vec<String>,
 }
 
 pub struct Modrinth<'a> {
@@ -421,6 +448,12 @@ impl<'a> Modrinth<'a> {
         .await
     }
 
+    /// Projenin tüm sürümleri (yeniden eskiye; mod paketleri için).
+    pub async fn all_versions(&self, id: &str) -> AppResult<Vec<Version>> {
+        self.get(&format!("/project/{}/version", encode(id)), &[])
+            .await
+    }
+
     /// sha1 → sürüm (elle atılmış dosyaları tanımak için).
     pub async fn version_files(&self, sha1s: &[String]) -> AppResult<HashMap<String, Version>> {
         if sha1s.is_empty() {
@@ -531,6 +564,17 @@ mod tests {
             ["quilt", "fabric"]
         );
         assert_eq!(ContentKind::DataPack.ext(), "zip");
+        // Mod paketleri: sürüm filtresi yok, yalnız sunucuda çalışabilenler.
+        let pack = f(ContentKind::Modpack, Some("adventure"));
+        assert_eq!(pack[0], vec!["project_type:modpack"]);
+        assert_eq!(
+            pack[1],
+            vec!["server_side:required", "server_side:optional"]
+        );
+        assert!(pack[2].contains(&"categories:neoforge".to_string()));
+        assert_eq!(pack[3], vec!["categories:adventure"]);
+        assert!(!pack.iter().flatten().any(|g| g.starts_with("versions:")));
+        assert_eq!(ContentKind::Modpack.ext(), "mrpack");
     }
 
     #[test]

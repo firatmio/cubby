@@ -23,6 +23,8 @@ mod join_cmds;
 mod loaders;
 mod media;
 mod migrate;
+mod modpack;
+mod modpack_cmds;
 mod modrinth;
 mod mods;
 mod mods_cmds;
@@ -329,6 +331,7 @@ pub fn run() {
             content_cmds::content_update,
             content_cmds::content_activate_shader,
             content_cmds::content_force_pack,
+            modpack_cmds::modpack_plan,
             mods_cmds::mods_install,
             mods_cmds::mods_installed,
             mods_cmds::mods_remove,

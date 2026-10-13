@@ -279,6 +279,11 @@ pub async fn set_cover(app: &AppHandle, id: &str, source: CoverSource) -> AppRes
     }
 }
 
+/// Kendiliğinden gelen kapak (ör. mod paketinin görseli): ilk ekran görüntüsü onun yerini alır.
+pub async fn set_auto_cover(app: &AppHandle, id: &str, src: PathBuf) -> AppResult<Instance> {
+    apply(app, id, Some(src), CoverKind::Auto).await
+}
+
 /// Oturum bitince: kapak elle seçilmediyse o oturumun en yeni görüntüsü kapak olur.
 pub async fn after_session(app: &AppHandle, id: &str, session: Session) -> AppResult<()> {
     if !app.state::<SettingsStore>().get().use_screenshots {

@@ -1,5 +1,5 @@
 mod fabric;
-mod forge;
+pub(crate) mod forge;
 mod installer;
 mod mojang;
 mod neoforge;

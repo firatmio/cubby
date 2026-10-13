@@ -104,6 +104,7 @@ const CATEGORY_KEYS: Record<ContentKind, string[]> = {
   resourcePack: ["vanilla-like", "realistic", "simplistic", "themed", "decoration", "combat", "tweaks", "utility", "gui", "fonts", "audio", "blocks", "items", "entities", "modded", "cursed"],
   shader: ["realistic", "semi-realistic", "fantasy", "cartoon", "vanilla-like", "potato", "low", "medium", "high"],
   dataPack: ["adventure", "worldgen", "game-mechanics", "utility", "magic", "mobs", "equipment", "decoration", "storage", "technology"],
+  modpack: ["adventure", "technology", "magic", "quests", "challenging", "combat", "kitchen-sink", "lightweight", "multiplayer", "optimization"],
 };
 
 /** Türün kategorileri: anahtar → görünen ad. */

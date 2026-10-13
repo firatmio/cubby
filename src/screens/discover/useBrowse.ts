@@ -10,9 +10,13 @@ import {
   type ModSearch,
   type ModSort,
   type PackList,
+  type PackPlan,
 } from "../../lib/api";
 import { fetchCached, invalidate } from "../../lib/queryCache";
 import { useAppStore } from "../../store/appStore";
+
+/** Mod paketleri dünyadan bağımsız: dünyalar arasında aynı önbelleği paylaşır. */
+const scope = (world: string, kind: ContentKind) => (kind === "modpack" ? "" : world);
 
 /**
  * Önbellek anahtarı: raflar ve ızgara aynı aramayı paylaşır.
@@ -25,7 +29,7 @@ export const searchKey = (
   category: string | null,
   sort: ModSort,
   offset: number,
-) => `${world}|${kind}|${query}|${category ?? ""}|${sort}|${offset}`;
+) => `${scope(world, kind)}|${kind}|${query}|${category ?? ""}|${sort}|${offset}`;
 
 /** Türe göre arama: modlar mevcut mod komutlarıyla, paketler içerik komutlarıyla. */
 export function searchItems(
@@ -60,7 +64,8 @@ export function useContentActions(world: string, kind: ContentKind, visible: boo
   const mod = kind === "mod";
 
   useEffect(() => {
-    if (!visible) return;
+    // Mod paketleri bir dünyaya kurulmaz; kurulu listesi yok.
+    if (!visible || kind === "modpack") return;
     const load: Promise<InstalledMod[]> = mod
       ? api.modsInstalled(world)
       : api.contentInstalled(world, kind).then((l) => l.items);
@@ -136,15 +141,46 @@ export function usePreview(world: string, kind: ContentKind) {
   const [shown, setShown] = useState(false);
   const [info, setInfo] = useState<ModInfo | null>(null);
   const [plan, setPlan] = useState<ModPlan | null>(null);
+  /** Mod paketinde planın yerine: hangi sürüm, nasıl bir dünya. */
+  const [pack, setPack] = useState<PackPlan | null>(null);
   const current = useRef<string | null>(null);
   const mod = kind === "mod";
+  const modpack = kind === "modpack";
+  const key = scope(world, kind);
+
+  const loadPack = useCallback(
+    (projectId: string, versionId: string | null) => {
+      setPack(null);
+      fetchCached(`|modpack|plan|${projectId}|${versionId ?? ""}`, () => api.modpackPlan(projectId, versionId))
+        .then((p) => current.current === projectId && setPack(p))
+        .catch(
+          (e) =>
+            current.current === projectId &&
+            setPack({
+              versions: [],
+              versionId: null,
+              versionNumber: null,
+              unstable: false,
+              mc: null,
+              loader: null,
+              loaderVersion: null,
+              serverMods: 0,
+              clientMods: 0,
+              size: 0,
+              ramMb: 0,
+              error: errorMessage(e),
+            }),
+        );
+    },
+    [],
+  );
 
   const loadInfo = useCallback(
     (projectId: string) =>
-      fetchCached(`${world}|${kind}|info|${projectId}`, () =>
+      fetchCached(`${key}|${kind}|info|${projectId}`, () =>
         mod ? api.modsProject(world, projectId) : api.contentProject(world, kind, projectId),
       ),
-    [world, kind, mod],
+    [key, world, kind, mod],
   );
   const loadPlan = useCallback(
     (projectId: string) => (mod ? api.modsPlan(world, projectId) : api.contentPlan(world, kind, projectId)),
@@ -161,6 +197,10 @@ export function usePreview(world: string, kind: ContentKind) {
       loadInfo(h.projectId)
         .then((i) => current.current === h.projectId && setInfo(i))
         .catch(console.error);
+      if (modpack) {
+        loadPack(h.projectId, null);
+        return;
+      }
       fetchCached(`${world}|${kind}|plan|${h.projectId}`, () => loadPlan(h.projectId))
         .then((p) => current.current === h.projectId && setPlan(p))
         .catch(
@@ -169,7 +209,15 @@ export function usePreview(world: string, kind: ContentKind) {
             setPlan({ versionNumber: null, unstable: false, with: [], missing: [], conflicts: [], error: errorMessage(e) }),
         );
     },
-    [world, kind, loadInfo, loadPlan],
+    [world, kind, modpack, loadInfo, loadPlan, loadPack],
+  );
+
+  /** Mod paketinin başka bir sürümü seçildi. */
+  const pickVersion = useCallback(
+    (versionId: string) => {
+      if (current.current) loadPack(current.current, versionId);
+    },
+    [loadPack],
   );
 
   const close = useCallback(() => {
@@ -183,13 +231,13 @@ export function usePreview(world: string, kind: ContentKind) {
   /** Kurulumdan sonra plan değişir (bağımlılıklar artık kurulu). */
   const refreshPlan = useCallback(() => {
     const p = current.current;
-    if (!p) return;
+    if (!p || modpack) return;
     loadPlan(p)
       .then((pl) => current.current === p && setPlan(pl))
       .catch(console.error);
-  }, [loadPlan]);
+  }, [loadPlan, modpack]);
 
-  return { hit, shown, info, plan, open, close, prefetch, refreshPlan };
+  return { hit, shown, info, plan, pack, open, close, prefetch, refreshPlan, pickVersion };
 }
 
 export type PreviewState = ReturnType<typeof usePreview>;

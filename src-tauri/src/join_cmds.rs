@@ -44,14 +44,24 @@ pub fn host_decider(app: AppHandle) -> Decide {
             app.state::<AppState>().servers.snapshot(&h.world).status == ServerStatus::Running;
         let modded = inst.loader.is_modded();
         let server_mods = server_dir.join("mods");
-        let records = || mods::load_records(&inst_dir.join(META_DIR));
-        let light = || {
-            if modded {
-                manifest::build_with(&server_mods, &records(), inst.loader, false)
-            } else {
-                Vec::new()
+        let meta = inst_dir.join(META_DIR);
+        // Mod paketinin yalnız oyuncuda çalışan modları sunucuda yok; ekstralardan gider.
+        let extras = meta.join(crate::content::EXTRAS_DIR);
+        let pack_client = || crate::content::Record::load(&meta).pack_client;
+        let list = |full: bool| {
+            if !modded {
+                return Vec::new();
             }
+            let mut list =
+                manifest::build_with(&server_mods, &mods::load_records(&meta), inst.loader, full);
+            for m in manifest::pack_client(&extras, &pack_client(), full) {
+                if !list.iter().any(|x| x.sha1 == m.sha1 || x.file == m.file) {
+                    list.push(m);
+                }
+            }
+            list
         };
+        let light = || list(false);
         let ok = |mods_rev| Reply::Ok {
             running,
             name: inst.name.clone(),
@@ -63,14 +73,10 @@ pub fn host_decider(app: AppHandle) -> Decide {
                 Decision::Tcp(ok(None), server_port(&server_dir, inst.port))
             }
             StreamKind::Tcp => Decision::Reply(Reply::Offline),
-            StreamKind::Manifest => {
-                let list = if modded {
-                    manifest::build(&server_mods, &records(), inst.loader)
-                } else {
-                    Vec::new()
-                };
-                Decision::Body(ok(None), serde_json::to_vec(&list).unwrap_or_default())
-            }
+            StreamKind::Manifest => Decision::Body(
+                ok(None),
+                serde_json::to_vec(&list(true)).unwrap_or_default(),
+            ),
             StreamKind::File => {
                 // Yalnız oyuncuya giden listedeki, güvenli adlı bir dosya.
                 let allowed = h
@@ -79,7 +85,10 @@ pub fn host_decider(app: AppHandle) -> Decide {
                     .and_then(mods::sanitize_filename)
                     .filter(|f| light().iter().any(|m| &m.file == f));
                 match allowed {
-                    Some(f) => Decision::File(ok(None), server_mods.join(f)),
+                    Some(f) if server_mods.join(&f).is_file() => {
+                        Decision::File(ok(None), server_mods.join(f))
+                    }
+                    Some(f) => Decision::File(ok(None), extras.join(f)),
                     None => Decision::Reply(Reply::Denied),
                 }
             }

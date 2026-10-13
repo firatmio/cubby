@@ -85,6 +85,37 @@ pub fn build_with(
         .collect()
 }
 
+/// Mod paketinin yalnız oyuncuda çalışan modları (`dir`: ekstraların klasörü). Sunucuda yoklar;
+/// arkadaşlara "önerilen" olarak gider, Modrinth'ten ya da host'tan iner.
+pub fn pack_client(dir: &Path, records: &[ModRecord], full: bool) -> Vec<ClientMod> {
+    records
+        .iter()
+        .filter_map(|r| {
+            let path = dir.join(&r.file);
+            let (sha512, size) = if full {
+                let bytes = std::fs::read(&path).ok()?;
+                (hash_bytes(HashAlgo::Sha512, &bytes), bytes.len() as u64)
+            } else {
+                (String::new(), std::fs::metadata(&path).ok()?.len())
+            };
+            let id = |s: &String| (!s.is_empty()).then(|| s.clone());
+            Some(ClientMod {
+                file: r.file.clone(),
+                title: r
+                    .title
+                    .clone()
+                    .unwrap_or_else(|| r.file.trim_end_matches(".jar").to_string()),
+                sha1: r.sha1.clone(),
+                sha512,
+                size,
+                project_id: id(&r.project_id),
+                version_id: id(&r.version_id),
+                need: Need::Recommended,
+            })
+        })
+        .collect()
+}
+
 /// Mod listesinin kısa özeti; değişince katılımcı "güncelle" görür.
 pub fn rev(list: &[ClientMod]) -> String {
     let joined: String = list
@@ -146,5 +177,37 @@ mod tests {
         assert_eq!(build(&d, &[], LoaderKind::NeoForge)[0].need, Need::Required);
         assert_eq!(rev(&list).len(), 16);
         assert_ne!(rev(&list), rev(&[]));
+
+        // Mod paketinin oyuncu modları: "önerilen", Modrinth kimliğiyle; dosyası olmayan atlanır.
+        let rec = |file: &str, pid: &str| ModRecord {
+            file: file.into(),
+            sha1: "s".into(),
+            project_id: pid.into(),
+            version_id: if pid.is_empty() {
+                String::new()
+            } else {
+                "v".into()
+            },
+            dependency: false,
+            title: None,
+            need: None,
+        };
+        let pack = pack_client(
+            &d,
+            &[
+                rec("both.jar", "P1"),
+                rec("gone.jar", ""),
+                rec("server-only.jar", ""),
+            ],
+            true,
+        );
+        assert_eq!(pack.len(), 2);
+        assert!(pack.iter().all(|m| m.need == Need::Recommended));
+        assert_eq!(pack[0].project_id.as_deref(), Some("P1"));
+        assert_eq!(pack[1].project_id, None);
+        assert_eq!(pack[1].title, "server-only");
+        let mut with_pack = list.clone();
+        with_pack.extend(pack);
+        assert_ne!(rev(&with_pack), rev(&list));
     }
 }

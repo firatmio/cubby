@@ -35,6 +35,7 @@ import { SelectList } from "../../ui/SelectList";
 import { Slider } from "../../ui/Slider";
 import { Toggle } from "../../ui/Toggle";
 import { LOADER_ART, LoaderLogo } from "../../ui/LoaderLogo";
+import { ModIcon } from "../discover/parts";
 import styles from "./SetupFlow.module.css";
 
 type Step = "kind" | "version" | "name" | "access" | "whitelist" | "install";
@@ -59,6 +60,7 @@ const downloadLabels = (t: Dict["setup"]): Record<NonNullable<InstallProgress["f
   paper: t.dlPaper,
   installer: t.dlInstaller,
   java: t.dlJava,
+  modpack: t.dlModpack,
 });
 
 const MAX_NAME_LEN = 48;
@@ -72,9 +74,15 @@ function progressText(p: InstallProgress | null, kind: LoaderKind): string {
   return `${downloadLabels(t.setup)[p.file]} · ${formatBytesMb(p.downloaded)}${total}`;
 }
 
-/** Yeni dünya: adım başına tek soru; teknik seçimler "Gelişmiş seçenekler"de, önerilen değerlerle dolu. */
+/**
+ * Yeni dünya: adım başına tek soru; teknik seçimler "Gelişmiş seçenekler"de, önerilen değerlerle dolu.
+ * Keşfet'ten bir mod paketiyle açılınca altyapı ve sürüm paketten gelir; o adımlar sorulmaz.
+ */
 export function SetupFlow() {
   const setView = useAppStore((s) => s.setView);
+  const setPage = useAppStore((s) => s.setPage);
+  // Sihirbaz açıkken ön ayar değişmez; kapanınca store temizler.
+  const [preset] = useState(() => useAppStore.getState().setupPreset);
   const setSetupColor = useAppStore((s) => s.setSetupColor);
   const addInstance = useAppStore((s) => s.addInstance);
   const progress = useAppStore((s) => s.installProgress);
@@ -83,8 +91,11 @@ export function SetupFlow() {
   const t = tt.setup;
 
   /** dir: son geçişin yönü (1 ileri, -1 geri); kayma animasyonu buna göre. */
-  const [{ step, dir }, setNav] = useState<{ step: Step; dir: 1 | -1 }>({ step: "kind", dir: 1 });
-  const [kind, setKind] = useState<LoaderKind>("fabric");
+  const [{ step, dir }, setNav] = useState<{ step: Step; dir: 1 | -1 }>({
+    step: preset ? "name" : "kind",
+    dir: 1,
+  });
+  const [kind, setKind] = useState<LoaderKind>(preset?.loader ?? "fabric");
   /** Modlu kartına dönülünce son seçilen altyapı kalsın. */
   const [lastModLoader, setLastModLoader] = useState<LoaderKind>("fabric");
 
@@ -92,7 +103,7 @@ export function SetupFlow() {
   const [showAllVersions, setShowAllVersions] = useState(false);
   const [versions, setVersions] = useState<GameVersionList | null>(null);
   const [versionsError, setVersionsError] = useState<string | null>(null);
-  const [version, setVersion] = useState<string | null>(null);
+  const [version, setVersion] = useState<string | null>(preset?.mc ?? null);
 
   const [loaderVersions, setLoaderVersions] = useState<LoaderVersionList | null>(null);
   /** null: önerilen (Rust seçer). */
@@ -100,7 +111,7 @@ export function SetupFlow() {
 
   const [sys, setSys] = useState<SystemInfo | null>(null);
   const [ramMax, setRamMax] = useState(2048);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(preset ? preset.title.trim().slice(0, MAX_NAME_LEN) : "");
   const [parentDir, setParentDir] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -123,12 +134,15 @@ export function SetupFlow() {
       .systemInfo()
       .then((s) => {
         setSys(s);
-        setRamMax(ramBounds(s.totalMemMb).initial);
+        const b = ramBounds(s.totalMemMb);
+        // Mod paketi: mod sayısına göre önerilen bellek, bilgisayarın sınırını aşmadan.
+        setRamMax(preset ? Math.min(Math.max(preset.ramMb, b.initial), b.max) : b.initial);
       })
       .catch(console.error);
   }, []);
 
   const loadVersions = useCallback(() => {
+    if (preset) return;
     setVersionsError(null);
     setVersions(null);
     api
@@ -138,16 +152,16 @@ export function SetupFlow() {
         setVersion((v) => (v && list.versions.some((x) => x.id === v) ? v : list.latestRelease || null));
       })
       .catch((e) => setVersionsError(errorMessage(e)));
-  }, [kind, includeSnapshots]);
+  }, [kind, includeSnapshots, preset]);
 
   useEffect(loadVersions, [loadVersions]);
 
   useEffect(() => {
     setLoaderVersions(null);
     setLoaderVersion(null);
-    if (kind === "vanilla" || !version) return;
+    if (preset || kind === "vanilla" || !version) return;
     api.listLoaderVersions(kind, version).then(setLoaderVersions).catch(console.error);
-  }, [kind, version]);
+  }, [kind, version, preset]);
 
   const bounds = ramBounds(sys?.totalMemMb ?? 4096);
   const defaultName = useMemo(() => tt.kind.defaultName(kindLabel(kind)), [kind, tt]);
@@ -155,8 +169,13 @@ export function SetupFlow() {
   // Premium olmayanlar girebiliyorsa beyaz liste zorunlu: yoksa herkes herkesin adıyla girebilir.
   const useWhitelist = whitelistOn || offline;
   const questionSteps = useMemo<Step[]>(
-    () => ["kind", "version", "name", "access", ...(useWhitelist ? (["whitelist"] as Step[]) : [])],
-    [useWhitelist],
+    () => [
+      ...(preset ? [] : (["kind", "version"] as Step[])),
+      "name",
+      "access",
+      ...(useWhitelist ? (["whitelist"] as Step[]) : []),
+    ],
+    [useWhitelist, preset],
   );
   const lastStep = questionSteps[questionSteps.length - 1];
   const setStep = (to: Step) => {
@@ -195,12 +214,13 @@ export function SetupFlow() {
         name: name.trim() || defaultName,
         loader: kind,
         mcVersion: version,
-        loaderVersion: kind === "vanilla" ? null : loaderVersion,
+        loaderVersion: preset ? preset.loaderVersion : kind === "vanilla" ? null : loaderVersion,
         ramMinMb: ramMinFor(ramMax),
         ramMaxMb: ramMax,
         parentDir,
         offlineMode: offline,
         whitelist: useWhitelist ? allowed : null,
+        modpack: preset ? { projectId: preset.projectId, versionId: preset.versionId } : null,
       })
       .then((inst) => {
         addInstance(inst);
@@ -210,7 +230,12 @@ export function SetupFlow() {
   };
 
   const qIndex = questionSteps.indexOf(step);
-  const back = () => (qIndex <= 0 ? setView("home") : setStep(questionSteps[qIndex - 1]));
+  const leave = () => {
+    setView("home");
+    // Paketten gelindiyse Keşfet'e dönülür.
+    if (preset) setPage("discover");
+  };
+  const back = () => (qIndex <= 0 ? leave() : setStep(questionSteps[qIndex - 1]));
   const next = () => {
     if (step === "version" && !name) setName(defaultName);
     if (step === lastStep) install();
@@ -534,7 +559,9 @@ export function SetupFlow() {
     sub = installError
       ? installError
       : created
-        ? created.loader === "fabric"
+        ? preset
+          ? t.readyModpack
+          : created.loader === "fabric"
           ? t.readyModded
           : t.readySub
         : kind === "neoforge" || kind === "forge" || kind === "quilt"
@@ -550,6 +577,15 @@ export function SetupFlow() {
 
   return (
     <div className={styles.setup}>
+      {preset && (
+        <div className={styles.packStrip}>
+          <ModIcon icon={preset.icon} plugin={false} size={26} />
+          <span>{t.fromPack(preset.title)}</span>
+          <span className={styles.packTech}>
+            {LOADER_LABELS[preset.loader]} · {preset.mc}
+          </span>
+        </div>
+      )}
       <div className={styles.dashes} aria-hidden>
         {questionSteps.map((s, i) => (
           <motion.span

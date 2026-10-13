@@ -105,18 +105,23 @@ export function ResultGrid({ world, kind, plugin, query, category, sort, scrollR
             showNeed={kind === "mod"}
             installed={actions.isInstalled(h)}
             selected={h.projectId === selectedId}
-            quickInstall={{
-              installing: actions.busy === `install:${h.projectId}`,
-              disabled: actions.busy !== null,
-              onInstall: actions.install,
-            }}
+            quickInstall={
+              // Mod paketi önizlemeden (sürüm ve bilgiyle) yeni dünya olarak kurulur.
+              kind === "modpack"
+                ? undefined
+                : {
+                    installing: actions.busy === `install:${h.projectId}`,
+                    disabled: actions.busy !== null,
+                    onInstall: actions.install,
+                  }
+            }
             onOpen={onOpen}
             onPrefetch={onPrefetch}
           />
         ))}
         {loading && Array.from({ length: hits.length ? 4 : 8 }, (_, i) => <SkeletonTile key={`s${i}`} />)}
       </div>
-      {!loading && hits.length === 0 && !error && <p className={styles.empty}>{kind !== "mod" ? tt.discover.nonePacks : plugin ? t.noneFoundPlugins : t.noneFoundMods}</p>}
+      {!loading && hits.length === 0 && !error && <p className={styles.empty}>{kind === "modpack" ? tt.discover.noneModpacks : kind !== "mod" ? tt.discover.nonePacks : plugin ? t.noneFoundPlugins : t.noneFoundMods}</p>}
       <div ref={sentinel} className={styles.sentinel} />
     </>
   );

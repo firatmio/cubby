@@ -17,6 +17,32 @@
   border-radius: var(--radius-full);
 }
 
+/* Mod paketinden kurulumda sağ üstte paketin adı ve altyapısı. */
+.packStrip {
+  position: absolute;
+  top: calc(var(--sp-6) - 11px);
+  right: var(--edge);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 50%;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.packStrip > span:not(.packTech) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.packTech {
+  flex: none;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
 .content {
   position: absolute;
   top: 64px;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, Compass, Info, RotateCcw, Search, Settings, Sparkles, X } from "lucide-react";
+import { ChevronLeft, Info, RotateCcw, Search, Settings, Sparkles, X } from "lucide-react";
 import {
   api,
   errorMessage,
@@ -35,12 +35,19 @@ const PREFETCH_DELAY = 900;
 
 /**
  * Dünyanın türüne ve sahibine göre gösterilen sekmeler. Arkadaşının dünyasında değiştiremediklerin
- * (modlar, veri paketleri) hiç görünmez.
+ * (modlar, veri paketleri) hiç görünmez. Mod paketleri seçili dünyayı değiştirmez (yeni dünya kurar);
+ * her dünyada en sonda.
  */
 function kindsFor(loader: LoaderKind, own: boolean): ContentKind[] {
   const modded = isModded(loader);
-  if (!own) return modded ? ["resourcePack", "shader"] : ["resourcePack"];
-  return [...(loader === "vanilla" ? [] : ["mod" as const]), "resourcePack", ...(modded ? ["shader" as const] : []), "dataPack"];
+  if (!own) return [...(modded ? (["resourcePack", "shader"] as const) : (["resourcePack"] as const)), "modpack"];
+  return [
+    ...(loader === "vanilla" ? [] : ["mod" as const]),
+    "resourcePack",
+    ...(modded ? ["shader" as const] : []),
+    "dataPack",
+    "modpack",
+  ];
 }
 
 /** Seçili dünya için içerik. Sayfa hep monte; görünmüyorken ilk sonuçları sessizce önden çeker. */
@@ -48,18 +55,12 @@ export function DiscoverPage() {
   const instance = useSelected();
   const joined = useSelectedJoined();
   const selectedId = useAppStore((s) => s.selectedId);
-  const t = useT().discover;
 
+  // Hiç dünya yokken de mod paketlerinden biriyle ilk dünya kurulabilir.
   if ((!instance && !joined) || !selectedId) {
     return (
       <div className={styles.page}>
-        <div className={styles.content}>
-          <div className={styles.note}>
-            <Compass size={28} aria-hidden />
-            <p className={styles.noteTitle}>{t.emptyTitle}</p>
-            <p className={styles.noteText}>{t.emptyText}</p>
-          </div>
-        </div>
+        <ContentBrowser key="none" world="" loader="vanilla" own={false} kinds={["modpack"]} />
       </div>
     );
   }
@@ -136,6 +137,7 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
   // Seçili sekme bu dünyada yoksa ilk sekmeye düşülür.
   const kind = kinds.includes(storedTab) ? storedTab : kinds[0];
   const plugin = kind === "mod" && loader === "paper";
+  const modpack = kind === "modpack";
   const visible = useAppStore((s) => s.page === "discover" && s.view === "home");
   const sheet = useAppStore((s) => s.sheet);
   const { status } = useServer(own ? world : null);
@@ -271,7 +273,17 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
   };
 
   const kindLabel = (k: ContentKind) =>
-    k === "mod" ? (loader === "paper" ? d.kindPlugins : d.kindMods) : k === "resourcePack" ? d.kindResourcePacks : k === "shader" ? d.kindShaders : d.kindDataPacks;
+    k === "mod"
+      ? loader === "paper"
+        ? d.kindPlugins
+        : d.kindMods
+      : k === "resourcePack"
+        ? d.kindResourcePacks
+        : k === "shader"
+          ? d.kindShaders
+          : k === "dataPack"
+            ? d.kindDataPacks
+            : d.kindModpacks;
   const sorts: { id: ModSort; label: string }[] = [
     { id: "downloads", label: t.sortPopular },
     { id: "relevance", label: t.sortRelevance },
@@ -290,7 +302,8 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
     <div className={[styles.browser, preview.shown && styles.withPreview].filter(Boolean).join(" ")}>
       <div className={styles.content}>
         <header className={styles.header}>
-          <WorldPicker />
+          {/* Mod paketi yeni dünya kurar; seçili dünya burada önemsiz. */}
+          {modpack ? <span /> : <WorldPicker />}
           <div className={styles.search}>
             <Search size={17} aria-hidden />
             <Input
@@ -315,9 +328,11 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
           ) : (
             <span className={styles.kindSingle}>{kindLabel(kind)}</span>
           )}
-          {!needsSync && <PillTabs tabs={views} active={view} onChange={setView} layoutId={`discover-view-${world}`} />}
+          {!needsSync && !modpack && (
+            <PillTabs tabs={views} active={view} onChange={setView} layoutId={`discover-view-${world}`} />
+          )}
         </div>
-        {!own && (
+        {!own && !modpack && (
           <p className={styles.friendLine}>
             <Info size={15} aria-hidden /> {d.friendLine}
           </p>

@@ -120,6 +120,16 @@ pub struct CreateInstanceRequest {
     /// `Some` ise beyaz liste açık başlar ve bu isimler eklenir.
     #[serde(default)]
     whitelist: Option<Vec<String>>,
+    /// Mod paketinden kurulum: altyapı ve sürümler paketten alınır.
+    #[serde(default)]
+    modpack: Option<ModpackRef>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModpackRef {
+    project_id: String,
+    version_id: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -127,7 +137,7 @@ pub struct CreateInstanceRequest {
 struct InstallProgress<'a> {
     id: &'a str,
     stage: &'static str,
-    /// "server" | "fabric" | "paper" | "installer" | "java" (`download` / `extract` aşamasında)
+    /// "server" | "fabric" | "paper" | "installer" | "java" | "modpack" (`download` / `extract` aşamasında)
     file: Option<&'static str>,
     downloaded: u64,
     total: Option<u64>,
@@ -157,6 +167,27 @@ pub async fn create_instance(
             players::resolve(&state.http, n, req.offline_mode).await?,
         );
     }
+
+    // Mod paketi: önce okunur (önizlemede indirildiği için genelde önbellekte); altyapı, Minecraft
+    // ve altyapı sürümü arayüzden değil paketten gelir.
+    let pack = match &req.modpack {
+        Some(m) => Some(
+            crate::modpack_cmds::prepare(&app, &state.http, &m.project_id, &m.version_id).await?,
+        ),
+        None => None,
+    };
+    let (loader, mc_version, loader_version) = match &pack {
+        Some(p) => (
+            p.target.loader,
+            p.target.mc.clone(),
+            p.target.loader_version.clone(),
+        ),
+        None => (
+            req.loader,
+            req.mc_version.clone(),
+            req.loader_version.clone(),
+        ),
+    };
 
     let id = uuid::Uuid::new_v4().to_string();
     let dir = registry.allocate(&id, &name, req.parent_dir.as_deref())?;
@@ -197,9 +228,9 @@ pub async fn create_instance(
 
     let installed = async {
         // NeoForge/Forge/Quilt installer'ı Java ile çalışır: Java önce hazırlanır.
-        let installer_java = if req.loader.uses_installer() {
+        let installer_java = if loader.uses_installer() {
             emit("meta", None, 0, None);
-            let major = state.loaders.java_major(&req.mc_version).await?;
+            let major = state.loaders.java_major(&mc_version).await?;
             let found = match java.resolve(None, major).await? {
                 Some(j) => j,
                 None => java.install(major, java_stage).await?,
@@ -211,10 +242,10 @@ pub async fn create_instance(
         state
             .loaders
             .install(
-                req.loader,
+                loader,
                 &InstallRequest {
-                    mc_version: &req.mc_version,
-                    loader_version: req.loader_version.as_deref(),
+                    mc_version: &mc_version,
+                    loader_version: loader_version.as_deref(),
                     java: installer_java.as_deref(),
                 },
                 &server_dir,
@@ -234,6 +265,20 @@ pub async fn create_instance(
 
     let result: AppResult<Instance> = async {
         let installed = installed?;
+        if let Some(p) = &pack {
+            let progress = |downloaded: u64, total: u64| {
+                emit("download", Some("modpack"), downloaded, Some(total))
+            };
+            crate::modpack_cmds::install(
+                &app,
+                &state.http,
+                p,
+                &server_dir,
+                &dir.join(crate::sessions::META_DIR),
+                &progress,
+            )
+            .await?;
+        }
         // Uygun Java yoksa indirilip sunucuya bağlanır. Başarısız olursa kurulum yine biter;
         // başlatırken arayüz Java'yı tekrar önerir.
         let java_path = match java.ensure(installed.java_major, java_stage).await {
@@ -246,8 +291,8 @@ pub async fn create_instance(
         let inst = Instance {
             id: id.clone(),
             name,
-            loader: req.loader,
-            mc_version: req.mc_version.clone(),
+            loader,
+            mc_version: mc_version.clone(),
             loader_version: installed.loader_version,
             java_path,
             java_major: installed.java_major,
@@ -278,7 +323,18 @@ pub async fn create_instance(
     .await;
 
     match result {
-        Ok(inst) => {
+        Ok(mut inst) => {
+            if let Some(m) = &req.modpack
+                && let Some(updated) = crate::modpack_cmds::cover_from_project(
+                    &app,
+                    &state.http,
+                    &inst.id,
+                    &m.project_id,
+                )
+                .await
+            {
+                inst = updated;
+            }
             emit("done", None, 0, None);
             // Modlu dünya: Fabric ve dünyaya özel profil oyuncunun Minecraft'ına da hazırlansın.
             crate::client_cmds::spawn_sync(&app, &inst.id);

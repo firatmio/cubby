@@ -105,7 +105,7 @@ fn target(app: &AppHandle, w: &World, kind: ContentKind) -> AppResult<PathBuf> {
             let inst = w.own.as_ref().ok_or_else(not_here)?;
             Ok(content::datapacks_dir(&paths::server_dir(app, &inst.id)?))
         }
-        ContentKind::Mod => Err(not_here()),
+        ContentKind::Mod | ContentKind::Modpack => Err(not_here()),
     }
 }
 
@@ -121,7 +121,7 @@ fn check_kind(w: &World, kind: ContentKind) -> AppResult<()> {
         ContentKind::ResourcePack => true,
         ContentKind::Shader => w.loader.is_modded(),
         ContentKind::DataPack => w.own.is_some(),
-        ContentKind::Mod => false,
+        ContentKind::Mod | ContentKind::Modpack => false,
     };
     ok.then_some(()).ok_or_else(not_here)
 }
@@ -206,6 +206,28 @@ pub async fn content_search(
     sort: Sort,
     offset: u32,
 ) -> AppResult<SearchView> {
+    // Mod paketleri dünyadan bağımsız (yeni dünya olarak kurulur).
+    if kind == ContentKind::Modpack {
+        let r = Modrinth::new(&state.http)
+            .search_content(
+                kind,
+                LoaderKind::Vanilla,
+                "",
+                query.trim(),
+                category.as_deref(),
+                sort,
+                offset,
+            )
+            .await?;
+        return Ok(SearchView {
+            total: r.total_hits,
+            hits: r
+                .hits
+                .into_iter()
+                .map(|h| hit_view(h, false, &icons, &images))
+                .collect(),
+        });
+    }
     let w = self::world(&app, &world).await?;
     check_kind(&w, kind)?;
     let record = Record::load(&w.dir);
@@ -248,6 +270,9 @@ pub async fn content_project(
     kind: ContentKind,
     project_id: String,
 ) -> AppResult<InfoView> {
+    if kind == ContentKind::Modpack {
+        return project_info(&state.http, &icons, &images, &project_id, &HashSet::new()).await;
+    }
     let w = self::world(&app, &world).await?;
     let installed: HashSet<String> = Record::load(&w.dir)
         .items(kind)
@@ -482,16 +507,19 @@ async fn sync_extras(app: &AppHandle, w: &World, dropped: &[String]) -> AppResul
     Ok(())
 }
 
-/// İstemci eşitlemesine eklenecek ekstralar ve kopyalanacakları klasör (kendi ya da katılınan dünya).
+/// İstemci eşitlemesine eklenecek ekstralar ve kopyalanacakları klasör (kendi ya da katılınan dünya):
+/// shader modları ve mod paketinin yalnız oyuncuda çalışan modları.
 pub fn extras_for(dir: &Path) -> (Vec<Wanted>, PathBuf) {
-    let wanted = Record::load(dir)
-        .client_mods
-        .into_iter()
-        .map(|m| Wanted {
-            file: m.file,
-            sha1: m.sha1,
-        })
-        .collect();
+    let record = Record::load(dir);
+    let mut wanted: Vec<Wanted> = Vec::new();
+    for m in record.client_mods.into_iter().chain(record.pack_client) {
+        if !wanted.iter().any(|w| w.sha1 == m.sha1) {
+            wanted.push(Wanted {
+                file: m.file,
+                sha1: m.sha1,
+            });
+        }
+    }
     (wanted, dir.join(EXTRAS_DIR))
 }
 
@@ -620,7 +648,7 @@ pub async fn content_install(
             }
         }
         ContentKind::DataPack => reload_datapacks(&app, &state, &w).await,
-        ContentKind::Mod => {}
+        ContentKind::Mod | ContentKind::Modpack => {}
     }
     record.save(&w.dir)?;
     if extras_changed {
@@ -684,7 +712,7 @@ pub async fn content_remove(
             }
         }
         ContentKind::DataPack => reload_datapacks(&app, &state, &w).await,
-        ContentKind::Mod => {}
+        ContentKind::Mod | ContentKind::Modpack => {}
     }
     record.save(&w.dir)?;
     if !dropped.is_empty() {

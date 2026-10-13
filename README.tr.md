@@ -21,12 +21,12 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
 - [~] **M9** — Oyunu Launcher'sız açma: Microsoft girişi (PKCE, tarayıcıda; yenileme anahtarı Windows Kimlik Bilgisi Yöneticisi'nde), oyunun dosyaları `.minecraft`'la paylaşılarak hash doğrulamalı indirilir, oyun Quick Play ile doğrudan dünyada açılır (vanilla ve NeoForge 26.3'te canlı doğrulandı). **Beklemede:** Mojang uygulama kimliğini onaylamadı (2026-10); Cubby şu an premium olmayan (TLauncher) oyuncuları da destekliyor ve onay listesi bunu kabul etmiyor. Yayın derlemeleri uygulama kimliği olmadan çıkar: Microsoft kartı görünmez, Launcher'lı akış çalışır. Ayrıntılar ve geri dönüş yolu: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md)
 
 - [x] **İngilizce** — arayüz ve hata mesajları Türkçe ve İngilizce; ilk açılışta bilgisayarın diline göre, Ayarlar > Dil'den değiştirilebilir
-- [~] **M10** — Oyna / Keşfet sayfaları: başlık çubuğunun ortasında goo (slime) geçişli haplar, sayfalar esneyerek kayar. Animasyon seviyesi (Tam / Sade / Kapalı) kendiliğinden belirlenir (Windows animasyon ayarı, yazılımla çizim, düşen kareler) ve Ayarlar'dan değiştirilebilir
+- [x] **M10** — Oyna / Keşfet sayfaları: başlık çubuğunun ortasında goo (slime) geçişli haplar, sayfalar esneyerek kayar. Animasyon seviyesi (Tam / Sade / Kapalı) kendiliğinden belirlenir (Windows animasyon ayarı, yazılımla çizim, düşen kareler) ve Ayarlar'dan değiştirilebilir
   - [x] **M10a** — sayfalar, animasyon seviyesi, büyütülebilir/yeniden boyutlanabilir pencere (en küçük 1200×720), kendi zemini olan ve modlarla Keşfet: dünya seçici, öne çıkan bandı ve kategori raflarıyla vitrin, galerili ve açıklaması gerçek Markdown olarak görünen yan önizleme (Modrinth görselleri küçültülüp diskte önbelleklenir), önden yükleme ve bellek önbelleği sayesinde listeler anında gelir
   - [x] **M10b** — kaynak paketleri (kendi Minecraft'ına kurulur ve açılır; istenirse sunucu üzerinden arkadaşlara zorunlu), shader'lar (Iris/Sodium — Forge'da Oculus/Embeddium — kendiliğinden kurulur ve dünyaya göre eşitlenir, shader açılır), veri paketleri (dünyaya kurulur, sunucu açıksa `reload` gider); arkadaşının dünyasında yalnız değiştirebileceğin sekmeler görünür
-  - [ ] **M10c** — mod paketleri → yeni dünya
+  - [x] **M10c** — mod paketleri → yeni dünya: Keşfet'te her dünyada (dünya yokken de) Mod paketleri sekmesi; önizlemede paketin Minecraft/altyapı sürümü, mod sayıları ve boyutu, sürüm seçimi; "Yeni dünya olarak kur" sihirbazı ad ve erişim adımlarıyla açar. Paket (`.mrpack`) okunur, altyapı paketten kurulur, dosyalar hash doğrulamalı ve yalnız izinli adreslerden iner; sunucu modları ve ayarları sunucuya, yalnız oyuncuda çalışan modlar ve ayarlar senin Minecraft'ına, arkadaşlara "önerilen" olarak gider; kapak paketin görseli olur
 
-Sırada M10b/M10c, sonra web katılım sayfası ve yayın hazırlığı var.
+Sırada web katılım sayfası ve yayın hazırlığı var.
 
 **Sonra:**
 - Web katılım sayfası (yayın hazırlığıyla birlikte)

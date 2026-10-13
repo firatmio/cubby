@@ -366,6 +366,13 @@ async fn sync_host_inner(app: &AppHandle, inst: &Instance) -> AppResult<ClientSt
     )
     .await?;
 
+    // Mod paketinden kurulan dünya: paketin oyuncu dosyaları (ayarlar, kaynak paketleri) bir kez.
+    if let Some(game_dir) = mods_dir.parent()
+        && let Err(e) = crate::modpack_cmds::apply_client_files(&meta, game_dir, shared)
+    {
+        eprintln!("Paketin oyuncu dosyaları kopyalanamadı: {e}");
+    }
+
     let server_mods = server_dir.join("mods");
     let list = manifest::build(&server_mods, &mods::load_records(&meta), inst.loader);
     let mut wanted: Vec<Wanted> = list
