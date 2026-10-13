@@ -1,5 +1,24 @@
 # Microsoft girişi: Azure kaydı ve Mojang onayı
 
+> **Durum (2026-10-13): beklemede.** Mojang ilk başvuruyu ("AppID Review Complete", 2026-10-12)
+> reddetti; sebep yazmıyor. Büyük ihtimalle: Cubby premium olmayan oyuncuları destekliyor
+> ("Premium olmayanlar da girebilsin", `online-mode=false`; TLauncher profilleri) ve repo bunu açıkça
+> anlatıyor. Mojang'ın onay listesi buna izin veren uygulamaları kabul etmiyor. Ayrıca başvuru metninde
+> "offline/cracked play yok" yazıyordu; repo ile çelişti.
+>
+> **Karar (plan A):** ilk kullanıcılar çoğunlukla TLauncher kullanıyor; premium olmayan desteği kalıyor,
+> Microsoft girişi şimdilik kapalı. Yayın derlemeleri `MCSM_MS_CLIENT_ID` olmadan çıkar: Ayarlar'daki
+> Microsoft kartı görünmez, "Başlat ve katıl" resmi Launcher'la (profil seçili, Quick Play) çalışır.
+> M9 kodu yerinde durur.
+>
+> **Plan B'ye geçiş** (kitlede hatırı sayılır premium oyuncu olursa):
+> 1. Premium olmayan ayarını ve TLauncher desteğini kaldır (sunucu hep `online-mode=true`; README/SPEC'ten de).
+>    Öncesinde duyur; mümkünse Bedrock desteğiyle (Geyser) yumuşat.
+> 2. Azure'da **yeni** bir uygulama kaydı aç (eski kimlik ret kaydıyla ilişkili olabilir); aşağıdaki adımlar aynı.
+> 3. Başvuruda dürüst ol: "önceki sürümler premium olmayan sunucuları destekliyordu, X sürümünde kaldırıldı;
+>    artık yalnız oyunu satın almış hesaplar". Uygulamayı kaldırıp onaydan sonra geri eklemek ya da aynı
+>    özelliği bir "fork" üzerinden sürdürmek kimliğin engellenmesine yol açar; yapılmayacak.
+
 Uygulamanın oyunu Launcher'a uğramadan açabilmesi için oyuncunun Microsoft hesabıyla giriş yapması
 gerekiyor. Bunun için uygulamanın kendi **Azure uygulama kimliği** (client ID) ve bu kimliğin Minecraft
 servislerini kullanabilmesi için **Mojang onayı** gerekir. İkisini de proje sahibi yapar; kod hazır,
@@ -47,11 +66,6 @@ Formda istenenler ve önerilen cevaplar:
 - **İletişim e-postası:** seninki.
 
 Cevap e-postayla geliyor; geliştirici raporlarına göre yaklaşık bir hafta sürüyor, garanti değil.
-
-> **Başvuru eski adla ("MC Server Client") yapıldıysa yeniden başvurma:** onay ada değil uygulama
-> kimliğine verilir. Azure'da adı *Markalama ve özellikler*'den `Cubby` yap (kimlik değişmez; oyuncunun
-> Microsoft giriş ekranında görünen ad da budur). Mojang yazarsa adın değiştiğini, kimliğin aynı kaldığını
-> söyle; reddederlerse Cubby adıyla, aynı kimlikle yeniden başvur.
 
 ## 3. Geliştirmede kimliği vermek
 
