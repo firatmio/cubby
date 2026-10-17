@@ -283,7 +283,8 @@ const tr = {
     recheck: "Tekrar kontrol et",
     join: "Katıl",
     next: "Devam",
-    pasteHint: "Arkadaşının gönderdiği davet linkini ya da kodunu yapıştır.",
+    pasteHint: "Arkadaşının gönderdiği davet kodunu (ör. K7M-2QX) ya da linkini yaz veya yapıştır.",
+    codePlaceholder: "K7M-2QX ya da davet linki",
     reaching: "Arkadaşının bilgisayarına ulaşılıyor…",
     own: "Bu senin kendi dünyan; davet arkadaşın için.",
     listUpdate: "Minecraft'ın Çok Oyunculu listesine güncellenecek:",
@@ -371,9 +372,12 @@ const tr = {
     inviteTitle: "Uygulamayla davet et",
     recommended: "Önerilen",
     inviteText:
-      "Arkadaşın bu uygulamayı kurup linke tıklar; modem ayarı gerekmez ve dünyan Minecraft'taki sunucu listesine kendiliğinden eklenir. Bağlantı mümkünse doğrudan kurulur.",
+      "Arkadaşın linke tıklar ya da Cubby'de Katıl'a bu kodu yazar; modem ayarı gerekmez ve dünyan Minecraft'taki sunucu listesine kendiliğinden eklenir. Bağlantı mümkünse doğrudan kurulur.",
+    inviteCode: "Davet kodu",
     copyLink: "Linki kopyala",
     copyCode: "Kodu kopyala",
+    shortFailed: "Kısa kod alınamadı (internet bağlantını kontrol et). Uzun link ve kod yine çalışır.",
+    retryShort: "Tekrar dene",
     resetInvite: "Daveti yenile",
     reset: "Yenile",
     resetText:

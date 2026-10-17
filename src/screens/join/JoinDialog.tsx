@@ -136,8 +136,8 @@ export function JoinDialog() {
               setCode(e.target.value);
               setError(null);
             }}
-            placeholder="cubby://join?d=…"
-            rows={3}
+            placeholder={t.codePlaceholder}
+            rows={2}
             autoFocus
             spellCheck={false}
           />

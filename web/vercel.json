@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["fra1"],
+  "rewrites": [
+    { "source": "/api/invites/:code", "destination": "/api/invite?code=:code" },
+    { "source": "/", "destination": "/api/page" },
+    { "source": "/:code([A-Za-z0-9-]{6,7})", "destination": "/api/page?code=:code" }
+  ]
+}

@@ -58,6 +58,9 @@ pub struct Instance {
     /// Davet linklerinin anahtarı; yenilenince eski davetler geçersiz olur.
     #[serde(default)]
     pub invite_token: Option<String>,
+    /// Davet sunucusundaki kısa kod (`K7M-2QX`); `token` hangi davet anahtarına ait olduğunu tutar.
+    #[serde(default)]
+    pub short_invite: Option<crate::short_invite::ShortInvite>,
 }
 
 impl Instance {

@@ -651,10 +651,20 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "create_invite":
     case "reset_invite": {
       const code = `${SAMPLE_CODE}${cmd === "reset_invite" ? Date.now().toString(36) : ""}`;
-      return { code, link: `cubby://join?d=${code}` };
+      // localStorage.mockNoShort = "1": davet sunucusuna ulaşılamamış gibi.
+      const noShort = typeof localStorage !== "undefined" && localStorage.getItem("mockNoShort") === "1";
+      const short = cmd === "reset_invite" ? "Q4R-8TW" : "K7M-2QX";
+      return {
+        code,
+        link: `cubby://join?d=${code}`,
+        short: noShort ? null : short,
+        web: noShort ? null : `https://cubby.quacomes.com/${short.replace("-", "")}`,
+      };
     }
     case "preview_invite":
-      if (!String(args.code).trim().startsWith("cubby") && String(args.code).trim().length < 8)
+      if (/^[a-z0-9]{3}-?[a-z0-9]{3}$/i.test(String(args.code).trim()) && !/^k7m-?2qx$/i.test(String(args.code).trim()))
+        throw "Bu davet kodu bulunamadı ya da yenilenmiş. Arkadaşından yeni bir davet iste.";
+      if (!String(args.code).trim().startsWith("cubby") && String(args.code).trim().length < 6)
         throw "Davet kodu bozuk ya da eksik. Arkadaşından yeni bir davet iste.";
       await sleep(700);
       return {

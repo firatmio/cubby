@@ -153,3 +153,38 @@
   font-size: var(--fs-xs);
   font-weight: 600;
 }
+
+/* Kısa davet kodu: sesle söylenip elle yazılabilsin diye büyük ve aralıklı. */
+.inviteCode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--hover);
+}
+
+.inviteCode span {
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inviteCode b {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  user-select: all;
+}
+
+.shortFailed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--warning);
+  font-size: var(--fs-sm);
+}

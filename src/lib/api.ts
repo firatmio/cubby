@@ -221,8 +221,12 @@ export interface ModProgress {
 }
 
 export interface InviteLinks {
+  /** Uzun kod ve `cubby://` linki: davet sunucusuna ulaşılamazsa da çalışır */
   code: string;
   link: string;
+  /** Kısa kod (`K7M-2QX`) ve tıklanabilir web linki; alınamadıysa null */
+  short: string | null;
+  web: string | null;
 }
 
 /** Bağlantı hangi yoldan gidiyor: doğrudan ya da aracı sunucu üzerinden. */

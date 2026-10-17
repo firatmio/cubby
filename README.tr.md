@@ -25,11 +25,13 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPE
   - [x] **M10a** — sayfalar, animasyon seviyesi, büyütülebilir/yeniden boyutlanabilir pencere (en küçük 1200×720), kendi zemini olan ve modlarla Keşfet: dünya seçici, öne çıkan bandı ve kategori raflarıyla vitrin, galerili ve açıklaması gerçek Markdown olarak görünen yan önizleme (Modrinth görselleri küçültülüp diskte önbelleklenir), önden yükleme ve bellek önbelleği sayesinde listeler anında gelir
   - [x] **M10b** — kaynak paketleri (kendi Minecraft'ına kurulur ve açılır; istenirse sunucu üzerinden arkadaşlara zorunlu), shader'lar (Iris/Sodium — Forge'da Oculus/Embeddium — kendiliğinden kurulur ve dünyaya göre eşitlenir, shader açılır), veri paketleri (dünyaya kurulur, sunucu açıksa `reload` gider); arkadaşının dünyasında yalnız değiştirebileceğin sekmeler görünür
   - [x] **M10c** — mod paketleri → yeni dünya: Keşfet'te her dünyada (dünya yokken de) Mod paketleri sekmesi; önizlemede paketin Minecraft/altyapı sürümü, mod sayıları ve boyutu, sürüm seçimi; "Yeni dünya olarak kur" sihirbazı ad ve erişim adımlarıyla açar. Paket (`.mrpack`) okunur, altyapı paketten kurulur, dosyalar hash doğrulamalı ve yalnız izinli adreslerden iner; sunucu modları ve ayarları sunucuya, yalnız oyuncuda çalışan modlar ve ayarlar senin Minecraft'ına, arkadaşlara "önerilen" olarak gider; kapak paketin görseli olur
+- [x] **Web katılım sayfası** — kısa davet kodları (`K7M-2QX`, karışan karakterler yok) ve [cubby.quacomes.com](https://cubby.quacomes.com) adresinde tıklanabilir davet sayfası: sohbette önizleme, "Cubby'de aç" ve "Cubby'yi indir"; Katıl kodu, web linkini ya da uzun kodu kabul eder. Kendi küçük sunucumuz ([web/](web/), Vercel + Redis) yalnız daveti tutar; kod davet yenilenene kadar geçerli, 60 gün kullanılmazsa silinir. Sunucuya ulaşılamazsa uzun link ve kod yine çalışır. Ayrıntılar: [docs/DAVET_SUNUCUSU.md](docs/DAVET_SUNUCUSU.md)
 
-Sırada web katılım sayfası ve yayın hazırlığı var.
+Sırada yayın hazırlığı var.
 
 **Sonra:**
-- Web katılım sayfası (yayın hazırlığıyla birlikte)
+- Yayın hazırlığı (kurulum dosyası, GitHub Releases)
+- Oyuncu sayısı artınca kendi aracı sunucumuz (bir VDS'te iroh-relay)
 
 **Fikir aşamasında:**
 - Dünya yedekleme: Google hesabı bağlayıp Google Drive'a otomatik yedek

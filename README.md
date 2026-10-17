@@ -24,11 +24,13 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](
   - [x] **M10a** — pages, animation level, resizable/maximizable window (minimum 1200×720), Discover with its own backdrop and mods: world picker, a showcase with a featured band and category shelves, a side preview with gallery and properly rendered Markdown descriptions (Modrinth images resized and cached on disk), prefetching and an in-memory cache so lists appear instantly
   - [x] **M10b** — resource packs (installed into your Minecraft and turned on; optionally required for friends via the server), shaders (Iris/Sodium — Oculus/Embeddium on Forge — installed automatically and synced per world, shader turned on), data packs (installed into the world, `reload` sent if running); on a friend's world only the tabs you can change are shown
   - [x] **M10c** — modpacks → new world: a Modpacks tab in Discover on every world (and with no worlds yet); the preview shows the pack's Minecraft/loader version, mod counts and size, with a version picker; "Install as a new world" opens the setup wizard with the name and access steps. The pack (`.mrpack`) is read, its loader installed, files downloaded hash-verified and only from allowed hosts; server mods and configs go to the server, player-only mods and settings to your Minecraft and to friends as "recommended"; the cover becomes the pack's image
+- [x] **Web join page** — short invite codes (`K7M-2QX`, no look-alike characters) and a clickable invite page at [cubby.quacomes.com](https://cubby.quacomes.com) with a link preview in chats, "Open in Cubby" and "Download Cubby"; Join accepts the code, the web link or the long code. Our own small server ([web/](web/), Vercel + Redis) stores only the invite; a code works until the invite is renewed and is deleted after 60 days unused. If the server can't be reached, the long link and code still work. Details (Turkish): [docs/DAVET_SUNUCUSU.md](docs/DAVET_SUNUCUSU.md)
 
-Next up: a web join page and release preparation.
+Next up: release preparation.
 
 **Next:**
-- Web join page (together with release preparation)
+- Release preparation (installer, GitHub Releases)
+- Our own relay server (iroh-relay on a VDS) once more players use it
 
 **Ideas:**
 - World backups: connect a Google account and back up to Google Drive automatically

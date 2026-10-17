@@ -278,7 +278,8 @@ const en: Dict = {
     recheck: "Check again",
     join: "Join",
     next: "Next",
-    pasteHint: "Paste the invite link or code your friend sent you.",
+    pasteHint: "Type or paste the invite code (e.g. K7M-2QX) or link your friend sent you.",
+    codePlaceholder: "K7M-2QX or invite link",
     reaching: "Reaching your friend's computer…",
     own: "This is your own world; the invite is for your friends.",
     listUpdate: "Will be updated in Minecraft's Multiplayer list:",
@@ -366,9 +367,12 @@ const en: Dict = {
     inviteTitle: "Invite with the app",
     recommended: "Recommended",
     inviteText:
-      "Your friend installs this app and clicks the link; no router settings needed, and your world is added to their Minecraft server list automatically. Connects directly when possible.",
+      "Your friend clicks the link or types this code into Join in Cubby; no router settings needed, and your world is added to their Minecraft server list automatically. Connects directly when possible.",
+    inviteCode: "Invite code",
     copyLink: "Copy link",
     copyCode: "Copy code",
+    shortFailed: "Couldn't get a short code (check your internet connection). The long link and code still work.",
+    retryShort: "Try again",
     resetInvite: "Reset invite",
     reset: "Reset",
     resetText:

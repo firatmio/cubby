@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Check, Copy, Globe, Home, Link2, Loader2, RotateCcw, Router, Send } from "lucide-react";
 import { api, errorMessage, type AccessView, type InviteLinks, type Route } from "../../lib/api";
+import { EVENT_INVITE_SHORT, listen } from "../../lib/events";
 import { useT } from "../../i18n";
 import { rise } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
@@ -76,23 +77,50 @@ function DirectRoute({ route }: { route: Route }) {
   );
 }
 
-/** Uygulamadan uygulamaya davet: arkadaşın linke tıklar, modem ayarı gerekmez. */
+/**
+ * Uygulamadan uygulamaya davet: arkadaşın web linkine tıklar ya da kısa kodu yazar, modem ayarı
+ * gerekmez. Kısa kod alınamazsa (davet sunucusuna ulaşılamadı) uzun link ve kod kullanılır.
+ */
 function InviteSection({ id }: { id: string }) {
   const [links, setLinks] = useState<InviteLinks | null>(null);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tt = useT();
   const t = tt.connection;
 
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    api
+      .createInvite(id)
+      .then(setLinks)
+      .catch((e) => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  }, [id]);
+
   useEffect(() => {
     setLinks(null);
-    api.createInvite(id).then(setLinks).catch((e) => setError(errorMessage(e)));
+    load();
+  }, [load]);
+
+  // Süresi dolmuş kod arkada yenilenirse panel güncellenir.
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    let live = true;
+    void listen<{ id: string; links: InviteLinks }>(EVENT_INVITE_SHORT, (e) => {
+      if (e.payload.id === id) setLinks(e.payload.links);
+    }).then((u) => (live ? (off = u) : u()));
+    return () => {
+      live = false;
+      off?.();
+    };
   }, [id]);
 
   const copy = async (what: "link" | "code") => {
     if (!links) return;
-    await navigator.clipboard.writeText(what === "link" ? links.link : links.code);
+    await navigator.clipboard.writeText(what === "link" ? (links.web ?? links.link) : (links.short ?? links.code));
     setCopied(what);
     setTimeout(() => setCopied(null), 1600);
   };
@@ -114,6 +142,12 @@ function InviteSection({ id }: { id: string }) {
         <span className={styles.recommended}>{t.recommended}</span>
       </h3>
       <p className={styles.hint}>{t.inviteText}</p>
+      {links?.short && (
+        <div className={styles.inviteCode}>
+          <span>{t.inviteCode}</span>
+          <b>{links.short}</b>
+        </div>
+      )}
       <div className={styles.buttons}>
         <Button size="sm" variant="primary" icon={copied === "link" ? Check : Link2} disabled={!links} onClick={() => copy("link")}>
           {copied === "link" ? tt.common.copied : t.copyLink}
@@ -125,6 +159,14 @@ function InviteSection({ id }: { id: string }) {
           {t.resetInvite}
         </Button>
       </div>
+      {links && !links.short && !loading && (
+        <p className={styles.shortFailed}>
+          <AlertTriangle size={15} aria-hidden /> {t.shortFailed}
+          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={load}>
+            {t.retryShort}
+          </Button>
+        </p>
+      )}
       {error && <p className={styles.error}>{error}</p>}
       {confirmReset && (
         <Dialog

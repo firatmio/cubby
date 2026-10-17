@@ -19,7 +19,8 @@ import {
 
 type Unlisten = () => void;
 
-async function listen<T>(event: string, handler: (e: { payload: T }) => void): Promise<Unlisten> {
+/** Bileşen içinden tek bir Rust event'ini dinlemek için (mock'ta da çalışır). */
+export async function listen<T>(event: string, handler: (e: { payload: T }) => void): Promise<Unlisten> {
   if (import.meta.env.DEV && IS_MOCK) {
     const { mockListen } = await import("./mock");
     return mockListen(event, handler as (e: { payload: unknown }) => void);
@@ -46,6 +47,8 @@ const EVENT_CLIENT_LAUNCH = "client://launch";
 const EVENT_GAME_PROGRESS = "game://progress";
 const EVENT_GAME_STATE = "game://state";
 const EVENT_INVITE = "join://invite";
+/** Kısa davet kodu kendiliğinden yenilendi (join_cmds.rs). */
+export const EVENT_INVITE_SHORT = "invite://short";
 
 type WithId<T> = T & { id: string };
 

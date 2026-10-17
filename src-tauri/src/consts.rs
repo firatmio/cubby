@@ -3,6 +3,9 @@ use std::time::Duration;
 /// Davet linklerinin şeması (`cubby://join?d=...`).
 pub const URL_SCHEME: &str = "cubby";
 
+/// Davet sayfası ve kısa kod sunucusu (`web/`, Vercel). Kısa kodlar `<JOIN_WEB>/<KOD>` olur.
+pub const JOIN_WEB: &str = "https://cubby.quacomes.com";
+
 /// Ad değişmeden önceki şema; eski davet linkleri de açılsın.
 pub const LEGACY_URL_SCHEME: &str = "mcsm";
 

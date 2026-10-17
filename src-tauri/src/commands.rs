@@ -303,6 +303,7 @@ pub async fn create_instance(
             cover: None,
             internet: false,
             invite_token: None,
+            short_invite: None,
         };
         let mut props = Properties::load(&server_dir)?;
         props.set("motd", inst.name.clone());

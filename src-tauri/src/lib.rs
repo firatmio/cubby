@@ -38,6 +38,7 @@ mod registry;
 mod server;
 mod sessions;
 mod settings;
+mod short_invite;
 mod util;
 mod world_cmds;
 
@@ -192,6 +193,7 @@ pub fn run() {
                 app.manage(game_cmds::GameState::default());
                 let net = Arc::new(NetManager::new(http));
                 net::install(app.handle(), net.clone());
+                join_cmds::install_refresh(app.handle());
                 app.manage(net);
                 sessions::install(app.handle());
 

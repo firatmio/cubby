@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Listener, Manager, State};
 
 use crate::client::manifest::{self, ClientMod, Need};
 use crate::commands::{AppState, server_port};
@@ -17,6 +17,7 @@ use crate::p2p::{Decide, Decision, P2p};
 use crate::server::ServerStatus;
 use crate::sessions::META_DIR;
 use crate::settings::SettingsStore;
+use crate::short_invite::{self, ShortInvite};
 use crate::{instance, paths};
 
 type Joins<'a> = State<'a, Arc<JoinManager>>;
@@ -96,22 +97,28 @@ pub fn host_decider(app: AppHandle) -> Decide {
     })
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InviteLinks {
+    /// Uzun kod ve `cubby://` linki: davet sunucusuna ulaşılamazsa da çalışır.
     code: String,
     link: String,
+    /// Kısa kod (`K7M-2QX`) ve tıklanabilir web linki; alınamadıysa `None`.
+    short: Option<String>,
+    web: Option<String>,
 }
 
-fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteLinks> {
-    let dir = paths::instance_dir(app, id)?;
-    let inst = instance::modify(&dir, |i| {
-        if reset || i.invite_token.is_none() {
-            i.invite_token = Some(new_token());
-        }
-        Ok(())
-    })?;
-    let invite = Invite {
+/// Kısa kod kendiliğinden yenilendi (süresi dolmuştu): açık panel güncellensin.
+pub const EVENT_SHORT: &str = "invite://short";
+
+#[derive(Serialize, Clone)]
+struct ShortPayload {
+    id: String,
+    links: InviteLinks,
+}
+
+fn invite_of(app: &AppHandle, inst: &instance::Instance) -> Invite {
+    Invite {
         v: INVITE_VERSION,
         name: inst.name.chars().take(64).collect(),
         host: app.state::<Arc<P2p>>().id(),
@@ -120,22 +127,150 @@ fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteLinks> 
         loader: inst.loader,
         mc_version: inst.mc_version.clone(),
         loader_version: inst.loader_version.clone(),
-    };
-    Ok(InviteLinks {
+    }
+}
+
+fn links(invite: &Invite, short: Option<&str>) -> InviteLinks {
+    InviteLinks {
         code: invite.encode(),
         link: invite.link(),
-    })
+        short: short.map(short_invite::format),
+        web: short.map(short_invite::web_link),
+    }
+}
+
+/// Davet sunucusundan yeni kısa kod alır ve dünyaya kaydeder.
+async fn new_short(app: &AppHandle, id: &str, invite: &Invite) -> AppResult<String> {
+    let http = app.state::<AppState>().http.clone();
+    let (code, owner) = short_invite::create(&http, &invite.encode()).await?;
+    let dir = paths::instance_dir(app, id)?;
+    let token = invite.token.clone();
+    let saved = code.clone();
+    instance::modify(&dir, move |i| {
+        i.short_invite = Some(ShortInvite {
+            code: saved,
+            owner,
+            token,
+        });
+        Ok(())
+    })?;
+    Ok(code)
+}
+
+/// Kayıtlı kısa kodun süresini (ve içindeki dünya adını) tazeler; sunucuda yoksa yenisini alır.
+/// Dönen: değiştiyse yeni kod.
+async fn refresh_short(app: &AppHandle, id: &str) -> AppResult<Option<String>> {
+    let inst = instance::get(app, id)?;
+    let Some(s) = inst
+        .short_invite
+        .clone()
+        .filter(|s| Some(&s.token) == inst.invite_token.as_ref())
+    else {
+        return Ok(None);
+    };
+    let invite = invite_of(app, &inst);
+    let http = app.state::<AppState>().http.clone();
+    if short_invite::refresh(&http, &s, &invite.encode()).await? {
+        return Ok(None);
+    }
+    Ok(Some(new_short(app, id, &invite).await?))
+}
+
+/// Arka planda tazeler; kod değiştiyse açık panele bildirir. Hatalar yalnız günlüğe.
+pub fn spawn_refresh(app: &AppHandle, id: &str) {
+    let (app, id) = (app.clone(), id.to_string());
+    tauri::async_runtime::spawn(async move {
+        match refresh_short(&app, &id).await {
+            Ok(Some(code)) => {
+                if let Ok(inst) = instance::get(&app, &id) {
+                    let links = links(&invite_of(&app, &inst), Some(&code));
+                    let _ = app.emit(EVENT_SHORT, ShortPayload { id, links });
+                }
+            }
+            Ok(None) => {}
+            Err(e) => eprintln!("Kısa davet kodu tazelenemedi: {e}"),
+        }
+    });
+}
+
+/// Dünya açılınca kısa kodu tazeler: kullanılan dünyaların kodu 60 günde düşmez.
+pub fn install_refresh(app: &AppHandle) {
+    #[derive(serde::Deserialize)]
+    struct StatusPayload {
+        id: String,
+        status: String,
+    }
+    let handle = app.clone();
+    app.listen_any(crate::server::EVENT_STATUS, move |event| {
+        if let Ok(p) = serde_json::from_str::<StatusPayload>(event.payload())
+            && p.status == "running"
+        {
+            spawn_refresh(&handle, &p.id);
+        }
+    });
+}
+
+async fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteLinks> {
+    let dir = paths::instance_dir(app, id)?;
+    let old = instance::get(app, id)?.short_invite;
+    let inst = instance::modify(&dir, |i| {
+        if reset || i.invite_token.is_none() {
+            i.invite_token = Some(new_token());
+        }
+        Ok(())
+    })?;
+    let invite = invite_of(app, &inst);
+    // Yenilemede eski kısa kod sunucudan silinir (olmazsa 60 günde kendiliğinden düşer).
+    if reset && let Some(old) = old {
+        let http = app.state::<AppState>().http.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(e) = short_invite::delete(&http, &old).await {
+                eprintln!("Eski kısa davet kodu silinemedi: {e}");
+            }
+        });
+    }
+    let current = inst
+        .short_invite
+        .as_ref()
+        .filter(|s| !reset && Some(&s.token) == inst.invite_token.as_ref())
+        .map(|s| s.code.clone());
+    let short = match current {
+        Some(code) => {
+            spawn_refresh(app, id);
+            Some(code)
+        }
+        None => match new_short(app, id, &invite).await {
+            Ok(code) => Some(code),
+            // Kısa kod alınamazsa uzun kod yine çalışır; panel bunu söyler.
+            Err(e) => {
+                eprintln!("Kısa davet kodu alınamadı: {e}");
+                None
+            }
+        },
+    };
+    Ok(links(&invite, short.as_deref()))
 }
 
 #[tauri::command]
-pub fn create_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> {
-    invite_for(&app, &id, false)
+pub async fn create_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> {
+    invite_for(&app, &id, false).await
 }
 
 /// Yeni anahtar üretir; eski linkler ve kodlar geçersiz olur.
 #[tauri::command]
-pub fn reset_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> {
-    invite_for(&app, &id, true)
+pub async fn reset_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> {
+    invite_for(&app, &id, true).await
+}
+
+/// Kısa kod, web linki, uzun kod ya da `cubby://` linki → davet.
+async fn invite_from(app: &AppHandle, input: &str) -> AppResult<Invite> {
+    match short_invite::normalize(input) {
+        Some(code) => {
+            let http = app.state::<AppState>().http.clone();
+            Invite::parse(&short_invite::resolve(&http, &code).await?)
+        }
+        None => Invite::parse(input),
+    }
 }
 
 #[derive(Serialize)]
@@ -242,7 +377,7 @@ pub async fn preview_invite(
     joins: Joins<'_>,
     code: String,
 ) -> AppResult<InvitePreview> {
-    let invite = Invite::parse(&code)?;
+    let invite = invite_from(&app, &code).await?;
     let p2p = app.state::<Arc<P2p>>().inner().clone();
     let own = invite.host == p2p.id();
     let status = if own {
@@ -531,7 +666,7 @@ pub async fn join_world(
     force: bool,
     install_recommended: bool,
 ) -> AppResult<JoinedView> {
-    let invite = Invite::parse(&code)?;
+    let invite = invite_from(&app, &code).await?;
     if invite.host == app.state::<Arc<P2p>>().id() {
         return Err(AppError::msg(tx!(
             "Bu senin kendi dünyan; davet arkadaşın için.",
