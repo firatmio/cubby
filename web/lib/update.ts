@@ -1,6 +1,6 @@
 /** Güncelleme ucu için saf işlevler: kanala göre GitHub sürümü seçimi ve semver karşılaştırma. */
 
-export const REPO = "firatmio/mc-server-client";
+export const REPO = "firatmio/cubby";
 
 export interface GhAsset {
   name: string;

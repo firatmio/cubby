@@ -53,7 +53,7 @@ Formda istenenler ve önerilen cevaplar:
 - **Application (client) ID:** 1. adımda kopyaladığın kimlik.
 - **Tenant:** `consumers` (kişisel hesaplar).
 - **Uygulama adı / web sitesi:** `Cubby` ve GitHub sayfası
-  (`https://github.com/firatmio/mc-server-manager`).
+  (`https://github.com/firatmio/cubby`).
 - **Ne yapıyor (İngilizce önerilen metin):**
 
   > A free, open-source desktop app (Tauri) that sets up and runs Minecraft: Java Edition servers for
