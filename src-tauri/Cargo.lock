@@ -3214,7 +3214,7 @@ dependencies = [
 
 [[package]]
 name = "mc-server-launcher"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.2"
 dependencies = [
  "arboard",
  "base64 0.22.1",
