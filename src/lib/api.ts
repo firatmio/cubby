@@ -282,6 +282,10 @@ export interface JoinedWorld {
   gameDir: string | null;
   modsRev: string | null;
   withRecommended: boolean;
+  /** Host'un dünya kapağı (arkadaşta da aynı arka plan) */
+  cover?: { version: number; color: string } | null;
+  /** Dünyanın davet kodu (`K7M-2QX`) */
+  code?: string | null;
 }
 
 export interface JoinedView {
@@ -621,7 +625,8 @@ export const api = {
 };
 
 /**
- * `media://` protokolünden görsel adresi: `cover/<id>`, `thumb/<id>`, `shot/<dosya>`.
+ * `media://` protokolünden görsel adresi: `cover/<id>`, `thumb/<id>`, `joinedcover/<id>`,
+ * `joinedthumb/<id>`, `shot/<dosya>`.
  * `v` önbellek kırıcı (kapak sürümü).
  */
 export function mediaUrl(path: string, v?: number | string): string {
@@ -633,7 +638,7 @@ export function mediaUrl(path: string, v?: number | string): string {
 /** Mock modunda gerçek görsel yok: dosya adından üretilen degrade manzara. */
 function mockMediaUrl(path: string): string {
   let h = 0;
-  for (const c of path.replace(/^(cover|thumb)\//, "")) h = (h * 31 + c.charCodeAt(0)) % 360;
+  for (const c of path.replace(/^(joined)?(cover|thumb)\//, "")) h = (h * 31 + c.charCodeAt(0)) % 360;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="none">
     <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${h},55%,62%)"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},45%,35%)"/></linearGradient></defs>
     <rect width="160" height="90" fill="url(#s)"/>

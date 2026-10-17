@@ -11,6 +11,7 @@ import { IconButton } from "../../ui/IconButton";
 import { Input } from "../../ui/Input";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
+import { useScrollFade } from "../../ui/useScrollFade";
 import styles from "./PlayersSheet.module.css";
 
 function Avatar({ name }: { name: string }) {
@@ -19,6 +20,7 @@ function Avatar({ name }: { name: string }) {
 
 /** Kim oyunda, kim girebilir, kim yetkili. Teknik terimsiz. */
 export function PlayersSheet() {
+  const fade = useScrollFade();
   const open = useAppStore((s) => s.sheet === "players");
   const openSheet = useAppStore((s) => s.openSheet);
   const instance = useSelected();
@@ -80,7 +82,7 @@ export function PlayersSheet() {
       onClose={() => openSheet(null)}
       width={560}
     >
-      <div className={styles.scroll}>
+      <div ref={fade} className={styles.scroll}>
         {error && <p className={styles.error}>{error}</p>}
         {view?.notice && <p className={styles.notice}>{view.notice}</p>}
 

@@ -8,6 +8,7 @@ import { rise, stagger } from "../../lib/motion";
 import { useAppStore, useSelected } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Sheet } from "../../ui/Sheet";
+import { useScrollFade } from "../../ui/useScrollFade";
 import styles from "./CoverSheet.module.css";
 
 function ShotGrid({
@@ -48,6 +49,7 @@ function ShotGrid({
 
 /** Dünyanın arka planı: bu dünyada çekilen ekran görüntüleri, diğerleri ya da bilgisayardan bir resim. */
 export function CoverSheet() {
+  const fade = useScrollFade();
   const open = useAppStore((s) => s.sheet === "cover");
   const openSheet = useAppStore((s) => s.openSheet);
   const replaceInstance = useAppStore((s) => s.replaceInstance);
@@ -117,7 +119,7 @@ export function CoverSheet() {
       </div>
       {error && <p className={styles.error}>{error}</p>}
 
-      <div className={styles.scroll}>
+      <div ref={fade} className={styles.scroll}>
         {!list && !error && <p className={styles.dim}>{t.cover.searching}</p>}
         {list && (
           <>

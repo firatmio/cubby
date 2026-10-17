@@ -5,15 +5,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--edge);
+  padding: clamp(var(--sp-4), 6vh, var(--edge)) var(--edge);
   background: var(--overlay);
   backdrop-filter: blur(6px);
   animation: fade 200ms ease-out;
 }
 
 .dialog {
+  display: flex;
+  flex-direction: column;
   width: min(460px, 100%);
-  padding: var(--sp-8);
+  max-height: 100%;
+  padding: clamp(20px, 4.5vh, var(--sp-8)) var(--sp-8);
   background: #262626;
   border: 1px solid var(--line);
   border-radius: var(--radius-tile);
@@ -22,6 +25,7 @@
 }
 
 .title {
+  flex: none;
   font-size: var(--fs-xl);
   margin-bottom: var(--sp-3);
 }
@@ -30,14 +34,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+  min-height: 0;
+  /* Kaydırma çubuğu içeriğe yapışmasın: gövde biraz taşar, içerik aynı yerde kalır. */
+  margin: 0 calc(-1 * var(--sp-3));
+  padding: 2px var(--sp-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: var(--text-2);
 }
 
 .actions {
   display: flex;
+  flex: none;
   gap: var(--sp-2);
   justify-content: flex-end;
-  margin-top: var(--sp-8);
+  margin-top: clamp(var(--sp-4), 4vh, var(--sp-8));
 }
 
 @keyframes fade {

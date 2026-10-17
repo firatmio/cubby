@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useT } from "../i18n";
 import { spring } from "../lib/motion";
 import { IconButton } from "./IconButton";
+import { useScrollFade } from "./useScrollFade";
 import styles from "./Sheet.module.css";
 
 type Props = {
@@ -19,6 +20,7 @@ type Props = {
 /** Sağdan kayan panel; arkası soluklaşır, Esc ya da boşluğa tıklama kapatır. */
 export function Sheet({ open, title, subtitle, onClose, children, width = 560 }: Props) {
   const t = useT();
+  const fade = useScrollFade();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -57,7 +59,10 @@ export function Sheet({ open, title, subtitle, onClose, children, width = 560 }:
               </div>
               <IconButton icon={X} label={t.common.close} size="sm" variant="ghost" tipBelow onClick={onClose} />
             </header>
-            <div className={styles.body}>{children}</div>
+            {/* Gövde kendisi kayar: kendi kaydırma alanı olmayan paneller de küçük pencerede taşmaz. */}
+            <div ref={fade} className={styles.body}>
+              {children}
+            </div>
           </motion.aside>
         </>
       )}

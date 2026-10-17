@@ -21,6 +21,8 @@ pub enum StreamKind {
     Manifest,
     /// Listedeki bir mod dosyası (yanıttan sonra ham bayt). Dosya adı `file` alanında.
     File,
+    /// Dünyanın kapağı (JPEG, yanıttan sonra ham bayt): arkadaşta da aynı arka plan görünsün.
+    Cover,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +43,12 @@ pub enum Reply {
         name: String,
         #[serde(default, rename = "modsRev", skip_serializing_if = "Option::is_none")]
         mods_rev: Option<String>,
+        /// Kapağın sürümü; değişince arkadaş yenisini `Cover` akışıyla alır. Kapak yoksa yok.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cover: Option<u64>,
+        /// Dünyanın güncel davet kodu (`K7M-2QX`): arkadaş başkasını çağırabilsin.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        code: Option<String>,
     },
     /// Davet geçersiz (token yanlış, dünya silinmiş).
     Denied,
@@ -138,6 +146,8 @@ mod tests {
             running: true,
             name: "x".into(),
             mods_rev: None,
+            cover: None,
+            code: None,
         };
         assert_eq!(
             serde_json::to_string(&r).unwrap(),
@@ -150,7 +160,20 @@ mod tests {
         // Eski sürümün yanıtı (modsRev yok) okunabilir.
         let old: Reply =
             serde_json::from_str(r#"{"status":"ok","running":false,"name":"y"}"#).unwrap();
-        assert!(matches!(old, Reply::Ok { mods_rev: None, .. }));
+        assert!(matches!(
+            old,
+            Reply::Ok {
+                mods_rev: None,
+                cover: None,
+                code: None,
+                ..
+            }
+        ));
+        let new: Reply = serde_json::from_str(
+            r#"{"status":"ok","running":true,"name":"y","cover":3,"code":"K7M-2QX"}"#,
+        )
+        .unwrap();
+        assert!(matches!(new, Reply::Ok { cover: Some(3), .. }));
     }
 
     #[tokio::test]

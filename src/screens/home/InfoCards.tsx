@@ -7,6 +7,7 @@ import { formatCode } from "../../lib/inviteCode";
 import { useT } from "../../i18n";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore, useServer } from "../../store/appStore";
+import { Tooltip } from "../../ui/Tooltip";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./InfoCards.module.css";
 
@@ -14,8 +15,9 @@ type ItemProps = {
   icon: LucideIcon;
   label: string;
   value: ReactNode;
+  /** Açıklama: üzerine gelince ipucu olarak görünür. */
   hint: ReactNode;
-  /** Uyarı tonunda ipucu (ör. girmeye çalışan oyuncu). */
+  /** Yapılacak bir iş varsa (ör. girmeye çalışan oyuncu) ipucu yerine değerin altında görünür. */
   alert?: boolean;
   /** Değer kod gibi tek tek okunacaksa. */
   mono?: boolean;
@@ -24,7 +26,7 @@ type ItemProps = {
   extra?: ReactNode;
 };
 
-/** Dock'ta bir öğe: ikon, küçük başlık, değer ve ipucu. Tıklanabilirse panel açar. */
+/** Dock'ta bir öğe: ikon, küçük başlık ve değer; açıklama ipucunda. Tıklanabilirse panel açar. */
 export function InfoItem({ icon: Icon, label, value, hint, alert, mono, onClick, extra }: ItemProps) {
   const body = (
     <>
@@ -39,24 +41,27 @@ export function InfoItem({ icon: Icon, label, value, hint, alert, mono, onClick,
         >
           {value}
         </span>
-        <span
-          className={[styles.hint, alert && styles.alert].filter(Boolean).join(" ")}
-          title={typeof hint === "string" ? hint : undefined}
-        >
-          {hint}
-        </span>
+        {alert && (
+          <span className={[styles.hint, styles.alert].join(" ")} title={typeof hint === "string" ? hint : undefined}>
+            {hint}
+          </span>
+        )}
       </span>
     </>
   );
   return (
     <motion.div className={styles.item} variants={rise}>
-      {onClick ? (
-        <button type="button" className={[styles.main, styles.action].join(" ")} onClick={onClick}>
-          {body}
-        </button>
-      ) : (
-        <div className={styles.main}>{body}</div>
-      )}
+      <Tooltip text={alert ? null : hint}>
+        {onClick ? (
+          <button type="button" className={[styles.main, styles.action].join(" ")} onClick={onClick}>
+            {body}
+          </button>
+        ) : (
+          <div className={styles.main} tabIndex={0}>
+            {body}
+          </div>
+        )}
+      </Tooltip>
       {extra}
     </motion.div>
   );
@@ -72,16 +77,12 @@ export function InfoDock({ children }: { children: ReactNode }) {
 }
 
 /** Öğenin sağındaki küçük kopyalama düğmesi. */
-export function CopyButton({ text, label, onCopied }: { text: string; label: string; onCopied?: (on: boolean) => void }) {
+export function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    onCopied?.(true);
-    setTimeout(() => {
-      setCopied(false);
-      onCopied?.(false);
-    }, 1600);
+    setTimeout(() => setCopied(false), 1600);
   };
   return (
     <button type="button" className={styles.copy} aria-label={label} title={label} onClick={copy}>
@@ -95,7 +96,6 @@ export function InfoCards({ instance }: { instance: Instance }) {
   const { status, players, rejected } = useServer(instance.id);
   const stats = usePlayStats(instance.id, status);
   const openSheet = useAppStore((s) => s.openSheet);
-  const [copied, setCopied] = useState(false);
   const running = status === "running";
   const tt = useT();
   const t = tt.home;
@@ -116,9 +116,9 @@ export function InfoCards({ instance }: { instance: Instance }) {
         label={t.invite}
         value={code ?? t.inviteNoCode}
         mono={!!code}
-        hint={copied ? tt.common.copied : code ? t.inviteCardHint : t.inviteCardNoCode}
+        hint={code ? t.inviteCardHint : t.inviteCardNoCode}
         onClick={() => openSheet("connection")}
-        extra={code && <CopyButton text={code} label={t.copyCode} onCopied={setCopied} />}
+        extra={code && <CopyButton text={code} label={t.copyCode} />}
       />
       <InfoItem
         icon={Clock}

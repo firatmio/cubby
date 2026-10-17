@@ -1,5 +1,6 @@
 //! `media://` protokolü: arayüze yalnızca kapak ve ekran görüntüsü önizlemelerini servis eder.
-//! Yollar: `/cover/<id>`, `/thumb/<id>`, `/shot/<dosya>`. Başka hiçbir dosyaya erişilemez.
+//! Yollar: `/cover/<id>`, `/thumb/<id>`, `/joinedcover/<id>`, `/joinedthumb/<id>` (arkadaşın
+//! dünyasının kapağı), `/shot/<dosya>`. Başka hiçbir dosyaya erişilemez.
 
 use std::path::{Path, PathBuf};
 
@@ -17,6 +18,8 @@ pub const SCHEME: &str = "media";
 enum Target {
     Cover(String),
     Thumb(String),
+    JoinedCover(String),
+    JoinedThumb(String),
     Shot(String),
 }
 
@@ -29,6 +32,8 @@ fn parse(path: &str) -> Option<Target> {
     match kind {
         "cover" if paths::validate_id(arg).is_ok() => Some(Target::Cover(arg.into())),
         "thumb" if paths::validate_id(arg).is_ok() => Some(Target::Thumb(arg.into())),
+        "joinedcover" if paths::validate_id(arg).is_ok() => Some(Target::JoinedCover(arg.into())),
+        "joinedthumb" if paths::validate_id(arg).is_ok() => Some(Target::JoinedThumb(arg.into())),
         "shot" if covers::is_valid_shot_name(arg) => Some(Target::Shot(arg.into())),
         _ => None,
     }
@@ -78,6 +83,16 @@ pub fn respond(app: &AppHandle, path: &str) -> Response<Vec<u8>> {
         Some(Target::Thumb(id)) => paths::instance_dir(app, &id)
             .ok()
             .map(|d| d.join(META_DIR).join(THUMB_FILE)),
+        Some(Target::JoinedCover(id)) => app
+            .path()
+            .app_data_dir()
+            .ok()
+            .map(|d| d.join("joined").join(id).join(COVER_FILE)),
+        Some(Target::JoinedThumb(id)) => app
+            .path()
+            .app_data_dir()
+            .ok()
+            .map(|d| d.join("joined").join(id).join(THUMB_FILE)),
         Some(Target::Shot(name)) => shot_preview(app, &name),
         None => None,
     };
@@ -98,6 +113,11 @@ mod tests {
             Some(Target::Cover("abc-123".into()))
         );
         assert_eq!(parse("/thumb/abc"), Some(Target::Thumb("abc".into())));
+        assert_eq!(
+            parse("/joinedcover/abc-1"),
+            Some(Target::JoinedCover("abc-1".into()))
+        );
+        assert_eq!(parse("/joinedthumb/../x"), None);
         assert_eq!(
             parse("/shot/2026-08-21_15.12.34.png"),
             Some(Target::Shot("2026-08-21_15.12.34.png".into()))

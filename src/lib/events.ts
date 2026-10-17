@@ -16,6 +16,7 @@ import {
   type LaunchResult,
   type GameProgress,
   type UpdateView,
+  type JoinedWorld,
 } from "./api";
 
 type Unlisten = () => void;
@@ -41,6 +42,7 @@ const EVENT_COVER_CHANGED = "cover://changed";
 const EVENT_SHUTTING_DOWN = "app://shutting-down";
 const EVENT_NET = "net://status";
 const EVENT_JOIN_STATUS = "join://status";
+const EVENT_JOIN_WORLD = "join://world";
 const EVENT_MODS_PROGRESS = "mods://progress";
 const EVENT_CLIENT_STATUS = "client://status";
 const EVENT_JOIN_PROGRESS = "join://progress";
@@ -88,6 +90,9 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<InstallProgress>(EVENT_INSTALL_PROGRESS, ({ payload }) => {
       store().setInstallProgress(payload);
+    }),
+    listen<JoinedWorld>(EVENT_JOIN_WORLD, ({ payload }) => {
+      store().updateJoinedWorld(payload);
     }),
     listen<UpdateView>(EVENT_UPDATE, ({ payload }) => {
       store().setUpdate(payload);

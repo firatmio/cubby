@@ -11,6 +11,7 @@ import { PillTabs } from "../../ui/PillTabs";
 import { Sheet } from "../../ui/Sheet";
 import { Slider } from "../../ui/Slider";
 import { Toggle } from "../../ui/Toggle";
+import { useScrollFade } from "../../ui/useScrollFade";
 import styles from "./WorldSettingsSheet.module.css";
 
 type Form = {
@@ -54,6 +55,7 @@ function toProps(f: Form): Record<string, string> {
 
 /** Oyunun kuralları: zorluk, oyun modu, PvP... ve kimlerin girebileceği (premium / TLauncher). */
 export function WorldSettingsSheet() {
+  const fade = useScrollFade();
   const open = useAppStore((s) => s.sheet === "world");
   const openSheet = useAppStore((s) => s.openSheet);
   const instance = useSelected();
@@ -161,7 +163,7 @@ export function WorldSettingsSheet() {
       onClose={() => openSheet(null)}
       width={560}
     >
-      <div className={styles.scroll}>
+      <div ref={fade} className={styles.scroll}>
         {error && <p className={styles.error}>{error}</p>}
         <AnimatePresence>
           {savedWhileRunning && (

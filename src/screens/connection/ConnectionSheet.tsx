@@ -13,6 +13,7 @@ import { IconButton } from "../../ui/IconButton";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
 import { useConnection } from "./useConnection";
+import { useScrollFade } from "../../ui/useScrollFade";
 import styles from "./ConnectionSheet.module.css";
 
 /** "Kopyalandı" bir süre görünür. */
@@ -300,6 +301,7 @@ function WithoutCubby({ id }: { id: string }) {
 
 /** Arkadaşını davet et: önce kod; Cubby'si olmayanlar için adresler katlanmış altta. */
 export function ConnectionSheet() {
+  const fade = useScrollFade();
   const open = useAppStore((s) => s.sheet === "connection");
   const openSheet = useAppStore((s) => s.openSheet);
   const instance = useSelected();
@@ -308,7 +310,7 @@ export function ConnectionSheet() {
   return (
     <Sheet open={open && !!instance} title={t.title} subtitle={instance?.name} onClose={() => openSheet(null)}>
       {instance && (
-        <div className={styles.scroll}>
+        <div ref={fade} className={styles.scroll}>
           <Invite id={instance.id} />
           <WithoutCubby id={instance.id} />
         </div>

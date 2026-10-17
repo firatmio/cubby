@@ -63,10 +63,24 @@ pub fn host_decider(app: AppHandle) -> Decide {
             list
         };
         let light = || list(false);
+        // Arkadaşta da aynı arka plan ve güncel davet kodu görünsün.
+        let cover_file = meta.join(crate::covers::COVER_FILE);
+        let cover = inst
+            .cover
+            .as_ref()
+            .filter(|_| cover_file.is_file())
+            .map(|c| c.version);
+        let code = inst
+            .short_invite
+            .as_ref()
+            .filter(|s| Some(&s.token) == inst.invite_token.as_ref())
+            .map(|s| short_invite::format(&s.code));
         let ok = |mods_rev| Reply::Ok {
             running,
             name: inst.name.clone(),
             mods_rev,
+            cover,
+            code: code.clone(),
         };
         match h.kind {
             StreamKind::Ping => Decision::Reply(ok(modded.then(|| manifest::rev(&light())))),
@@ -78,6 +92,8 @@ pub fn host_decider(app: AppHandle) -> Decide {
                 ok(None),
                 serde_json::to_vec(&list(true)).unwrap_or_default(),
             ),
+            StreamKind::Cover if cover.is_some() => Decision::File(ok(None), cover_file.clone()),
+            StreamKind::Cover => Decision::Reply(Reply::Denied),
             StreamKind::File => {
                 // Yalnız oyuncuya giden listedeki, güvenli adlı bir dosya.
                 let allowed = h
@@ -680,7 +696,9 @@ pub async fn join_world(
             "Minecraft is running. If you don't close it, the server-list entry we added may be lost; close the game first."
         )));
     }
-    let mut joined = joins.inner().join(&app, &invite).await?;
+    // Katılırken yazılan kod hemen görünsün (ping sonra güncel tutar).
+    let typed = short_invite::normalize(&code).map(|c| short_invite::format(&c));
+    let mut joined = joins.inner().join(&app, &invite, typed).await?;
     // Modlu dünya: oyuncuda gereken modlar varsa profile kur (yoksa sunucu listesi ana klasöre).
     if invite.loader.is_modded() {
         let p2p = app.state::<Arc<P2p>>().inner().clone();

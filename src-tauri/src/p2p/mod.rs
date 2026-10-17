@@ -251,18 +251,33 @@ impl P2p {
                 "Couldn't get {file} from your friend's computer."
             )));
         }
-        let mut out = tokio::fs::File::create(dest).await?;
-        let copied =
-            tokio::io::copy(&mut tokio::io::AsyncReadExt::take(recv, max + 1), &mut out).await?;
-        if copied > max {
-            drop(out);
-            let _ = std::fs::remove_file(dest);
+        save_limited(recv, dest, max, file).await
+    }
+
+    /// Dünyanın kapağını arkadaşın bilgisayarından `dest`'e indirir (en fazla `max` bayt).
+    pub async fn fetch_cover(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+        dest: &std::path::Path,
+        max: u64,
+    ) -> AppResult<()> {
+        let header = StreamHeader {
+            world: world.into(),
+            token: token.into(),
+            kind: StreamKind::Cover,
+            file: None,
+        };
+        let (mut send, recv, reply, _) = self.open(host, &header).await?;
+        let _ = send.finish();
+        if !matches!(reply, Reply::Ok { .. }) {
             return Err(AppError::msg(tx!(
-                "{file} beklenenden büyük geldi.",
-                "{file} was larger than expected."
+                "Kapak arkadaşının bilgisayarından alınamadı.",
+                "Couldn't get the cover from your friend's computer."
             )));
         }
-        Ok(())
+        save_limited(recv, dest, max, "cover").await
     }
 
     /// Minecraft'ın bir TCP bağlantısını host'a taşır; bağlantı kapanana kadar sürer.
@@ -290,6 +305,27 @@ impl P2p {
         let _ = tokio::io::copy_bidirectional(&mut stream, &mut tcp).await;
         Ok(())
     }
+}
+
+/// Gelen akışı `dest`'e yazar; `max`'tan büyükse dosyayı siler ve hata verir.
+async fn save_limited(
+    recv: RecvStream,
+    dest: &std::path::Path,
+    max: u64,
+    name: &str,
+) -> AppResult<()> {
+    let mut out = tokio::fs::File::create(dest).await?;
+    let copied =
+        tokio::io::copy(&mut tokio::io::AsyncReadExt::take(recv, max + 1), &mut out).await?;
+    if copied > max {
+        drop(out);
+        let _ = std::fs::remove_file(dest);
+        return Err(AppError::msg(tx!(
+            "{name} beklenenden büyük geldi.",
+            "{name} was larger than expected."
+        )));
+    }
+    Ok(())
 }
 
 async fn handle_stream(
@@ -361,13 +397,15 @@ mod tests {
                 running: true,
                 name: "Deneme".into(),
                 mods_rev: None,
+                cover: None,
+                code: None,
             };
             match (h.world == "w" && h.token == "t", h.kind) {
                 (false, _) => Decision::Reply(Reply::Denied),
                 (true, StreamKind::Tcp) => Decision::Tcp(ok, port),
                 (true, StreamKind::Manifest) => Decision::Body(ok, br#"[{"file":"a.jar","title":"A","sha1":"x","sha512":"y","size":3,"projectId":null,"versionId":null,"need":"required"}]"#.to_vec()),
                 (true, StreamKind::File) => Decision::File(ok, file_path.clone()),
-                (true, StreamKind::Ping) => Decision::Reply(ok),
+                (true, StreamKind::Ping | StreamKind::Cover) => Decision::Reply(ok),
             }
         }));
 

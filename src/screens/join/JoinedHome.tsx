@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Download, ListPlus, Network, Play, RefreshCw, Trash2 } from "lucide-react";
+import { Download, ListPlus, Network, Play, RefreshCw, Send, Trash2 } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { isModded, kindLabel } from "../../lib/format";
@@ -62,25 +62,36 @@ function useEntryExists(id: string) {
 
 export function JoinedCards({ view }: { view: JoinedView }) {
   const [exists] = useEntryExists(view.world.id);
-  const [copied, setCopied] = useState(false);
   const t = useT();
+  const code = view.world.code;
   return (
     <InfoDock>
       <InfoItem
         icon={ListPlus}
         label={t.joined.serverList}
         value={view.world.name}
-        hint={exists === false ? t.joined.notInList : t.joined.inList}
+        hint={exists === false ? t.joined.notInList : t.joined.inListAt(view.address)}
         alert={exists === false}
       />
-      <InfoItem
-        icon={Network}
-        label={t.joined.localAddress}
-        value={view.address}
-        mono
-        hint={copied ? t.common.copied : t.joined.worksWhileOpen}
-        extra={<CopyButton text={view.address} label={t.connection.copy} onCopied={setCopied} />}
-      />
+      {code ? (
+        <InfoItem
+          icon={Send}
+          label={t.home.invite}
+          value={code}
+          mono
+          hint={t.joined.codeHint}
+          extra={<CopyButton text={code} label={t.home.copyCode} />}
+        />
+      ) : (
+        <InfoItem
+          icon={Network}
+          label={t.joined.localAddress}
+          value={view.address}
+          mono
+          hint={t.joined.worksWhileOpen}
+          extra={<CopyButton text={view.address} label={t.connection.copy} />}
+        />
+      )}
     </InfoDock>
   );
 }

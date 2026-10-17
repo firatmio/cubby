@@ -7,6 +7,7 @@ import {
   type ClientStatus,
   type JoinProgress,
   type JoinedView,
+  type JoinedWorld,
   type JoinStatus,
   type ModProgress,
   type Instance,
@@ -117,6 +118,8 @@ interface AppStore {
   joined: JoinedView[];
   loadJoined: () => Promise<void>;
   upsertJoined: (view: JoinedView) => void;
+  /** Kaydı değişen (kapak, kod) katılınan dünya. */
+  updateJoinedWorld: (world: JoinedWorld) => void;
   removeJoinedLocal: (id: string) => void;
   setJoinStatus: (id: string, status: JoinStatus) => void;
   /** Katıl penceresi: null kapalı, "" boş, dolu ise davet kodu/linki. */
@@ -271,6 +274,8 @@ export const useAppStore = create<AppStore>((set, get) => {
         return { joined, selectedId: st.selectedId && ids.includes(st.selectedId) ? st.selectedId : (ids[0] ?? null) };
       });
     },
+    updateJoinedWorld: (world) =>
+      set((st) => ({ joined: st.joined.map((j) => (j.world.id === world.id ? { ...j, world } : j)) })),
     upsertJoined: (view) =>
       set((st) => {
         const exists = st.joined.some((j) => j.world.id === view.world.id);

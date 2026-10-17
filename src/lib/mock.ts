@@ -246,6 +246,8 @@ const joined: { world: Record<string, unknown> & { id: string; name: string; loc
       gameDir: null,
       modsRev: null,
       withRecommended: false,
+      cover: { version: 1, color: "#d9a35b" },
+      code: "K7M-2QX",
     },
     status: { ...ONLINE, modsRev: null },
     address: "127.0.0.1:25600",

@@ -67,9 +67,19 @@ export default function App() {
   }, []);
 
   const inSetup = view === "setup";
-  const accent = inSetup ? setupColor : joined ? KIND_COLORS[joined.world.loader] : accentOf(selected);
-  const image =
-    !inSetup && selected?.cover ? mediaUrl(`cover/${selected.id}`, selected.cover.version) : null;
+  const accent = inSetup
+    ? setupColor
+    : joined
+      ? (joined.world.cover?.color ?? KIND_COLORS[joined.world.loader])
+      : accentOf(selected);
+  // Arkadaşın dünyasında host'un kapağı (Cubby onu host'tan alır).
+  const image = inSetup
+    ? null
+    : selected?.cover
+      ? mediaUrl(`cover/${selected.id}`, selected.cover.version)
+      : joined?.world.cover
+        ? mediaUrl(`joinedcover/${joined.world.id}`, joined.world.cover.version)
+        : null;
 
   // Vurgu rengi (@property ile kayıtlı) dünya değişince yumuşakça geçer.
   useEffect(() => {

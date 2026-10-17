@@ -93,7 +93,16 @@ function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean })
         transition={spring}
         onClick={() => select(joinKey(view.world.id))}
       >
-        <LoaderLogo kind={view.world.loader} size={40} className={styles.icon} />
+        {view.world.cover ? (
+          <img
+            src={mediaUrl(`joinedthumb/${view.world.id}`, view.world.cover.version)}
+            alt=""
+            className={styles.thumb}
+            draggable={false}
+          />
+        ) : (
+          <LoaderLogo kind={view.world.loader} size={40} className={styles.icon} />
+        )}
         <span className={styles.friend} aria-hidden>
           <Users size={13} />
         </span>

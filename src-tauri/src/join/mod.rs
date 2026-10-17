@@ -26,6 +26,8 @@ use crate::p2p::{P2p, PathKind};
 use crate::util::now_ms;
 
 pub const EVENT_STATUS: &str = "join://status";
+/// Katılınan dünyanın kaydı değişti (kapak, kod): arayüz o dünyayı günceller.
+pub const EVENT_WORLD: &str = "join://world";
 const FILE: &str = "joined.json";
 const PORTS: std::ops::RangeInclusive<u16> = 25600..=25999;
 const POLL_EVERY: Duration = Duration::from_secs(20);
@@ -55,7 +57,23 @@ pub struct JoinedWorld {
     /// Önerilen modlar da kurulsun mu (katılırken seçilen).
     #[serde(default)]
     pub with_recommended: bool,
+    /// Host'un dünya kapağı (`joined/<id>/cover.jpg`): sürümü ve vurgu rengi.
+    #[serde(default)]
+    pub cover: Option<JoinedCover>,
+    /// Dünyanın davet kodu (`K7M-2QX`); katılırken yazılan ya da host'un bildirdiği.
+    #[serde(default)]
+    pub code: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JoinedCover {
+    pub version: u64,
+    pub color: String,
+}
+
+/// Kapak dosyası için üst sınır.
+const MAX_COVER: u64 = 8 * 1024 * 1024;
 
 impl JoinedWorld {
     pub fn address(&self) -> String {
@@ -260,6 +278,10 @@ impl JoinManager {
                 .unwrap_or_else(|_| Err(AppError::msg(tx!("zaman aşımı", "timed out")))),
             Err(e) => Err(e),
         };
+        let extras = match &result {
+            Ok((Reply::Ok { cover, code, .. }, _)) => Some((*cover, code.clone())),
+            _ => None,
+        };
         let mut status = status_from(result);
         // Dinleyici hatası (ör. port dolu) varsa göster.
         if status.error.is_none()
@@ -269,6 +291,76 @@ impl JoinManager {
             status.error = old.error.clone();
         }
         self.set_status(app, &w.id, status).await;
+        if let Some((cover, code)) = extras {
+            self.sync_cover_and_code(app, w, cover, code).await;
+        }
+    }
+
+    /// Arkadaşın klasörü (kapak, paketler): `app_data/joined/<id>`.
+    fn world_dir(&self, id: &str) -> Option<std::path::PathBuf> {
+        self.file.parent().map(|d| d.join("joined").join(id))
+    }
+
+    /// Host'un bildirdiği kapak sürümü ve davet kodu kayıttakinden farklıysa günceller; kapağı indirip
+    /// küçük resmini ve rengini üretir. Değişince arayüze `join://world` gider. Hatalar sessiz.
+    async fn sync_cover_and_code(
+        &self,
+        app: &AppHandle,
+        w: &JoinedWorld,
+        cover: Option<u64>,
+        code: Option<String>,
+    ) {
+        let Some(dir) = self.world_dir(&w.id) else {
+            return;
+        };
+        let have = w.cover.as_ref().map(|c| c.version);
+        let file_ok = dir.join(crate::covers::COVER_FILE).is_file();
+        let mut new_cover = w.cover.clone();
+        match cover {
+            Some(v) if have != Some(v) || !file_ok => {
+                let Ok(host) = host_id(w) else { return };
+                let _ = std::fs::create_dir_all(&dir);
+                let tmp = dir.join("cover.download");
+                if self
+                    .p2p
+                    .fetch_cover(host, &w.world, &w.token, &tmp, MAX_COVER)
+                    .await
+                    .is_err()
+                {
+                    let _ = std::fs::remove_file(&tmp);
+                    return;
+                }
+                let (src, out) = (tmp.clone(), dir.clone());
+                let color = tauri::async_runtime::spawn_blocking(move || {
+                    crate::covers::render_cover(&src, &out)
+                })
+                .await;
+                let _ = std::fs::remove_file(&tmp);
+                match color {
+                    Ok(Ok(color)) => new_cover = Some(JoinedCover { version: v, color }),
+                    _ => return,
+                }
+            }
+            None if have.is_some() => {
+                let _ = std::fs::remove_file(dir.join(crate::covers::COVER_FILE));
+                let _ = std::fs::remove_file(dir.join(crate::covers::THUMB_FILE));
+                new_cover = None;
+            }
+            _ => {}
+        }
+        let new_code = code.or_else(|| w.code.clone());
+        if new_cover == w.cover && new_code == w.code {
+            return;
+        }
+        if let Ok(updated) = self
+            .update(&w.id, |x| {
+                x.cover = new_cover;
+                x.code = new_code;
+            })
+            .await
+        {
+            let _ = app.emit(EVENT_WORLD, &updated);
+        }
     }
 
     async fn poll_all(self: &Arc<Self>, app: &AppHandle) {
@@ -337,6 +429,7 @@ impl JoinManager {
         self: &Arc<Self>,
         app: &AppHandle,
         invite: &Invite,
+        code: Option<String>,
     ) -> AppResult<JoinedWorld> {
         let mut worlds = self.worlds.lock().await;
         let joined = if let Some(w) = worlds
@@ -348,6 +441,9 @@ impl JoinManager {
             w.loader = invite.loader;
             w.mc_version = invite.mc_version.clone();
             w.loader_version = invite.loader_version.clone();
+            if code.is_some() {
+                w.code = code.clone();
+            }
             w.clone()
         } else {
             let taken: Vec<u16> = worlds.iter().map(|w| w.local_port).collect();
@@ -366,6 +462,8 @@ impl JoinManager {
                 game_dir: None,
                 mods_rev: None,
                 with_recommended: false,
+                cover: None,
+                code,
             };
             worlds.push(w.clone());
             w
@@ -428,6 +526,8 @@ mod tests {
                 running: true,
                 name: "x".into(),
                 mods_rev: None,
+                cover: None,
+                code: None,
             },
             PathKind::Direct,
         )));

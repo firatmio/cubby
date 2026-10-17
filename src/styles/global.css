@@ -70,6 +70,27 @@ a {
   box-shadow: 0 0 0 3px var(--primary);
 }
 
+/* Kaydırılabilen alanların kenar solması (`ui/useScrollFade`): gizli içerik olan kenar solar. */
+[data-fade] {
+  --fade-top: 0px;
+  --fade-bottom: 0px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fade-top),
+    #000 calc(100% - var(--fade-bottom)),
+    transparent
+  );
+}
+
+[data-fade~="top"] {
+  --fade-top: 28px;
+}
+
+[data-fade~="bottom"] {
+  --fade-bottom: 28px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
