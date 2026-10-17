@@ -15,6 +15,7 @@ import {
   type JoinProgress,
   type LaunchResult,
   type GameProgress,
+  type UpdateView,
 } from "./api";
 
 type Unlisten = () => void;
@@ -47,6 +48,7 @@ const EVENT_CLIENT_LAUNCH = "client://launch";
 const EVENT_GAME_PROGRESS = "game://progress";
 const EVENT_GAME_STATE = "game://state";
 const EVENT_INVITE = "join://invite";
+const EVENT_UPDATE = "update://state";
 /** Kısa davet kodu kendiliğinden yenilendi (join_cmds.rs). */
 export const EVENT_INVITE_SHORT = "invite://short";
 
@@ -86,6 +88,9 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<InstallProgress>(EVENT_INSTALL_PROGRESS, ({ payload }) => {
       store().setInstallProgress(payload);
+    }),
+    listen<UpdateView>(EVENT_UPDATE, ({ payload }) => {
+      store().setUpdate(payload);
     }),
     listen<JavaProgress>(EVENT_JAVA_PROGRESS, ({ payload }) => {
       store().setJavaProgress(payload);

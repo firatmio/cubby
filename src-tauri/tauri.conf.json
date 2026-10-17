@@ -31,14 +31,17 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "deep-link": {
@@ -46,6 +49,15 @@
         "schemes": [
           "cubby"
         ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1MEY5NDcwNTM0QTI1NTcKUldSWEpVcFRjSlFQOVdnK2traWZSRGorSXQ3Q1NncVpaWkUyQmllUXIzZDFyUzFNMTlMUGJJYy8K",
+      "endpoints": [
+        "https://cubby.quacomes.com/api/update?channel=stable&target={{target}}&arch={{arch}}&current={{current_version}}"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

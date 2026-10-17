@@ -6,6 +6,7 @@ import { useAppStore } from "../store/appStore";
 import { IconButton } from "../ui/IconButton";
 import { useT } from "../i18n";
 import { PageSwitch } from "./PageSwitch";
+import { UpdatePill } from "./Update";
 import styles from "./TitleBar.module.css";
 
 /** Pencere işlemleri; tarayıcıdaki mock modunda etkisiz. */
@@ -43,6 +44,7 @@ export function TitleBar() {
       <span className={styles.name}>Cubby</span>
       {home && <PageSwitch />}
       <div className={styles.actions}>
+        <UpdatePill />
         <IconButton icon={Settings} label={t.settings} size="sm" variant="ghost" tipBelow onClick={() => openSheet("settings")} />
         <IconButton icon={Minus} label={t.minimize} size="sm" variant="ghost" tipBelow onClick={() => win()?.minimize()} />
         <IconButton

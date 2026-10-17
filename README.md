@@ -25,11 +25,12 @@ Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](
   - [x] **M10b** — resource packs (installed into your Minecraft and turned on; optionally required for friends via the server), shaders (Iris/Sodium — Oculus/Embeddium on Forge — installed automatically and synced per world, shader turned on), data packs (installed into the world, `reload` sent if running); on a friend's world only the tabs you can change are shown
   - [x] **M10c** — modpacks → new world: a Modpacks tab in Discover on every world (and with no worlds yet); the preview shows the pack's Minecraft/loader version, mod counts and size, with a version picker; "Install as a new world" opens the setup wizard with the name and access steps. The pack (`.mrpack`) is read, its loader installed, files downloaded hash-verified and only from allowed hosts; server mods and configs go to the server, player-only mods and settings to your Minecraft and to friends as "recommended"; the cover becomes the pack's image
 - [x] **Web join page** — invites are shared as a 6-character code (`K7M-2QX`, no look-alike characters) or its link `cubby.quacomes.com/join/K7M2QX` (also `/join?code=`), with a link preview in chats, "Open in Cubby" and "Download Cubby". Join has two 3-character boxes that move on by themselves; pasting a link fills them. Our own small server ([web/](web/), Vercel + Redis) stores only the invite; a code works until the invite is renewed and is deleted after 60 days unused. The site's root is kept for a future landing page; unknown addresses show a 404 page. Details (Turkish): [docs/DAVET_SUNUCUSU.md](docs/DAVET_SUNUCUSU.md)
+- [x] **Auto-update** — new versions download in the background; the title bar shows "Update ready" with what's new, and restarting is up to the user (open worlds shut down cleanly first; "Later" installs on quit). Preview channel (GitHub pre-releases) in Settings › Updates. Releasing is one command: `bun run release <version> [--beta]` ([docs/YAYIN.md](docs/YAYIN.md), Turkish)
 
-Next up: release preparation.
+Next up: the rest of release preparation.
 
 **Next:**
-- Release preparation (installer, GitHub Releases)
+- Release preparation: code signing (no SmartScreen warning), landing site
 - Our own relay server (iroh-relay on a VDS) once more players use it
 
 **Ideas:**

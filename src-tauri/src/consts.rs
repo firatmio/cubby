@@ -6,6 +6,9 @@ pub const URL_SCHEME: &str = "cubby";
 /// Davet sayfası ve kısa kod sunucusu (`web/`, Vercel). Kısa kodlar `<JOIN_WEB>/<KOD>` olur.
 pub const JOIN_WEB: &str = "https://cubby.quacomes.com";
 
+/// Güncelleme ucu (`web/api/update.ts`); `JOIN_WEB` ile aynı sunucu.
+pub const UPDATE_URL: &str = "https://cubby.quacomes.com/api/update";
+
 /// Ad değişmeden önceki şema; eski davet linkleri de açılsın.
 pub const LEGACY_URL_SCHEME: &str = "mcsm";
 

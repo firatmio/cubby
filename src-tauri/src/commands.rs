@@ -721,9 +721,14 @@ pub fn update_settings(
 ) -> AppResult<SettingsView> {
     let turned_on = settings.client_sync && !store.get().client_sync;
     let lang_changed = settings.language != store.get().language;
+    let channel_changed = settings.beta_updates != store.get().beta_updates;
     store.set(settings)?;
     if lang_changed {
         crate::refresh_tray(&app);
+    }
+    // Deneme kanalı açılıp kapandı: hangi sürümün geleceği değişti.
+    if channel_changed {
+        crate::updates::recheck(&app);
     }
     // "Modları kendi Minecraft'ıma da kur" yeni açıldıysa modlu dünyalar hemen eşitlensin.
     if turned_on {

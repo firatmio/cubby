@@ -10,6 +10,7 @@ import { PillTabs } from "../../ui/PillTabs";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
 import { AccountCard } from "./AccountCard";
+import { UpdateCard } from "./UpdateCard";
 import styles from "../instance/sections.module.css";
 import own from "./AppSettingsSheet.module.css";
 
@@ -123,6 +124,7 @@ export function AppSettingsSheet() {
               )}
             </div>
           </Card>
+          <UpdateCard settings={view.settings} save={save} />
           {error && <p className={styles.error}>{error}</p>}
         </div>
       )}

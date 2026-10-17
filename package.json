@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "release": "bun scripts/release.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"

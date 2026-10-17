@@ -3,7 +3,7 @@
 import { formatCode } from "./code.js";
 import { TEXT, type Lang } from "./i18n.js";
 
-export const DOWNLOAD_URL = "https://github.com/firatmio/mc-server-manager/releases/latest";
+export const DOWNLOAD_URL = "https://github.com/firatmio/mc-server-client/releases/latest";
 export const APP_SCHEME = "cubby";
 
 /** Paylaşılan davet linki (uygulamadaki `short_invite::web_link` ile aynı). */

@@ -13,6 +13,7 @@ import { HomeScreen } from "./screens/home/HomeScreen";
 import { AppSettingsSheet } from "./screens/settings/AppSettingsSheet";
 import { ConnectionSheet } from "./screens/connection/ConnectionSheet";
 import { JoinDialog } from "./screens/join/JoinDialog";
+import { UpdateDialog, UpdatedToast } from "./shell/Update";
 import { DiscoverPage } from "./screens/discover/DiscoverPage";
 import { SetupFlow } from "./screens/setup/SetupFlow";
 import { WorldSettingsSheet } from "./screens/world/WorldSettingsSheet";
@@ -44,6 +45,7 @@ export default function App() {
     });
     const st = useAppStore.getState();
     st.loadInstances().catch(console.error);
+    api.updateStatus().then(st.setUpdate).catch(console.error);
     st.loadJoined().catch(console.error);
     // Etkin dil Rust'ta (ayar ya da bilgisayarın dili).
     api
@@ -100,6 +102,8 @@ export default function App() {
         <CoverSheet />
         <AppSettingsSheet />
         <JoinDialog />
+        <UpdateDialog />
+        <UpdatedToast />
         <AccountCelebration />
 
         {shuttingDown && (

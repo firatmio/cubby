@@ -39,6 +39,7 @@ mod server;
 mod sessions;
 mod settings;
 mod short_invite;
+mod updates;
 mod util;
 mod world_cmds;
 
@@ -78,6 +79,12 @@ pub(crate) fn focus_main(app: &AppHandle) {
 
 /// Çalışan sunucuları düzgünce durdurur, sonra uygulamayı kapatır.
 fn begin_shutdown(app: &AppHandle) {
+    shutdown(app, false);
+}
+
+/// Düzgün kapanış. İnmiş bir güncelleme varsa kapanırken kurulur: `restart_for_update` ise
+/// ("Yeniden başlat") kurulumdan sonra yeni sürüm açılır, değilse (kullanıcı kapattı) açılmaz.
+pub(crate) fn shutdown(app: &AppHandle, restart_for_update: bool) {
     if SHUTTING_DOWN.swap(true, Ordering::SeqCst) {
         return;
     }
@@ -89,12 +96,23 @@ fn begin_shutdown(app: &AppHandle) {
         // Modemde açılan portlar kapansın, doğrudan bağlantılar düzgünce kapansın.
         app.state::<Arc<NetManager>>().shutdown().await;
         app.state::<Arc<P2p>>().close().await;
+        // Windows'ta kurulum başlayınca süreç kapanır; dönerse kurulum olmadı.
+        if let Err(e) = updates::install_ready(&app, restart_for_update) {
+            eprintln!("{e}");
+            if restart_for_update {
+                // Kullanıcı güncellemek istedi ama olmadı: uygulama açık kalsın, hata gösterilsin.
+                SHUTTING_DOWN.store(false, Ordering::SeqCst);
+                return;
+            }
+        }
         app.exit(0);
     });
 }
 
+/// Kapanmadan önce iş var mı: çalışan sunucu ya da kurulmayı bekleyen güncelleme.
 fn needs_graceful_shutdown(app: &AppHandle) -> bool {
-    !SHUTTING_DOWN.load(Ordering::SeqCst) && app.state::<AppState>().servers.any_active()
+    !SHUTTING_DOWN.load(Ordering::SeqCst)
+        && (app.state::<AppState>().servers.any_active() || updates::is_ready(app))
 }
 
 /// Pencere kapatılınca arka planda (tray) kalmalı mı: çalışan sunucu ya da katılınan dünya varsa.
@@ -180,6 +198,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup({
             let http = http.clone();
             move |app| {
@@ -196,6 +215,8 @@ pub fn run() {
                 join_cmds::install_refresh(app.handle());
                 app.manage(net);
                 sessions::install(app.handle());
+                app.manage(updates::Updates::default());
+                updates::spawn(app.handle());
 
                 // Uygulamalar arası doğrudan bağlantı: host olarak dinle, katılınan dünyaları aç.
                 let p2p = tauri::async_runtime::block_on(P2p::bind(&data))?;
@@ -315,6 +336,11 @@ pub fn run() {
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
             join_cmds::clipboard_invite_code,
+            updates::update_status,
+            updates::update_check,
+            updates::update_download,
+            updates::update_install,
+            updates::update_whats_new,
             join_cmds::update_joined_mods,
             join_cmds::play_joined,
             game_cmds::account_status,

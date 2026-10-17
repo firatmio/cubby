@@ -19,6 +19,7 @@ import {
   type GameProgress,
   type Account,
   type LoaderKind,
+  type UpdateView,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -64,6 +65,11 @@ interface AppStore {
   setView: (view: View) => void;
   setupPreset: ModpackPreset | null;
   startModpackSetup: (preset: ModpackPreset) => void;
+
+  update: UpdateView | null;
+  setUpdate: (update: UpdateView) => void;
+  updateDialog: boolean;
+  openUpdate: (open: boolean) => void;
 
   sheet: SheetName | null;
   openSheet: (sheet: SheetName | null) => void;
@@ -160,6 +166,11 @@ export const useAppStore = create<AppStore>((set, get) => {
       })),
     setupPreset: null,
     startModpackSetup: (setupPreset) => set({ setupPreset, view: "setup", sheet: null, page: "play" }),
+
+    update: null,
+    setUpdate: (update) => set({ update }),
+    updateDialog: false,
+    openUpdate: (updateDialog) => set({ updateDialog }),
 
     sheet: null,
     openSheet: (sheet) => set({ sheet }),

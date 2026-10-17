@@ -24,6 +24,10 @@ pub struct AppSettings {
     pub language: Option<String>,
     /// Animasyonlar: `"full"` / `"simple"`; `None` = otomatik (bilgisayar zorlanırsa sadeleşir).
     pub animations: Option<String>,
+    /// Yeni sürüm arkada kendiliğinden insin (kurulum yine sorulur).
+    pub auto_update: bool,
+    /// Deneme sürümleri (GitHub'da pre-release) de gelsin.
+    pub beta_updates: bool,
 }
 
 impl Default for AppSettings {
@@ -35,6 +39,8 @@ impl Default for AppSettings {
             client_sync: true,
             language: None,
             animations: None,
+            auto_update: true,
+            beta_updates: false,
         }
     }
 }

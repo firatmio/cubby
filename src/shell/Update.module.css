@@ -1,0 +1,143 @@
+/* Başlık çubuğundaki hap: sessiz ama fark edilir. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  margin-right: var(--sp-2);
+  padding: 0 var(--sp-3) 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 140ms;
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.current {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.notes {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notes h3 {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+}
+
+.warn svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hint {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  user-select: text;
+}
+
+/* İlk açılıştaki "güncellendi" bildirimi: başlık çubuğunun hemen altında, ortada. */
+.toast {
+  position: fixed;
+  top: calc(var(--titlebar-h) + var(--sp-2));
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  translate: -50% 0;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.toastIcon {
+  color: var(--accent);
+}
+
+.toastLink {
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toastLink:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.toastClose {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.toastClose:hover {
+  background: var(--hover);
+  color: var(--text);
+}

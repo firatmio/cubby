@@ -51,6 +51,7 @@ tauri-plugin-deep-link = "2.6"
 # İlk açılışta arayüz dili için bilgisayarın dili
 sys-locale = "0.3.2"
 keyring = { version = "3.6.3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
+tauri-plugin-updater = "2"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

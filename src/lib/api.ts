@@ -73,6 +73,30 @@ export interface AppSettings {
   language: "tr" | "en" | null;
   /** "full" / "simple"; null = otomatik */
   animations: "full" | "simple" | null;
+  /** Yeni sürüm arkada kendiliğinden insin (kurulum yine sorulur) */
+  autoUpdate: boolean;
+  /** Deneme sürümleri de gelsin */
+  betaUpdates: boolean;
+}
+
+/** Güncellemenin durumu (Rust `updates::Status`). */
+export type UpdateStatus =
+  | { state: "idle" | "checking" | "upToDate" | "installing" | "dev" }
+  | { state: "available" | "ready"; version: string; notes: string }
+  | { state: "downloading"; version: string; downloaded: number; total: number | null }
+  | { state: "error"; message: string };
+
+export interface UpdateView {
+  /** Çalışan sürüm */
+  current: string;
+  status: UpdateStatus;
+  /** Yalnız `updateStatus`'ta bakılır; olaylarda false */
+  minecraftRunning: boolean;
+}
+
+export interface WhatsNew {
+  version: string;
+  notes: string;
 }
 
 export type Launcher = "official" | "tLauncher";
@@ -540,6 +564,13 @@ export const api = {
   /** Yeni anahtar; eski linkler ve kodlar geçersiz olur. */
   resetInvite: (id: string) => invoke<InviteLinks>("reset_invite", { id }),
   previewInvite: (code: string) => invoke<InvitePreview>("preview_invite", { code }),
+  updateStatus: () => invoke<UpdateView>("update_status"),
+  updateCheck: () => invoke<UpdateView>("update_check"),
+  updateDownload: () => invoke<UpdateView>("update_download"),
+  /** Dünyaları düzgünce kapatır, kurar; Cubby yeni sürümle açılır. */
+  updateInstall: () => invoke<void>("update_install"),
+  /** Güncellemeden sonraki ilk açılışta bir kez. */
+  updateWhatsNew: () => invoke<WhatsNew | null>("update_whats_new"),
   /** Panoda davet kodu ya da linki varsa yalnız kod (panonun kendisi gelmez). */
   clipboardInviteCode: () => invoke<string | null>("clipboard_invite_code"),
   joinWorld: (code: string, force: boolean, installRecommended: boolean) =>

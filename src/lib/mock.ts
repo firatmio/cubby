@@ -95,7 +95,7 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null, animations: null as "full" | "simple" | null };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null, animations: null as "full" | "simple" | null, autoUpdate: true, betaUpdates: false };
 
 const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
@@ -660,6 +660,26 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         web: noShort ? null : `https://cubby.quacomes.com/join/${short.replace("-", "")}`,
       };
     }
+    // localStorage.mockUpdate = "ready" | "available": güncelleme varmış gibi.
+    case "update_status":
+    case "update_check": {
+      const mode = typeof localStorage !== "undefined" ? localStorage.getItem("mockUpdate") : null;
+      const notes = "- Davet artık 6 karakterlik kodla\n- Oyna sayfasında yeni kartlar\n- Panodan kod doldurma";
+      return {
+        current: "0.2.0-beta.1",
+        status: mode === "ready" || mode === "available" ? { state: mode, version: "0.2.0-beta.2", notes } : { state: "upToDate" },
+        minecraftRunning: false,
+      };
+    }
+    case "update_download":
+      return { current: "0.2.0-beta.1", status: { state: "ready", version: "0.2.0-beta.2", notes: "- Yeni" }, minecraftRunning: false };
+    case "update_install":
+      await sleep(800);
+      return null;
+    case "update_whats_new":
+      return typeof localStorage !== "undefined" && localStorage.getItem("mockWhatsNew")
+        ? { version: "0.2.0-beta.1", notes: "- Davet artık 6 karakterlik kodla\n- Oyna sayfasında yeni kartlar" }
+        : null;
     case "clipboard_invite_code":
       // localStorage.mockClipboard = "K7M2QX": panoda kod varmış gibi.
       return (typeof localStorage !== "undefined" && localStorage.getItem("mockClipboard")) || null;
