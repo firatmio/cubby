@@ -252,7 +252,6 @@ const joined: { world: Record<string, unknown> & { id: string; name: string; loc
   },
 ];
 const entries = new Set(["join-1"]);
-const SAMPLE_CODE = "eyJ2IjoxLCJuYW1lIjoiTWVobWV0In0";
 
 type MockMod = {
   projectId: string;
@@ -650,15 +649,12 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     }
     case "create_invite":
     case "reset_invite": {
-      const code = `${SAMPLE_CODE}${cmd === "reset_invite" ? Date.now().toString(36) : ""}`;
       // localStorage.mockNoShort = "1": davet sunucusuna ulaşılamamış gibi.
       const noShort = typeof localStorage !== "undefined" && localStorage.getItem("mockNoShort") === "1";
       const short = cmd === "reset_invite" ? "Q4R-8TW" : "K7M-2QX";
       return {
-        code,
-        link: `cubby://join?d=${code}`,
         short: noShort ? null : short,
-        web: noShort ? null : `https://cubby.quacomes.com/${short.replace("-", "")}`,
+        web: noShort ? null : `https://cubby.quacomes.com/join/${short.replace("-", "")}`,
       };
     }
     case "preview_invite":

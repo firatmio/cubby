@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ALPHABET, CODE_LEN, formatCode, hashOwner, newCode, newOwner, normalizeCode } from "./code.js";
-import { escapeHtml, invitePage } from "./html.js";
+import { escapeHtml, invitePage, notFoundPage } from "./html.js";
 import { pickLang } from "./i18n.js";
 import { MAX_INVITE_LEN, parseInvite } from "./invite.js";
 
@@ -113,9 +113,18 @@ describe("sayfa", () => {
     expect(page).toContain("&lt;img src=x onerror=alert(1)&gt;");
     expect(page).toContain(`href="cubby://join?c=K7M2QX"`);
     expect(page).toContain("K7M-2QX");
-    expect(page).toContain(`og:url" content="https://cubby-join.vercel.app/K7M2QX"`);
+    expect(page).toContain(`og:url" content="https://cubby-join.vercel.app/join/K7M2QX"`);
     // Uzun anahtar sayfaya girmez.
     expect(page).not.toContain(sample.token);
+  });
+
+  test("davet ve 404 sayfaları dizinlenmez", () => {
+    const page = invitePage({ lang: "en", origin: "https://x.test", code: "K7M2QX", world: "W", tech: "Fabric" });
+    expect(page).toContain(`<meta name="robots" content="noindex">`);
+    const nf = notFoundPage("tr", "https://x.test");
+    expect(nf).toContain("Sayfa bulunamadı");
+    expect(nf).toContain(`href="/"`);
+    expect(nf).toContain(`<meta name="robots" content="noindex">`);
   });
 
   test("dil seçimi", () => {

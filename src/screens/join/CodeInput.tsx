@@ -1,0 +1,126 @@
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import { CODE_LEN, cleanCode, extractCode } from "../../lib/inviteCode";
+import { useT } from "../../i18n";
+import styles from "./JoinDialog.module.css";
+
+type Props = {
+  /** Dışarıdan gelen kod (ör. davet linkiyle açılış); tiresiz. */
+  initial: string;
+  /** Her değişimde iki kutunun birleşimi (tamamlanmamış olabilir). */
+  onChange: (code: string) => void;
+  /** 6 karakter tamamlanınca (yazarak ya da yapıştırarak). */
+  onComplete: (code: string) => void;
+  onEnter: () => void;
+  disabled?: boolean;
+};
+
+const HALF = CODE_LEN / 2;
+
+/**
+ * İki üçlü kutu (`K7M` – `2QX`): yalnız koddaki karakterler kabul edilir, ilk kutu dolunca
+ * ikinciye geçilir, boş ikinci kutuda geri silince ilkine dönülür. Link ya da tireli kod
+ * yapıştırılırsa kod ayıklanıp iki kutuya dağıtılır.
+ */
+export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: Props) {
+  const t = useT().join;
+  const first = useRef<HTMLInputElement>(null);
+  const second = useRef<HTMLInputElement>(null);
+  const [[left, right], setHalves] = useState<[string, string]>(() => [
+    initial.slice(0, HALF),
+    initial.slice(HALF, CODE_LEN),
+  ]);
+
+  useEffect(() => {
+    (initial.length >= HALF ? second : first).current?.focus();
+    // Yalnız açılışta; sonraki odak geçişleri yazarken yapılır.
+  }, []);
+
+  const update = (l: string, r: string) => {
+    setHalves([l, r]);
+    const code = l + r;
+    onChange(code);
+    if (l.length === HALF && r.length === HALF) onComplete(code);
+  };
+
+  /** Bir kerede altı karakter (yapıştırma, otomatik doldurma, hızlı yazma). */
+  const fill = (code: string) => {
+    const l = code.slice(0, HALF);
+    const r = code.slice(HALF, CODE_LEN);
+    update(l, r);
+    (l.length === HALF ? second : first).current?.focus();
+  };
+
+  const typeLeft = (raw: string) => {
+    const typed = cleanCode(raw);
+    if (typed.length > HALF) return fill(typed);
+    update(typed, right);
+    if (typed.length === HALF) second.current?.focus();
+  };
+
+  const typeRight = (raw: string) => update(left, cleanCode(raw).slice(0, HALF));
+
+  const paste = (e: ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    const code = extractCode(text) ?? cleanCode(text).slice(0, CODE_LEN);
+    if (!code) return;
+    e.preventDefault();
+    fill(code);
+  };
+
+  const keyLeft = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") return onEnter();
+    const el = e.currentTarget;
+    if (e.key === "ArrowRight" && el.selectionStart === left.length) {
+      e.preventDefault();
+      second.current?.focus();
+    }
+  };
+
+  const keyRight = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") return onEnter();
+    const el = e.currentTarget;
+    const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
+    if ((e.key === "Backspace" && right === "") || (e.key === "ArrowLeft" && atStart)) {
+      e.preventDefault();
+      if (e.key === "Backspace") update(left.slice(0, -1), right);
+      first.current?.focus();
+    }
+  };
+
+  const common = {
+    className: styles.codeBox,
+    // Taşma yakalansın diye biraz fazla: altı karakter tek kutuya yazılırsa ikiye dağıtılır.
+    maxLength: CODE_LEN,
+    disabled,
+    autoComplete: "off",
+    autoCapitalize: "characters",
+    spellCheck: false,
+    placeholder: "···",
+    onPaste: paste,
+  } as const;
+
+  return (
+    <div className={styles.codeInput} role="group" aria-label={t.codeLabel}>
+      <input
+        {...common}
+        ref={first}
+        value={left}
+        aria-label={t.codeFirst}
+        onChange={(e) => typeLeft(e.target.value)}
+        onKeyDown={keyLeft}
+      />
+      <span className={styles.codeDash} aria-hidden />
+      <input
+        {...common}
+        ref={second}
+        value={right}
+        aria-label={t.codeLast}
+        onChange={(e) => typeRight(e.target.value)}
+        onKeyDown={keyRight}
+        // İlk kutu eksikken ikinciye tıklanırsa yazı ilk kutudan devam etsin. Durum değil DOM
+        // okunur: ilk kutu dolar dolmaz yapılan geçişte durum henüz güncellenmemiş olur.
+        onFocus={() => (first.current?.value.length ?? 0) < HALF && first.current?.focus()}
+      />
+    </div>
+  );
+}

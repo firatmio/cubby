@@ -78,8 +78,8 @@ function DirectRoute({ route }: { route: Route }) {
 }
 
 /**
- * Uygulamadan uygulamaya davet: arkadaşın web linkine tıklar ya da kısa kodu yazar, modem ayarı
- * gerekmez. Kısa kod alınamazsa (davet sunucusuna ulaşılamadı) uzun link ve kod kullanılır.
+ * Uygulamadan uygulamaya davet: arkadaşın kodu Cubby'de Katıl'a yazar ya da linke tıklar; modem
+ * ayarı gerekmez. Kod davet sunucusundan alınır; ulaşılamazsa "Tekrar dene".
  */
 function InviteSection({ id }: { id: string }) {
   const [links, setLinks] = useState<InviteLinks | null>(null);
@@ -120,7 +120,9 @@ function InviteSection({ id }: { id: string }) {
 
   const copy = async (what: "link" | "code") => {
     if (!links) return;
-    await navigator.clipboard.writeText(what === "link" ? (links.web ?? links.link) : (links.short ?? links.code));
+    const text = what === "link" ? links.web : links.short;
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
     setCopied(what);
     setTimeout(() => setCopied(null), 1600);
   };
@@ -149,11 +151,11 @@ function InviteSection({ id }: { id: string }) {
         </div>
       )}
       <div className={styles.buttons}>
-        <Button size="sm" variant="primary" icon={copied === "link" ? Check : Link2} disabled={!links} onClick={() => copy("link")}>
-          {copied === "link" ? tt.common.copied : t.copyLink}
-        </Button>
-        <Button size="sm" icon={copied === "code" ? Check : Copy} disabled={!links} onClick={() => copy("code")}>
+        <Button size="sm" variant="primary" icon={copied === "code" ? Check : Copy} disabled={!links?.short} onClick={() => copy("code")}>
           {copied === "code" ? tt.common.copied : t.copyCode}
+        </Button>
+        <Button size="sm" icon={copied === "link" ? Check : Link2} disabled={!links?.web} onClick={() => copy("link")}>
+          {copied === "link" ? tt.common.copied : t.copyLink}
         </Button>
         <Button size="sm" variant="ghost" icon={RotateCcw} disabled={!links} onClick={() => setConfirmReset(true)}>
           {t.resetInvite}

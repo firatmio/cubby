@@ -6,6 +6,9 @@ import { TEXT, type Lang } from "./i18n.js";
 export const DOWNLOAD_URL = "https://github.com/firatmio/mc-server-manager/releases/latest";
 export const APP_SCHEME = "cubby";
 
+/** Paylaşılan davet linki (uygulamadaki `short_invite::web_link` ile aynı). */
+export const joinUrl = (origin: string, code: string) => `${origin}/join/${code}`;
+
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
@@ -46,15 +49,20 @@ color:var(--warn);font-size:14px}
 @media (max-width:420px){main{padding:24px 18px}h1{font-size:24px}.code b{font-size:28px}}
 `;
 
-function layout(lang: Lang, head: { title: string; desc: string; url: string; image: string }, body: string): string {
-  const h = Object.fromEntries(Object.entries(head).map(([k, v]) => [k, escapeHtml(v)])) as typeof head;
+type Head = { title: string; desc: string; url: string; image: string; /** Arama motorları dizinlemesin. */ noindex?: boolean };
+
+function layout(lang: Lang, head: Head, body: string): string {
+  const h = Object.fromEntries(
+    Object.entries(head).map(([k, v]) => [k, typeof v === "string" ? escapeHtml(v) : v]),
+  ) as Head;
   return `<!doctype html>
 <html lang="${lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${h.title}</title>
-<meta name="description" content="${h.desc}">
+<meta name="description" content="${h.desc}">${h.noindex ? `
+<meta name="robots" content="noindex">` : ""}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cubby">
 <meta property="og:title" content="${h.title}">
@@ -92,8 +100,10 @@ export function invitePage(v: InviteView): string {
     {
       title: t.inviteTitle(v.world),
       desc: t.inviteDesc(v.tech),
-      url: `${v.origin}/${v.code}`,
+      url: joinUrl(v.origin, v.code),
       image: `${v.origin}/icon.png`,
+      // Davetler arkadaşlar arası; aramada çıkmasın.
+      noindex: true,
     },
     `<p class="mobile">${escapeHtml(t.desktopOnly)}</p>
 <p class="eyebrow">${escapeHtml(t.eyebrow)}</p>
@@ -112,10 +122,26 @@ export function messagePage(lang: Lang, origin: string, title: string, text: str
   const t = TEXT[lang];
   return layout(
     lang,
-    { title, desc: text, url: origin, image: `${origin}/icon.png` },
+    { title, desc: text, url: origin, image: `${origin}/icon.png`, noindex: true },
     `<h1>${escapeHtml(title)}</h1>
 <p class="eyebrow" style="margin-bottom:24px">${escapeHtml(text)}</p>
 <div class="actions"><a class="btn primary" href="${DOWNLOAD_URL}" rel="noopener">${escapeHtml(t.download)}</a></div>`,
+  );
+}
+
+/** Bilinmeyen her adres (404). */
+export function notFoundPage(lang: Lang, origin: string): string {
+  const t = TEXT[lang];
+  return layout(
+    lang,
+    { title: `${t.pageNotFoundTitle} — Cubby`, desc: t.pageNotFoundText, url: origin, image: `${origin}/icon.png`, noindex: true },
+    `<p class="eyebrow">404</p>
+<h1>${escapeHtml(t.pageNotFoundTitle)}</h1>
+<p class="eyebrow" style="margin-bottom:24px">${escapeHtml(t.pageNotFoundText)}</p>
+<div class="actions">
+<a class="btn primary" href="/">${escapeHtml(t.backHome)}</a>
+<a class="btn" href="${DOWNLOAD_URL}" rel="noopener">${escapeHtml(t.download)}</a>
+</div>`,
   );
 }
 

@@ -40,6 +40,8 @@ impl Invite {
         URL_SAFE_NO_PAD.encode(serde_json::to_vec(self).expect("davet serileştirilemedi"))
     }
 
+    /// Eski uzun link biçimi; paylaşılmaz ama `parse` hâlâ kabul eder (eski davetler).
+    #[cfg(test)]
     pub fn link(&self) -> String {
         format!("{URL_SCHEME}://join?d={}", self.encode())
     }

@@ -3,7 +3,9 @@
 Cubby'nin bağlantısı uygulamadan uygulamaya kurulur (iroh: önce doğrudan, olmazsa aracı sunucu);
 bunun için bir hesap ya da port açmak gerekmez. Davet sunucusu yalnız **daveti bulmaya** yarar:
 uzun davet kodunu kısa bir koda (`K7M-2QX`) ve tıklanabilir bir web linkine
-(`https://cubby.quacomes.com/K7M2QX`) çevirir. Oyun trafiği bu sunucudan geçmez.
+(`https://cubby.quacomes.com/join/K7M2QX`, `/join?code=K7M2QX` da olur) çevirir. Paylaşılan tek
+şey bu kod ya da linki. Oyun trafiği bu sunucudan geçmez. Sitenin kökü (`/`) ileride gelecek
+tanıtım sitesine ayrıldı; bilinmeyen adresler 404 sayfası gösterir.
 
 ## Sunucuda ne tutulur
 
@@ -32,5 +34,6 @@ kısa süreli sayaç anahtarı olarak kullanılır (en uzunu 1 gün).
 
 ## Sunucuya ulaşılamazsa
 
-Panelde "Kısa kod alınamadı" yazar; uzun link (`cubby://join?d=…`) ve uzun kod eskisi gibi çalışır.
+Panelde "Davet kodu alınamadı" ve "Tekrar dene" görünür. Eski uzun linkler (`cubby://join?d=…`)
+açılınca hâlâ çalışır ama artık paylaşılmaz.
 Kod: [web/](../web/) (Vercel + Upstash Redis). Adres: `src-tauri/src/consts.rs` → `JOIN_WEB`.

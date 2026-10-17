@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { LOADER_LABELS, formatBytesMb, isModded, kindLabel } from "../../lib/format";
+import { CODE_LEN, extractCode } from "../../lib/inviteCode";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { Progress } from "../../ui/Progress";
 import { Toggle } from "../../ui/Toggle";
+import { CodeInput } from "./CodeInput";
 import styles from "./JoinDialog.module.css";
 
 function hostLine(s: JoinStatus): { ok: boolean; text: string } {
@@ -40,7 +42,10 @@ function ModList({ items }: { items: ModItem[] }) {
   );
 }
 
-/** Davet kodu/linkiyle katılma: önce ne yapılacağını gösterir, onay olmadan hiçbir dosyaya dokunmaz. */
+/**
+ * Davet koduyla katılma: önce ne yapılacağını gösterir, onay olmadan hiçbir dosyaya dokunmaz.
+ * Kod iki üçlü kutuya yazılır; davet sayfasındaki "Cubby'de aç" kodla açar.
+ */
 export function JoinDialog() {
   const initial = useAppStore((s) => s.joinDialog);
   const openJoin = useAppStore((s) => s.openJoin);
@@ -48,6 +53,9 @@ export function JoinDialog() {
   const openSheet = useAppStore((s) => s.openSheet);
 
   const [code, setCode] = useState("");
+  /** Eski uzun davet linkiyle (`cubby://join?d=…`) açıldıysa: kutular yerine bu kullanılır. */
+  const [legacy, setLegacy] = useState<string | null>(null);
+  const checking = useRef(false);
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +66,8 @@ export function JoinDialog() {
   const t = tt.join;
 
   const check = useCallback(async (value: string) => {
-    if (!value.trim()) return;
+    if (!value.trim() || checking.current) return;
+    checking.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -67,16 +76,20 @@ export function JoinDialog() {
       setPreview(null);
       setError(errorMessage(e));
     } finally {
+      checking.current = false;
       setBusy(false);
     }
   }, []);
 
   useEffect(() => {
     if (initial === null) return;
-    setCode(initial);
+    // Davet sayfasından (`cubby://join?c=`) kodla gelinir; eski uzun linkler de çalışsın.
+    const fromLink = initial ? extractCode(initial) : null;
+    setCode(fromLink ?? "");
+    setLegacy(initial && !fromLink ? initial : null);
     setPreview(null);
     setError(null);
-    if (initial) void check(initial);
+    if (initial) void check(fromLink ?? initial);
   }, [initial, check]);
 
   if (initial === null) return null;
@@ -87,7 +100,7 @@ export function JoinDialog() {
     setError(null);
     try {
       setJoinProgress(null);
-      upsertJoined(await api.joinWorld(code, false, withRecommended));
+      upsertJoined(await api.joinWorld(legacy ?? code, false, withRecommended));
       close();
     } catch (e) {
       setError(errorMessage(e));
@@ -110,7 +123,7 @@ export function JoinDialog() {
           </Button>
           {preview ? (
             preview.minecraftRunning ? (
-              <Button icon={RotateCcw} loading={busy} onClick={() => check(code)}>
+              <Button icon={RotateCcw} loading={busy} onClick={() => check(legacy ?? code)}>
                 {t.recheck}
               </Button>
             ) : (
@@ -119,7 +132,7 @@ export function JoinDialog() {
               </Button>
             )
           ) : (
-            <Button variant="primary" loading={busy} disabled={!code.trim()} onClick={() => check(code)}>
+            <Button variant="primary" loading={busy} disabled={code.length !== CODE_LEN} onClick={() => check(code)}>
               {t.next}
             </Button>
           )}
@@ -129,17 +142,17 @@ export function JoinDialog() {
       {!preview ? (
         <>
           <p>{t.pasteHint}</p>
-          <textarea
-            className={styles.code}
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
+          <CodeInput
+            key={initial}
+            initial={extractCode(initial) ?? ""}
+            disabled={busy}
+            onChange={(c) => {
+              setCode(c);
+              setLegacy(null);
               setError(null);
             }}
-            placeholder={t.codePlaceholder}
-            rows={2}
-            autoFocus
-            spellCheck={false}
+            onComplete={(c) => void check(c)}
+            onEnter={() => code.length === CODE_LEN && void check(code)}
           />
           {busy && (
             <p className={styles.checking}>

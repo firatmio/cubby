@@ -97,13 +97,10 @@ pub fn host_decider(app: AppHandle) -> Decide {
     })
 }
 
+/// Paylaşılan tek şey kısa kod (`K7M-2QX`) ya da onun web linki; alınamadıysa ikisi de `None`.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InviteLinks {
-    /// Uzun kod ve `cubby://` linki: davet sunucusuna ulaşılamazsa da çalışır.
-    code: String,
-    link: String,
-    /// Kısa kod (`K7M-2QX`) ve tıklanabilir web linki; alınamadıysa `None`.
     short: Option<String>,
     web: Option<String>,
 }
@@ -130,10 +127,8 @@ fn invite_of(app: &AppHandle, inst: &instance::Instance) -> Invite {
     }
 }
 
-fn links(invite: &Invite, short: Option<&str>) -> InviteLinks {
+fn links(short: Option<&str>) -> InviteLinks {
     InviteLinks {
-        code: invite.encode(),
-        link: invite.link(),
         short: short.map(short_invite::format),
         web: short.map(short_invite::web_link),
     }
@@ -182,10 +177,8 @@ pub fn spawn_refresh(app: &AppHandle, id: &str) {
     tauri::async_runtime::spawn(async move {
         match refresh_short(&app, &id).await {
             Ok(Some(code)) => {
-                if let Ok(inst) = instance::get(&app, &id) {
-                    let links = links(&invite_of(&app, &inst), Some(&code));
-                    let _ = app.emit(EVENT_SHORT, ShortPayload { id, links });
-                }
+                let links = links(Some(&code));
+                let _ = app.emit(EVENT_SHORT, ShortPayload { id, links });
             }
             Ok(None) => {}
             Err(e) => eprintln!("Kısa davet kodu tazelenemedi: {e}"),
@@ -241,14 +234,14 @@ async fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteL
         }
         None => match new_short(app, id, &invite).await {
             Ok(code) => Some(code),
-            // Kısa kod alınamazsa uzun kod yine çalışır; panel bunu söyler.
+            // Davet sunucusuna ulaşılamadı: panel söyler, "Tekrar dene" yeniden ister.
             Err(e) => {
                 eprintln!("Kısa davet kodu alınamadı: {e}");
                 None
             }
         },
     };
-    Ok(links(&invite, short.as_deref()))
+    Ok(links(short.as_deref()))
 }
 
 #[tauri::command]

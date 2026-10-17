@@ -20,6 +20,9 @@ export const TEXT = {
       "Cubby, terminalle uğraşmadan bir Minecraft sunucusu kurar ve çalıştırır, arkadaşlarını davet eder ve oyunu doğrudan dünyada açar.",
     homeHeading: "Arkadaşlarınla kendi Minecraft dünyan",
     tooMany: "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.",
+    pageNotFoundTitle: "Sayfa bulunamadı",
+    pageNotFoundText: "Aradığın sayfa yok ya da taşınmış. Bir davet linkiyle geldiysen arkadaşından linki tekrar göndermesini iste.",
+    backHome: "Ana sayfaya dön",
   },
   en: {
     inviteTitle: (world: string) => `${world} — Cubby invite`,
@@ -38,6 +41,9 @@ export const TEXT = {
       "Cubby sets up and runs a Minecraft server without any terminal work, invites your friends, and opens the game straight into the world.",
     homeHeading: "Your own Minecraft world with your friends",
     tooMany: "Too many attempts. Wait a little and try again.",
+    pageNotFoundTitle: "Page not found",
+    pageNotFoundText: "The page you're looking for doesn't exist or has moved. If you came from an invite link, ask your friend to send it again.",
+    backHome: "Back to home",
   },
 } satisfies Record<Lang, Record<string, unknown>>;
 

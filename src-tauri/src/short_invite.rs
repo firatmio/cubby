@@ -1,5 +1,5 @@
 //! Kısa davet kodları (`K7M-2QX`): uzun davet Cubby'nin davet sunucusunda (`consts::JOIN_WEB`,
-//! Vercel + Redis) tutulur; kod ve web linki onu bulur. Sunucuya ulaşılamazsa uzun kod yine çalışır.
+//! Vercel + Redis) tutulur; kod ve web linki (`<JOIN_WEB>/join/<KOD>`) onu bulur.
 
 use std::time::Duration;
 
@@ -30,8 +30,8 @@ fn host_of(url: &str) -> Option<String> {
         .map(str::to_ascii_lowercase)
 }
 
-/// `K7M-2QX`, `k7m2qx`, web linki ve `cubby://join?c=K7M2QX` → `K7M2QX`. Değilse `None`
-/// (uzun kod ya da `?d=` linki olabilir).
+/// `K7M-2QX`, `k7m2qx`, web linki (`/join/K7M2QX`, `/join?code=K7M2QX`) ve
+/// `cubby://join?c=K7M2QX` → `K7M2QX`. Değilse `None` (eski `?d=` linki olabilir).
 pub fn normalize(input: &str) -> Option<String> {
     let s = input.trim();
     let web = host_of(JOIN_WEB)?;
@@ -49,7 +49,7 @@ pub fn normalize(input: &str) -> Option<String> {
             path_code(rest, &web)?
         }
         Some(_) => return None,
-        // Şemasız yapıştırılmış web linki: `cubby.quacomes.com/K7M2QX`.
+        // Şemasız yapıştırılmış web linki: `cubby.quacomes.com/join/K7M2QX`.
         None if s.contains('/') => path_code(s, &web)?,
         None => s,
     };
@@ -61,14 +61,19 @@ pub fn normalize(input: &str) -> Option<String> {
     (code.len() == LEN && code.chars().all(|c| ALPHABET.contains(c))).then_some(code)
 }
 
-/// `host/KOD` (sondaki `/`, `?`, `#` atılır); host davet sunucusu değilse `None`.
+/// `host/join/KOD` ya da `host/join?code=KOD`; host davet sunucusu değilse `None`.
+/// Kök (`host/...`) Cubby'nin tanıtım sitesine ayrıldı.
 fn path_code<'a>(rest: &'a str, web: &str) -> Option<&'a str> {
     let (host, path) = rest.split_once('/')?;
     if !host.eq_ignore_ascii_case(web) {
         return None;
     }
-    let path = path.split(['?', '#']).next()?.trim_end_matches('/');
-    (!path.contains('/')).then_some(path)
+    let path = path.split('#').next()?;
+    let (path, query) = path.split_once('?').unwrap_or((path, ""));
+    match path.trim_end_matches('/') {
+        "join" => query.split('&').find_map(|kv| kv.strip_prefix("code=")),
+        p => p.strip_prefix("join/").filter(|c| !c.contains('/')),
+    }
 }
 
 /// Okunur biçim: `K7M-2QX`.
@@ -77,7 +82,7 @@ pub fn format(code: &str) -> String {
 }
 
 pub fn web_link(code: &str) -> String {
-    format!("{JOIN_WEB}/{code}")
+    format!("{JOIN_WEB}/join/{code}")
 }
 
 fn unreachable(e: reqwest::Error) -> AppError {
@@ -183,23 +188,16 @@ mod tests {
         assert_eq!(normalize("K7M2QX").as_deref(), Some("K7M2QX"));
         assert_eq!(normalize(" k7m-2qx ").as_deref(), Some("K7M2QX"));
         assert_eq!(normalize("K7M 2QX").as_deref(), Some("K7M2QX"));
-        assert_eq!(
-            normalize(&format!("{JOIN_WEB}/K7M2QX")).as_deref(),
-            Some("K7M2QX")
-        );
-        assert_eq!(
-            normalize(&format!("{JOIN_WEB}/k7m-2qx/")).as_deref(),
-            Some("K7M2QX")
-        );
-        assert_eq!(
-            normalize(&format!("{JOIN_WEB}/K7M2QX?ref=x")).as_deref(),
-            Some("K7M2QX")
-        );
-        let bare = JOIN_WEB.trim_start_matches("https://");
-        assert_eq!(
-            normalize(&format!("{bare}/K7M2QX")).as_deref(),
-            Some("K7M2QX")
-        );
+        assert_eq!(normalize(&web_link("K7M2QX")).as_deref(), Some("K7M2QX"));
+        for link in [
+            format!("{JOIN_WEB}/join/k7m-2qx/"),
+            format!("{JOIN_WEB}/join/K7M2QX?ref=x"),
+            format!("{JOIN_WEB}/join?code=K7M2QX"),
+            format!("{JOIN_WEB}/join/?ref=a&code=k7m2qx"),
+            format!("{}/join/K7M2QX", JOIN_WEB.trim_start_matches("https://")),
+        ] {
+            assert_eq!(normalize(&link).as_deref(), Some("K7M2QX"), "{link}");
+        }
         assert_eq!(
             normalize("cubby://join?c=K7M2QX").as_deref(),
             Some("K7M2QX")
@@ -215,7 +213,10 @@ mod tests {
             "K7M2QXX",
             "K0M2QX",
             "KIM2QX",
-            "https://evil.example/K7M2QX",
+            "https://evil.example/join/K7M2QX",
+            "https://cubby.quacomes.com/K7M2QX",
+            "https://cubby.quacomes.com/about/K7M2QX",
+            "https://cubby.quacomes.com/join/a/K7M2QX",
             "https://example.com/a/K7M2QX",
             "cubby://join?d=eyJ2IjoxfQ",
             "ftp://cubby.quacomes.com/K7M2QX",

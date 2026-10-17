@@ -3,7 +3,9 @@
   "regions": ["fra1"],
   "rewrites": [
     { "source": "/api/invites/:code", "destination": "/api/invite?code=:code" },
+    { "source": "/join/:code", "destination": "/api/join?code=:code" },
+    { "source": "/join", "destination": "/api/join" },
     { "source": "/", "destination": "/api/page" },
-    { "source": "/:code([A-Za-z0-9-]{6,7})", "destination": "/api/page?code=:code" }
+    { "source": "/((?!api/).*)", "destination": "/api/page?notfound=1" }
   ]
 }

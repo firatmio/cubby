@@ -1,6 +1,7 @@
 # Cubby davet sunucusu (`web/`)
 
-Kısa davet kodları (`K7M-2QX`) ve tıklanabilir davet sayfası: <https://cubby.quacomes.com>.
+Kısa davet kodları (`K7M-2QX`) ve tıklanabilir davet sayfası: `https://cubby.quacomes.com/join/<KOD>`.
+Kök `/` ileride Cubby'nin tanıtım sitesine ayrıldı.
 Vercel Functions (çatısız, TypeScript) + Upstash Redis. Uygulama adresi `src-tauri/src/consts.rs` → `JOIN_WEB`.
 
 ## Uçlar
@@ -11,8 +12,9 @@ Vercel Functions (çatısız, TypeScript) + Upstash Redis. Uygulama adresi `src-
 | `GET` | `/api/invites/:code` | `{invite}` ya da 404 (IP başına 30/dk, 300/gün; sayfayla ortak) |
 | `PUT` | `/api/invites/:code` `{owner, invite}` | İçeriği ve 60 günlük süreyi tazeler |
 | `DELETE` | `/api/invites/:code` `{owner}` | "Daveti yenile"de eski kodu siler |
-| `GET` | `/:code` | Davet sayfası (OG etiketli, Türkçe/İngilizce) |
-| `GET` | `/` | Ana sayfa |
+| `GET` | `/join/:code`, `/join?code=` | Davet sayfası (OG etiketli, Türkçe/İngilizce, `noindex`) |
+| `GET` | `/` | Ana sayfa (tanıtım sitesi gelene kadar kısa bir sayfa) |
+| `GET` | başka her şey | 404 sayfası |
 
 `owner` yalnız host'ta durur; sunucuda SHA-256'sı tutulur. Kodlar 31 karakterli alfabeden
 (0/O, 1/I/L yok) 6 karakter. Kayıt 60 gün dokunulmazsa silinir; uygulama dünya açılınca ve davet

@@ -1,20 +1,51 @@
-.code {
-  width: 100%;
-  padding: var(--sp-3) var(--sp-4);
-  border: 1px solid var(--line);
+.codeInput {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0;
+}
+
+/* Üç karakterlik kutu: kod sesle söylenip elle yazılsın diye büyük ve aralıklı. */
+.codeBox {
+  width: 156px;
+  height: 72px;
+  padding: 0 0 0 0.3em;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-card);
   background: #1d1d1d;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  resize: none;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
   outline: none;
-  word-break: break-all;
-  user-select: text;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.code:focus {
-  border-color: var(--line-strong);
+.codeBox::placeholder {
+  color: var(--text-3);
+  letter-spacing: 0.3em;
+}
+
+.codeBox:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.codeBox:disabled {
+  opacity: 0.6;
+}
+
+.codeDash {
+  width: 18px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--text-3);
 }
 
 .caption {
