@@ -1,6 +1,6 @@
 [package]
 name = "mc-server-launcher"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 description = "Cubby: arkadaşlarınla kendi Minecraft dünyan"
 authors = ["firatmio"]
 edition = "2024"
