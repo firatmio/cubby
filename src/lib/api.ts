@@ -94,6 +94,28 @@ export interface UpdateView {
   minecraftRunning: boolean;
 }
 
+/** Dünyayı önceden hazırlama (Chunky) durumu (Rust `perf::Pregen`). */
+export interface Pregen {
+  state: "idle" | "pending" | "running" | "paused" | "done";
+  radius: number;
+  chunks: number;
+  percent: number;
+  etaSecs: number | null;
+  /** Biri oyuna girdiği için Cubby duraklattı */
+  autoPaused: boolean;
+  doneAt: number | null;
+}
+
+export interface PerfView {
+  pregen: Pregen;
+  /** "Can't keep up!" uyarıları: sunucu zorlanıyor */
+  overloaded: boolean;
+  behindMs: number;
+  /** Önceden hazırlama bu dünyada yapılabilir mi (modlu ya da Paper) */
+  supported: boolean;
+  chunkyInstalled: boolean;
+}
+
 export interface WhatsNew {
   version: string;
   notes: string;
@@ -568,6 +590,11 @@ export const api = {
   /** Yeni anahtar; eski linkler ve kodlar geçersiz olur. */
   resetInvite: (id: string) => invoke<InviteLinks>("reset_invite", { id }),
   previewInvite: (code: string) => invoke<InvitePreview>("preview_invite", { code }),
+  perfStatus: (id: string) => invoke<PerfView>("perf_status", { id }),
+  pregenStart: (id: string, radius: number) => invoke<PerfView>("pregen_start", { id, radius }),
+  pregenPause: (id: string) => invoke<PerfView>("pregen_pause", { id }),
+  pregenResume: (id: string) => invoke<PerfView>("pregen_resume", { id }),
+  pregenCancel: (id: string) => invoke<PerfView>("pregen_cancel", { id }),
   updateStatus: () => invoke<UpdateView>("update_status"),
   updateCheck: () => invoke<UpdateView>("update_check"),
   updateDownload: () => invoke<UpdateView>("update_download"),

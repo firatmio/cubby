@@ -13,6 +13,7 @@ use super::stats::ProcessSampler;
 use super::{LaunchSpec, LogStream, ServerHandle, ServerStatus};
 use crate::consts::STATS_INTERVAL;
 use crate::error::{AppError, AppResult};
+use crate::perf::ChunkyLine;
 use crate::util::hide_console;
 
 /// Süreç bittikten sonra kalan çıktının okunması için beklenecek en uzun süre.
@@ -134,7 +135,10 @@ async fn read_lines(
         let event = matches!(stream, LogStream::Stdout)
             .then(|| parse(&line))
             .flatten();
-        h.push_log(&app, stream, line);
+        // Chunky saniyede bir ilerleme yazar; konsol bunlarla dolmasın (ilerleme kartta görünür).
+        if !matches!(event, Some(LogEvent::Chunky(ChunkyLine::Progress { .. }))) {
+            h.push_log(&app, stream, line);
+        }
         match event {
             Some(LogEvent::Done) => {
                 h.transition(&app, ServerStatus::Starting, ServerStatus::Running);
@@ -142,6 +146,8 @@ async fn read_lines(
             Some(LogEvent::Joined(name)) => h.update_players(&app, Some((&name, true))),
             Some(LogEvent::Left(name)) => h.update_players(&app, Some((&name, false))),
             Some(LogEvent::Rejected(name)) => h.add_rejected(&app, &name),
+            Some(LogEvent::Behind(ms)) => crate::perf::on_behind(&app, &h.id, ms),
+            Some(LogEvent::Chunky(c)) => crate::perf::on_chunky(&app, &h.id, &c),
             None => {}
         }
     }

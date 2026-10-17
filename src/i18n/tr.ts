@@ -2,6 +2,15 @@
  * Türkçe metinler (asıl sözlük). `en.ts` aynı yapıda olmak zorunda; eksik anahtar `tsc`'de hata verir.
  * Değişkenli metinler fonksiyondur.
  */
+const nTr = (n: number) => n.toLocaleString("tr-TR");
+/** Saniye → "1 sa 5 dk", "12 dk", "1 dk'dan az". */
+const etaTr = (s: number) => {
+  const m = Math.round(s / 60);
+  if (m < 1) return "1 dk'dan az";
+  return m >= 60 ? `${Math.floor(m / 60)} sa${m % 60 ? ` ${m % 60} dk` : ""}` : `${m} dk`;
+};
+const mbTr = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} GB` : `${mb} MB`);
+
 const tr = {
   common: {
     cancel: "Vazgeç",
@@ -100,6 +109,10 @@ const tr = {
     shuttingDown: "Dünya kaydediliyor ve sunucu durduruluyor…",
   },
   home: {
+    pregenChip: (percent: number) => `Dünya hazırlanıyor %${percent}`,
+    pregenPausedChip: (percent: number) => `Hazırlık duraklatıldı %${percent}`,
+    overloadedChip: "Sunucu zorlanıyor",
+    overloadedTip: (ms: number) => `En son ${nTr(ms)} ms geride kaldı. Öneriler için tıkla.`,
     worlds: "Dünyalar",
     newWorld: "Yeni dünya",
     joinFriend: "Arkadaşının dünyasına katıl",
@@ -440,10 +453,47 @@ const tr = {
       "Adresi bilen biri senin ya da arkadaşının adını kullanarak girebilir. Bu yüzden beyaz liste açık tutuluyor; yalnız eklediğin isimler girebilir.",
     advanced: "Gelişmiş",
     viewDistance: "Görüş mesafesi (chunk)",
+    simDistance: "Simülasyon mesafesi (chunk)",
     port: "Port",
     portHint: "Genelde 25565. Aynı anda iki dünya açacaksan farklı olmalı.",
     otherSettings: "Diğer tüm ayarlar Gelişmiş > Tüm ayarlar'da.",
     appliesOnRestart: "Yeniden başlatınca geçerli olur",
+  },
+  perf: {
+    title: "Performans",
+    overloaded: (ms: number) => `Sunucu yetişemiyor; en son ${nTr(ms)} ms geride kaldı. Oyunda takılma olabilir.`,
+    useBalanced: "Dengeli'ye düşür",
+    viewLabel: "Görüş mesafesi",
+    light: "Hafif",
+    balanced: "Dengeli",
+    far: "Uzak görüş",
+    custom: "Özel",
+    presetHint: {
+      light: "Zayıf bilgisayar ya da yavaş internet için. Görüş 6, simülasyon 4 chunk.",
+      balanced: "Önerilen. Görüş 8, simülasyon 6 chunk; farkı neredeyse hiç görünmez.",
+      far: "Güçlü bilgisayar ve hızlı internet için. Görüş 12, simülasyon 8 chunk.",
+      custom: "Elle ayarlanmış. Aşağıdaki Gelişmiş'ten değiştirebilirsin.",
+    },
+    pregenTitle: "Dünyayı önceden hazırla",
+    pregenText: "Çevreyi şimdiden oluşturur; oyunda yeni yerlere gidilince bilgisayar daha az zorlanır.",
+    notSupported: "Önceden hazırlama için modlu ya da Paper dünya gerekir.",
+    radius: (r: number) => `${nTr(r)} blok`,
+    estimate: (chunks: number, minutes: number, mb: number) =>
+      `Yaklaşık ${nTr(chunks)} chunk · ~${etaTr(minutes * 60)} · ~${mbTr(mb)} disk`,
+    start: "Hazırla",
+    again: "Yeniden hazırla",
+    done: (r: number, date: string) => `Dünya ${nTr(r)} blok yarıçapında hazır${date ? ` · ${date}` : ""}.`,
+    pendingRestart: "Chunky kuruldu. Hazırlığın başlaması için dünyayı yeniden başlat.",
+    pendingStart: "Dünya açılınca hazırlık kendiliğinden başlar.",
+    startWorld: "Dünyayı başlat",
+    progress: (percent: number, chunks: number, eta: number | null) =>
+      `%${percent} · ${nTr(chunks)} chunk${eta != null ? ` · kalan ~${etaTr(eta)}` : ""}`,
+    paused: "duraklatıldı",
+    autoPaused: "biri oyunda, duraklatıldı",
+    pause: "Duraklat",
+    resume: "Devam et",
+    whenOpen: "Dünya açılınca kaldığı yerden devam eder.",
+    pausesForPlayers: "Biri oyundayken kendiliğinden duraklar, herkes çıkınca devam eder.",
   },
   advanced: {
     title: "Gelişmiş",

@@ -308,6 +308,9 @@ pub async fn create_instance(
         let mut props = Properties::load(&server_dir)?;
         props.set("motd", inst.name.clone());
         props.set("online-mode", (!req.offline_mode).to_string());
+        // Dengeli varsayılan (Minecraft'ınki 10/10): dağınık oyuncularda yük ve gönderilen veri azalır.
+        props.set("view-distance", "8");
+        props.set("simulation-distance", "6");
         props.set("white-list", whitelist_on.to_string());
         props.set("enforce-whitelist", whitelist_on.to_string());
         props.save(&server_dir)?;

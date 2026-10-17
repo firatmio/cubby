@@ -1,5 +1,7 @@
+use crate::perf::{self, ChunkyLine};
+
 /// Sunucu log satırından çıkarılan olaylar.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum LogEvent {
     /// `Done (3.456s)! For help, type "help"` — sunucu bağlantı kabul etmeye hazır.
     Done,
@@ -7,6 +9,10 @@ pub enum LogEvent {
     Left(String),
     /// Beyaz listede olmadığı için atıldı.
     Rejected(String),
+    /// "Can't keep up!": sunucu ms cinsinden geride.
+    Behind(u64),
+    /// Chunky (önceden hazırlama) mesajı.
+    Chunky(ChunkyLine),
 }
 
 /// Minecraft kullanıcı adı: 1–16 harf, rakam veya `_` (sohbet ve `[Server]` satırları elenir).
@@ -15,8 +21,15 @@ fn is_player_name(s: &str) -> bool {
 }
 
 pub fn parse(line: &str) -> Option<LogEvent> {
+    // Chunky mesajları altyapıya göre farklı önekle gelebilir: satırın tamamında aranır.
+    if let Some(c) = perf::parse_chunky(line) {
+        return Some(LogEvent::Chunky(c));
+    }
     // "[14:02:11] [Server thread/INFO]: mesaj" ya da Paper: "[14:02:11 INFO]: mesaj"
     let msg = &line[line.find("]: ")? + 3..];
+    if let Some(ms) = perf::parse_behind(msg) {
+        return Some(LogEvent::Behind(ms));
+    }
     if let Some(rest) = msg.strip_prefix("Done (") {
         return rest.contains(")!").then_some(LogEvent::Done);
     }

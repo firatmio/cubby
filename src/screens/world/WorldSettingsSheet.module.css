@@ -90,3 +90,54 @@
   gap: var(--sp-4);
   padding-top: var(--sp-4);
 }
+
+.sectionTitle {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.ok {
+  color: var(--ok);
+  font-size: var(--fs-sm);
+}
+
+/* Önceden hazırlama: bölümün içinde hafif ayrılmış bir kutu. */
+.pregen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pregenHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pregenTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}

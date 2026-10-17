@@ -1,6 +1,15 @@
 import type { Dict } from "./tr";
 
 /** English texts; same shape as `tr.ts`. */
+const nEn = (n: number) => n.toLocaleString("en-US");
+/** Seconds → "1 h 5 min", "12 min", "under a minute". */
+const etaEn = (s: number) => {
+  const m = Math.round(s / 60);
+  if (m < 1) return "under a minute";
+  return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`;
+};
+const mbEn = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toLocaleString("en-US", { maximumFractionDigits: 1 })} GB` : `${mb} MB`);
+
 const en: Dict = {
   common: {
     cancel: "Cancel",
@@ -98,6 +107,10 @@ const en: Dict = {
     shuttingDown: "Saving the world and stopping the server…",
   },
   home: {
+    pregenChip: (percent: number) => `Preparing the world ${percent}%`,
+    pregenPausedChip: (percent: number) => `Preparing paused ${percent}%`,
+    overloadedChip: "Server is struggling",
+    overloadedTip: (ms: number) => `It fell ${nEn(ms)} ms behind. Click for suggestions.`,
     worlds: "Worlds",
     newWorld: "New world",
     joinFriend: "Join a friend's world",
@@ -435,10 +448,47 @@ const en: Dict = {
       "Anyone who knows the address could join using your or your friend's name. That's why the whitelist stays on; only names you add can join.",
     advanced: "Advanced",
     viewDistance: "View distance (chunks)",
+    simDistance: "Simulation distance (chunks)",
     port: "Port",
     portHint: "Usually 25565. Must differ if you run two worlds at once.",
     otherSettings: "All other settings are in Advanced > All settings.",
     appliesOnRestart: "Takes effect after a restart",
+  },
+  perf: {
+    title: "Performance",
+    overloaded: (ms: number) => `The server can't keep up; it fell ${nEn(ms)} ms behind. The game may stutter.`,
+    useBalanced: "Switch to Balanced",
+    viewLabel: "View distance",
+    light: "Light",
+    balanced: "Balanced",
+    far: "Far view",
+    custom: "Custom",
+    presetHint: {
+      light: "For a weak computer or slow internet. View 6, simulation 4 chunks.",
+      balanced: "Recommended. View 8, simulation 6 chunks; you'll barely notice the difference.",
+      far: "For a strong computer and fast internet. View 12, simulation 8 chunks.",
+      custom: "Set by hand. You can change it under Advanced below.",
+    },
+    pregenTitle: "Prepare the world in advance",
+    pregenText: "Generates the surroundings now, so the computer works less when players explore new places.",
+    notSupported: "Preparing in advance needs a modded or Paper world.",
+    radius: (r: number) => `${nEn(r)} blocks`,
+    estimate: (chunks: number, minutes: number, mb: number) =>
+      `About ${nEn(chunks)} chunks · ~${etaEn(minutes * 60)} · ~${mbEn(mb)} disk`,
+    start: "Prepare",
+    again: "Prepare again",
+    done: (r: number, date: string) => `The world is ready within ${nEn(r)} blocks${date ? ` · ${date}` : ""}.`,
+    pendingRestart: "Chunky is installed. Restart the world to start preparing.",
+    pendingStart: "Preparing starts on its own when the world opens.",
+    startWorld: "Start the world",
+    progress: (percent: number, chunks: number, eta: number | null) =>
+      `${percent}% · ${nEn(chunks)} chunks${eta != null ? ` · ~${etaEn(eta)} left` : ""}`,
+    paused: "paused",
+    autoPaused: "someone is playing, paused",
+    pause: "Pause",
+    resume: "Continue",
+    whenOpen: "It picks up where it left off when the world opens.",
+    pausesForPlayers: "Pauses on its own while someone is playing and continues when everyone leaves.",
   },
   advanced: {
     title: "Advanced",

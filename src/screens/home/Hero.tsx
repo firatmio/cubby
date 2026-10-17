@@ -1,9 +1,12 @@
 import { motion } from "motion/react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 import type { Instance } from "../../lib/api";
 import { kindCaption, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
-import { useServer } from "../../store/appStore";
+import { useAppStore, useServer } from "../../store/appStore";
 import { statusLabel } from "../../ui/Badge";
+import { Tooltip } from "../../ui/Tooltip";
+import { busyWithPregen } from "../world/PerformanceSection";
 import { useT } from "../../i18n";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./Hero.module.css";
@@ -12,7 +15,13 @@ import styles from "./Hero.module.css";
 export function Hero({ instance }: { instance: Instance }) {
   const { status, players } = useServer(instance.id);
   const stats = usePlayStats(instance.id, status);
+  const pregen = useAppStore((s) => s.pregen[instance.id]);
+  const health = useAppStore((s) => s.health[instance.id]);
+  const openPerformance = useAppStore((s) => s.openWorldPerformance);
   const t = useT().home;
+  const live = status === "running";
+  const preparing = live && (pregen?.state === "running" || pregen?.state === "paused");
+  const overloaded = live && !!health?.overloaded && !(pregen && busyWithPregen(pregen));
 
   const detail =
     status === "running"
@@ -36,6 +45,20 @@ export function Hero({ instance }: { instance: Instance }) {
       <motion.p className={[styles.status, styles[status]].join(" ")} variants={rise}>
         {statusLabel(status)}
         {detail && <span className={styles.detail}>{detail}</span>}
+        {preparing && (
+          <button type="button" className={styles.chip} onClick={openPerformance}>
+            <Sparkles size={13} aria-hidden />
+            {(pregen.state === "paused" ? t.pregenPausedChip : t.pregenChip)(Math.floor(pregen.percent))}
+          </button>
+        )}
+        {overloaded && (
+          <Tooltip text={t.overloadedTip(health.behindMs)}>
+            <button type="button" className={[styles.chip, styles.warn].join(" ")} onClick={openPerformance}>
+              <AlertTriangle size={13} aria-hidden />
+              {t.overloadedChip}
+            </button>
+          </Tooltip>
+        )}
       </motion.p>
     </motion.div>
   );

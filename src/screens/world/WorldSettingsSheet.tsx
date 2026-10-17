@@ -12,6 +12,7 @@ import { Sheet } from "../../ui/Sheet";
 import { Slider } from "../../ui/Slider";
 import { Toggle } from "../../ui/Toggle";
 import { useScrollFade } from "../../ui/useScrollFade";
+import { PerformanceSection } from "./PerformanceSection";
 import styles from "./WorldSettingsSheet.module.css";
 
 type Form = {
@@ -21,6 +22,7 @@ type Form = {
   maxPlayers: number;
   motd: string;
   viewDistance: number;
+  simDistance: number;
   port: string;
 };
 
@@ -37,6 +39,7 @@ function fromProps(v: Record<string, string>, fallbackMotd: string): Form {
     maxPlayers: int("max-players", 20),
     motd: v["motd"] ?? fallbackMotd,
     viewDistance: int("view-distance", 10),
+    simDistance: int("simulation-distance", 10),
     port: v["server-port"] ?? "25565",
   };
 }
@@ -49,6 +52,7 @@ function toProps(f: Form): Record<string, string> {
     "max-players": String(f.maxPlayers),
     motd: f.motd,
     "view-distance": String(f.viewDistance),
+    "simulation-distance": String(f.simDistance),
     "server-port": f.port.trim(),
   };
 }
@@ -58,6 +62,8 @@ export function WorldSettingsSheet() {
   const fade = useScrollFade();
   const open = useAppStore((s) => s.sheet === "world");
   const openSheet = useAppStore((s) => s.openSheet);
+  const focus = useAppStore((s) => s.worldFocus);
+  const clearFocus = useAppStore((s) => s.clearWorldFocus);
   const instance = useSelected();
   const { status } = useServer(instance?.id ?? null);
   const active = status === "starting" || status === "running" || status === "stopping";
@@ -111,6 +117,16 @@ export function WorldSettingsSheet() {
   const dirty = Object.keys(changes).length > 0;
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
+
+  // "Sunucu zorlanıyor" hapından gelindiyse Performans bölümüne kaydır.
+  useEffect(() => {
+    if (!open || !form || focus !== "performance") return;
+    const timer = setTimeout(() => {
+      document.getElementById("world-performance")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      clearFocus();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [open, form, focus, clearFocus]);
 
   const save = async () => {
     if (!id || !form) return;
@@ -221,6 +237,15 @@ export function WorldSettingsSheet() {
               </Field>
             </section>
 
+            {id && (
+              <PerformanceSection
+                id={id}
+                view={form.viewDistance}
+                sim={form.simDistance}
+                onPreset={(view, sim) => setForm((f) => (f ? { ...f, viewDistance: view, simDistance: sim } : f))}
+              />
+            )}
+
             {access && (
               <section className={styles.section}>
                 <Toggle
@@ -263,6 +288,15 @@ export function WorldSettingsSheet() {
                       max={32}
                       step={1}
                       onChange={(v) => set("viewDistance", v)}
+                    />
+                    <Slider
+                      label={t.simDistance}
+                      valueLabel={String(form.simDistance)}
+                      value={form.simDistance}
+                      min={2}
+                      max={32}
+                      step={1}
+                      onChange={(v) => set("simDistance", v)}
                     />
                     <Field label={t.port} hint={t.portHint}>
                       <Input

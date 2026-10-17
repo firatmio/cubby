@@ -21,6 +21,7 @@ import {
   type Account,
   type LoaderKind,
   type UpdateView,
+  type Pregen,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -69,6 +70,16 @@ interface AppStore {
 
   update: UpdateView | null;
   setUpdate: (update: UpdateView) => void;
+
+  /** Dünya başına: sunucu zorlanıyor mu, önceden hazırlama durumu. */
+  health: Record<string, { overloaded: boolean; behindMs: number }>;
+  setHealth: (id: string, overloaded: boolean, behindMs: number) => void;
+  pregen: Record<string, Pregen>;
+  setPregen: (id: string, pregen: Pregen) => void;
+  /** Dünya ayarları açılınca Performans bölümüne kaydırılsın (zorlanma hapından gelince). */
+  worldFocus: "performance" | null;
+  openWorldPerformance: () => void;
+  clearWorldFocus: () => void;
   updateDialog: boolean;
   openUpdate: (open: boolean) => void;
 
@@ -172,6 +183,14 @@ export const useAppStore = create<AppStore>((set, get) => {
 
     update: null,
     setUpdate: (update) => set({ update }),
+
+    health: {},
+    setHealth: (id, overloaded, behindMs) => set((st) => ({ health: { ...st.health, [id]: { overloaded, behindMs } } })),
+    pregen: {},
+    setPregen: (id, pregen) => set((st) => ({ pregen: { ...st.pregen, [id]: pregen } })),
+    worldFocus: null,
+    openWorldPerformance: () => set({ worldFocus: "performance", sheet: "world" }),
+    clearWorldFocus: () => set({ worldFocus: null }),
     updateDialog: false,
     openUpdate: (updateDialog) => set({ updateDialog }),
 

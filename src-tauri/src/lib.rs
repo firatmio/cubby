@@ -32,6 +32,7 @@ mod net;
 mod net_cmds;
 mod p2p;
 mod paths;
+mod perf;
 mod players;
 mod properties;
 mod registry;
@@ -212,6 +213,8 @@ pub fn run() {
                 app.manage(game_cmds::GameState::default());
                 let net = Arc::new(NetManager::new(http));
                 net::install(app.handle(), net.clone());
+                app.manage(perf::Perf::default());
+                perf::install(app.handle());
                 join_cmds::install_refresh(app.handle());
                 app.manage(net);
                 sessions::install(app.handle());
@@ -336,6 +339,11 @@ pub fn run() {
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
             join_cmds::clipboard_invite_code,
+            perf::perf_status,
+            perf::pregen_start,
+            perf::pregen_pause,
+            perf::pregen_resume,
+            perf::pregen_cancel,
             updates::update_status,
             updates::update_check,
             updates::update_download,

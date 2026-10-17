@@ -34,3 +34,38 @@
 .crashed {
   color: var(--danger);
 }
+
+/* Durum satırındaki küçük haplar: dünya hazırlanıyor, sunucu zorlanıyor. Tıklayınca Performans açılır. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 140ms,
+    color 140ms;
+}
+
+.chip:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.warn {
+  border-color: color-mix(in srgb, var(--warning) 45%, transparent);
+  color: var(--warning);
+}
+
+.warn:hover {
+  color: var(--warning);
+}

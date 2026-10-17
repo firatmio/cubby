@@ -198,6 +198,44 @@ setInterval(() => {
   }
 }, 2000);
 
+// Performans: önceden hazırlama ilerlemesi ve "sunucu zorlanıyor" taklidi.
+type MockPregen = {
+  state: "idle" | "pending" | "running" | "paused" | "done";
+  radius: number;
+  chunks: number;
+  percent: number;
+  etaSecs: number | null;
+  autoPaused: boolean;
+  doneAt: number | null;
+};
+const IDLE: MockPregen = { state: "idle", radius: 0, chunks: 0, percent: 0, etaSecs: null, autoPaused: false, doneAt: null };
+const pregens: Record<string, MockPregen> = {};
+const health: Record<string, { overloaded: boolean; behindMs: number }> = { "mock-1": { overloaded: true, behindMs: 2350 } };
+setTimeout(() => emit("server://health", { id: "mock-1", ...health["mock-1"] }), 800);
+
+const pregenOf = (id: string) => (pregens[id] ??= { ...IDLE });
+const setPregen = (id: string, p: Partial<MockPregen>) => {
+  Object.assign(pregenOf(id), p);
+  emit("server://pregen", { id, pregen: pregens[id] });
+};
+const perfView = (id: string) => ({
+  pregen: pregenOf(id),
+  overloaded: health[id]?.overloaded ?? false,
+  behindMs: health[id]?.behindMs ?? 0,
+  supported: byId(id).loader !== "vanilla",
+  chunkyInstalled: pregens[id] !== undefined,
+});
+
+setInterval(() => {
+  for (const [id, p] of Object.entries(pregens)) {
+    if (p.state !== "running" || status[id] !== "running") continue;
+    const total = ((p.radius * 2) / 16) ** 2;
+    const percent = Math.min(100, p.percent + 3.5);
+    if (percent >= 100) setPregen(id, { state: "done", percent: 100, chunks: total, etaSecs: null, doneAt: Date.now() });
+    else setPregen(id, { percent, chunks: Math.round((total * percent) / 100), etaSecs: Math.round((100 - percent) * 18) });
+  }
+}, 1000);
+
 type Route = { state: string; address: string | null; message: string | null };
 const OFF: Route = { state: "off", address: null, message: null };
 const direct: Record<string, Route> = {};
@@ -423,6 +461,9 @@ async function boot(id: string) {
   }
   setStatus(id, "running");
   if (byId(id).internet) void netUp(id);
+  // Bekleyen ya da yarım kalan hazırlık açılınca sürer (Rust'taki `perf::install` gibi).
+  const p = pregens[id];
+  if (p && (p.state === "pending" || p.autoPaused)) setPregen(id, { state: "running", autoPaused: false });
 }
 
 async function stop(id: string) {
@@ -1014,6 +1055,25 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         m.update = null;
       }
       return installedView(args.id);
+    case "perf_status":
+      return perfView(args.id);
+    case "pregen_start":
+      await sleep(600);
+      setPregen(args.id, {
+        ...IDLE,
+        radius: args.radius,
+        state: status[args.id] === "running" ? "running" : "pending",
+      });
+      return perfView(args.id);
+    case "pregen_pause":
+      setPregen(args.id, { state: "paused", autoPaused: false });
+      return perfView(args.id);
+    case "pregen_resume":
+      setPregen(args.id, { state: "running", autoPaused: false });
+      return perfView(args.id);
+    case "pregen_cancel":
+      setPregen(args.id, { ...IDLE });
+      return perfView(args.id);
     case "kick_player":
       players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
       emit("server://players", { id: args.id, players: players[args.id] });

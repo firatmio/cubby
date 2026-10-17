@@ -17,6 +17,7 @@ import {
   type GameProgress,
   type UpdateView,
   type JoinedWorld,
+  type Pregen,
 } from "./api";
 
 type Unlisten = () => void;
@@ -43,6 +44,8 @@ const EVENT_SHUTTING_DOWN = "app://shutting-down";
 const EVENT_NET = "net://status";
 const EVENT_JOIN_STATUS = "join://status";
 const EVENT_JOIN_WORLD = "join://world";
+const EVENT_HEALTH = "server://health";
+const EVENT_PREGEN = "server://pregen";
 const EVENT_MODS_PROGRESS = "mods://progress";
 const EVENT_CLIENT_STATUS = "client://status";
 const EVENT_JOIN_PROGRESS = "join://progress";
@@ -90,6 +93,12 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<InstallProgress>(EVENT_INSTALL_PROGRESS, ({ payload }) => {
       store().setInstallProgress(payload);
+    }),
+    listen<{ id: string; overloaded: boolean; behindMs: number }>(EVENT_HEALTH, ({ payload }) => {
+      store().setHealth(payload.id, payload.overloaded, payload.behindMs);
+    }),
+    listen<{ id: string; pregen: Pregen }>(EVENT_PREGEN, ({ payload }) => {
+      store().setPregen(payload.id, payload.pregen);
     }),
     listen<JoinedWorld>(EVENT_JOIN_WORLD, ({ payload }) => {
       store().updateJoinedWorld(payload);
