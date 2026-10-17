@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CODE_LEN, cleanCode, extractCode } from "../../lib/inviteCode";
 import { useT } from "../../i18n";
 import styles from "./JoinDialog.module.css";
@@ -17,6 +17,36 @@ type Props = {
 const HALF = CODE_LEN / 2;
 
 /**
+ * Üç hücreli bir yarı: görünen hücreler, üstünde görünmez bir input (yazma, yapıştırma ve
+ * erişilebilirlik onda). Odaktayken sıradaki hücre vurgulanır ve imleç orada yanıp söner.
+ */
+function Half({ value, focused, children }: { value: string; focused: boolean; children: ReactNode }) {
+  const active = Math.min(value.length, HALF - 1);
+  return (
+    <div className={styles.codeHalf}>
+      <div className={styles.codeCells} aria-hidden>
+        {Array.from({ length: HALF }, (_, i) => (
+          <span
+            key={i}
+            className={[
+              styles.codeCell,
+              value[i] && styles.codeCellFilled,
+              focused && i === active && styles.codeCellActive,
+              focused && i === value.length && styles.codeCellCaret,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {value[i] ?? ""}
+          </span>
+        ))}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/**
  * İki üçlü kutu (`K7M` – `2QX`): yalnız koddaki karakterler kabul edilir, ilk kutu dolunca
  * ikinciye geçilir, boş ikinci kutuda geri silince ilkine dönülür. Link ya da tireli kod
  * yapıştırılırsa kod ayıklanıp iki kutuya dağıtılır.
@@ -25,6 +55,7 @@ export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: 
   const t = useT().join;
   const first = useRef<HTMLInputElement>(null);
   const second = useRef<HTMLInputElement>(null);
+  const [focused, setFocused] = useState<"left" | "right" | null>(null);
   const [[left, right], setHalves] = useState<[string, string]>(() => [
     initial.slice(0, HALF),
     initial.slice(HALF, CODE_LEN),
@@ -87,6 +118,9 @@ export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: 
     }
   };
 
+  /** Hücreler sırayla dolar: imleç hep sonda kalsın (ortadan düzenleme yok). */
+  const toEnd = (el: HTMLInputElement) => el.setSelectionRange(el.value.length, el.value.length);
+
   const common = {
     className: styles.codeBox,
     // Taşma yakalansın diye biraz fazla: altı karakter tek kutuya yazılırsa ikiye dağıtılır.
@@ -95,32 +129,45 @@ export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: 
     autoComplete: "off",
     autoCapitalize: "characters",
     spellCheck: false,
-    placeholder: "···",
     onPaste: paste,
+    onBlur: () => setFocused(null),
+    onClick: (e: React.MouseEvent<HTMLInputElement>) => toEnd(e.currentTarget),
   } as const;
 
   return (
     <div className={styles.codeInput} role="group" aria-label={t.codeLabel}>
-      <input
-        {...common}
-        ref={first}
-        value={left}
-        aria-label={t.codeFirst}
-        onChange={(e) => typeLeft(e.target.value)}
-        onKeyDown={keyLeft}
-      />
+      <Half value={left} focused={focused === "left"}>
+        <input
+          {...common}
+          ref={first}
+          value={left}
+          aria-label={t.codeFirst}
+          onChange={(e) => typeLeft(e.target.value)}
+          onKeyDown={keyLeft}
+          onFocus={(e) => {
+            setFocused("left");
+            toEnd(e.currentTarget);
+          }}
+        />
+      </Half>
       <span className={styles.codeDash} aria-hidden />
-      <input
-        {...common}
-        ref={second}
-        value={right}
-        aria-label={t.codeLast}
-        onChange={(e) => typeRight(e.target.value)}
-        onKeyDown={keyRight}
-        // İlk kutu eksikken ikinciye tıklanırsa yazı ilk kutudan devam etsin. Durum değil DOM
-        // okunur: ilk kutu dolar dolmaz yapılan geçişte durum henüz güncellenmemiş olur.
-        onFocus={() => (first.current?.value.length ?? 0) < HALF && first.current?.focus()}
-      />
+      <Half value={right} focused={focused === "right"}>
+        <input
+          {...common}
+          ref={second}
+          value={right}
+          aria-label={t.codeLast}
+          onChange={(e) => typeRight(e.target.value)}
+          onKeyDown={keyRight}
+          onFocus={(e) => {
+            // İlk kutu eksikken ikinciye tıklanırsa yazı ilk kutudan devam etsin. Durum değil DOM
+            // okunur: ilk kutu dolar dolmaz yapılan geçişte durum henüz güncellenmemiş olur.
+            if ((first.current?.value.length ?? 0) < HALF) return first.current?.focus();
+            setFocused("right");
+            toEnd(e.currentTarget);
+          }}
+        />
+      </Half>
     </div>
   );
 }

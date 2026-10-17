@@ -3,46 +3,112 @@
   align-items: center;
   justify-content: center;
   gap: var(--sp-3);
-  margin: var(--sp-2) 0;
+  margin: var(--sp-3) 0 var(--sp-2);
 }
 
-/* Üç karakterlik kutu: kod sesle söylenip elle yazılsın diye büyük ve aralıklı. */
-.codeBox {
-  width: 156px;
-  height: 72px;
-  padding: 0 0 0 0.3em;
+/* Bir üçlü: görünen hücreler + üstünde görünmez input. */
+.codeHalf {
+  position: relative;
+}
+
+.codeCells {
+  display: flex;
+  gap: 6px;
+}
+
+/* Karakter hücresi: dolgun, hafif gömük; kod tek tek okunup yazılsın. */
+.codeCell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 64px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-card);
-  background: #1d1d1d;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #181818, #1e1e1e);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.04);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 34px;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-align: center;
-  text-transform: uppercase;
-  outline: none;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
-.codeBox::placeholder {
-  color: var(--text-3);
-  letter-spacing: 0.3em;
+.codeCellFilled {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: linear-gradient(180deg, #202020, #262626);
 }
 
-.codeBox:focus {
+.codeCellActive {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 4px var(--accent-soft);
+}
+
+/* Boş sıradaki hücrede yanıp sönen imleç. */
+.codeCellCaret::after {
+  content: "";
+  width: 2px;
+  height: 30px;
+  border-radius: 1px;
+  background: var(--text);
+  animation: caret 1s steps(1) infinite;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+:global([data-motion="off"]) .codeCellCaret::after {
+  animation: none;
+}
+
+/* Gerçek input hücrelerin üstünde, görünmez: tıklama, yazma, yapıştırma ve ekran okuyucu onda. */
+.codeBox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 1px;
+  outline: none;
+  cursor: text;
+}
+
+/* Odak hücrelerde gösterilir (vurgulu hücre); genel odak çerçevesi burada çıkmasın. */
+.codeHalf .codeBox:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.codeBox::selection {
+  background: transparent;
 }
 
 .codeBox:disabled {
+  cursor: default;
+}
+
+.codeHalf:has(.codeBox:disabled) .codeCells {
   opacity: 0.6;
 }
 
 .codeDash {
-  width: 18px;
+  flex: none;
+  width: 16px;
   height: 3px;
   border-radius: var(--radius-full);
   background: var(--text-3);
