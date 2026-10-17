@@ -87,3 +87,9 @@
   background: var(--hover);
   color: var(--text);
 }
+
+/* Davet kodu: hücreli gösterimin küçük karşılığı. */
+.code {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+}

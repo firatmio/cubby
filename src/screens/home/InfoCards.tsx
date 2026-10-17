@@ -6,19 +6,20 @@ import { formatDuration, relativeTime } from "../../lib/format";
 import { useT } from "../../i18n";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore, useServer } from "../../store/appStore";
-import { bestInvite, useConnection } from "../connection/useConnection";
+import { formatCode } from "../../lib/inviteCode";
 import { usePlayStats } from "./usePlayStats";
 import styles from "./InfoCards.module.css";
 
-function InviteCard({ id }: { id: string }) {
+/** Davet kodu (varsa) ve kopyalama; tıklayınca davet paneli açılır, kod yoksa orada alınır. */
+function InviteCard({ instance }: { instance: Instance }) {
   const openSheet = useAppStore((s) => s.openSheet);
-  const invite = bestInvite(useConnection(id));
+  const code = instance.shortInvite?.code ? formatCode(instance.shortInvite.code) : null;
   const t = useT();
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    if (!invite) return;
-    await navigator.clipboard.writeText(invite.address);
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };
@@ -27,13 +28,15 @@ function InviteCard({ id }: { id: string }) {
     <motion.div className={styles.slot} variants={rise}>
       <button type="button" className={[styles.card, styles.action].join(" ")} onClick={() => openSheet("connection")}>
         <span className={styles.label}>{t.home.invite}</span>
-        <span className={[styles.value, styles.withCopy].join(" ")}>{invite?.address ?? t.home.noAddress}</span>
+        <span className={[styles.value, code && styles.withCopy, code && styles.code].filter(Boolean).join(" ")}>
+          {code ?? t.home.inviteNoCode}
+        </span>
         <span className={styles.hint}>
-          {copied ? t.common.copied : invite?.internet ? t.home.viaInternet : t.home.viaLan}
+          {copied ? t.common.copied : code ? t.home.inviteCardHint : t.home.inviteCardNoCode}
         </span>
       </button>
-      {invite && (
-        <button type="button" className={styles.copy} aria-label={t.home.copyAddress} onClick={copy}>
+      {code && (
+        <button type="button" className={styles.copy} aria-label={t.home.copyCode} onClick={copy}>
           {copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />}
         </button>
       )}
@@ -68,7 +71,7 @@ export function InfoCards({ instance }: { instance: Instance }) {
         )}
       </motion.button>
 
-      <InviteCard id={instance.id} />
+      <InviteCard instance={instance} />
 
       <motion.div className={styles.card} variants={rise}>
         <span className={styles.label}>{t.lastPlayedLabel}</span>

@@ -496,7 +496,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "list_instances":
       return [...instances];
     case "get_instance":
-      return byId(args.id);
+      return { ...byId(args.id) };
     case "create_instance": {
       const req = args.req;
       const id = `mock-${Date.now()}`;
@@ -652,6 +652,9 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       // localStorage.mockNoShort = "1": davet sunucusuna ulaşılamamış gibi.
       const noShort = typeof localStorage !== "undefined" && localStorage.getItem("mockNoShort") === "1";
       const short = cmd === "reset_invite" ? "Q4R-8TW" : "K7M-2QX";
+      const inst = instances.find((i) => i.id === args.id);
+      if (inst && !noShort) inst.shortInvite = { code: short.replace("-", "") };
+      await sleep(400);
       return {
         short: noShort ? null : short,
         web: noShort ? null : `https://cubby.quacomes.com/join/${short.replace("-", "")}`,

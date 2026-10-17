@@ -36,6 +36,8 @@ export interface Instance {
   /** İnternetten katılım açık mı */
   internet: boolean;
   inviteToken: string | null;
+  /** Davet sunucusundaki kısa kod (tiresiz); davet paneli ilk açılınca alınır. */
+  shortInvite?: { code: string } | null;
 }
 
 export interface Cover {

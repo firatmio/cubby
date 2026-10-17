@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CODE_LEN, cleanCode, extractCode } from "../../lib/inviteCode";
 import { useT } from "../../i18n";
+import { Cells, codeCellStyles } from "../../ui/CodeCells";
 import styles from "./JoinDialog.module.css";
 
 type Props = {
@@ -21,26 +22,14 @@ const HALF = CODE_LEN / 2;
  * erişilebilirlik onda). Odaktayken sıradaki hücre vurgulanır ve imleç orada yanıp söner.
  */
 function Half({ value, focused, children }: { value: string; focused: boolean; children: ReactNode }) {
-  const active = Math.min(value.length, HALF - 1);
   return (
     <div className={styles.codeHalf}>
-      <div className={styles.codeCells} aria-hidden>
-        {Array.from({ length: HALF }, (_, i) => (
-          <span
-            key={i}
-            className={[
-              styles.codeCell,
-              value[i] && styles.codeCellFilled,
-              focused && i === active && styles.codeCellActive,
-              focused && i === value.length && styles.codeCellCaret,
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {value[i] ?? ""}
-          </span>
-        ))}
-      </div>
+      <Cells
+        value={value}
+        length={HALF}
+        active={focused ? Math.min(value.length, HALF - 1) : null}
+        caret={focused && value.length < HALF ? value.length : null}
+      />
       {children}
     </div>
   );
@@ -135,7 +124,7 @@ export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: 
   } as const;
 
   return (
-    <div className={styles.codeInput} role="group" aria-label={t.codeLabel}>
+    <div className={[codeCellStyles.code, styles.codeInput].join(" ")} role="group" aria-label={t.codeLabel}>
       <Half value={left} focused={focused === "left"}>
         <input
           {...common}
@@ -150,7 +139,7 @@ export function CodeInput({ initial, onChange, onComplete, onEnter, disabled }: 
           }}
         />
       </Half>
-      <span className={styles.codeDash} aria-hidden />
+      <span className={codeCellStyles.dash} aria-hidden />
       <Half value={right} focused={focused === "right"}>
         <input
           {...common}

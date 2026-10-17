@@ -17,14 +17,3 @@ export function useConnection(id: string | null): ConnectionView | null {
 
   return view ?? null;
 }
-
-export type Invite = { address: string; internet: boolean };
-
-/** Davet için en iyi adres: internete açıksa modem üzerinden, değilse LAN. */
-export function bestInvite(view: ConnectionView | null): Invite | null {
-  if (!view) return null;
-  if (view.internet && view.direct.state === "ok" && view.direct.address) {
-    return { address: view.direct.address, internet: true };
-  }
-  return view.lan ? { address: view.lan, internet: false } : null;
-}

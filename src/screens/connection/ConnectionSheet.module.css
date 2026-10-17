@@ -2,61 +2,109 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
   margin: 0 calc(-1 * var(--sp-2));
   padding: 0 var(--sp-2) var(--sp-4);
 }
 
-.section {
+/* Davet: büyük kod, tek satır açıklama, iki düğme. */
+.invite {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4) var(--sp-5);
-  margin-bottom: var(--sp-3);
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-8) var(--sp-6) var(--sp-5);
   border-radius: var(--radius-card);
   background: var(--surface);
+  text-align: center;
 }
 
-.section h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-md);
-}
-
-.routes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-
-.route {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-card);
-  background: var(--surface-2);
-}
-
-.routeHead {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-
-.options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding-left: var(--sp-5);
+.inviteHint {
+  max-width: 360px;
   color: var(--text-2);
   font-size: var(--fs-sm);
 }
 
-.options b {
+.inviteActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-2);
+}
+
+/* Az kullanılan eylem: düğme gibi değil, küçük bir bağlantı gibi. */
+.quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.quiet:hover {
+  color: var(--text-2);
+}
+
+/* Cubby'si olmayanlar için: katlanabilir. */
+.more {
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.moreHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-4) var(--sp-5);
+  border: none;
+  background: none;
   color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moreHead > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moreHead b {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.moreBody {
+  overflow: hidden;
+}
+
+.moreInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: 0 var(--sp-5) var(--sp-5);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.groupTitle {
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -85,6 +133,11 @@
 .hint {
   color: var(--text-2);
   font-size: var(--fs-sm);
+}
+
+.hint b {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .working {
@@ -136,55 +189,4 @@
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-}
-
-.recommended {
-  margin-left: auto;
-  padding: 2px 10px;
-  border-radius: var(--radius-full);
-  background: var(--ok-soft, rgba(108, 192, 74, 0.16));
-  color: var(--ok);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-}
-
-/* Kısa davet kodu: sesle söylenip elle yazılabilsin diye büyük ve aralıklı. */
-.inviteCode {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius);
-  background: var(--hover);
-}
-
-.inviteCode span {
-  color: var(--text-2);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.inviteCode b {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xl);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  user-select: all;
-}
-
-.shortFailed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: 0;
-  color: var(--warning);
-  font-size: var(--fs-sm);
 }

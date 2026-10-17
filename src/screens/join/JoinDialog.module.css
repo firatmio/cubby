@@ -1,75 +1,10 @@
 .codeInput {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
   margin: var(--sp-3) 0 var(--sp-2);
 }
 
-/* Bir üçlü: görünen hücreler + üstünde görünmez input. */
+/* Bir üçlü: görünen hücreler (`ui/CodeCells`) + üstünde görünmez input. */
 .codeHalf {
   position: relative;
-}
-
-.codeCells {
-  display: flex;
-  gap: 6px;
-}
-
-/* Karakter hücresi: dolgun, hafif gömük; kod tek tek okunup yazılsın. */
-.codeCell {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 64px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, #181818, #1e1e1e);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-}
-
-.codeCellFilled {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: linear-gradient(180deg, #202020, #262626);
-}
-
-.codeCellActive {
-  border-color: var(--accent);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.35),
-    0 0 0 4px var(--accent-soft);
-}
-
-/* Boş sıradaki hücrede yanıp sönen imleç. */
-.codeCellCaret::after {
-  content: "";
-  width: 2px;
-  height: 30px;
-  border-radius: 1px;
-  background: var(--text);
-  animation: caret 1s steps(1) infinite;
-}
-
-@keyframes caret {
-  50% {
-    opacity: 0;
-  }
-}
-
-:global([data-motion="off"]) .codeCellCaret::after {
-  animation: none;
 }
 
 /* Gerçek input hücrelerin üstünde, görünmez: tıklama, yazma, yapıştırma ve ekran okuyucu onda. */
@@ -102,16 +37,8 @@
   cursor: default;
 }
 
-.codeHalf:has(.codeBox:disabled) .codeCells {
+.codeHalf:has(.codeBox:disabled) > div {
   opacity: 0.6;
-}
-
-.codeDash {
-  flex: none;
-  width: 16px;
-  height: 3px;
-  border-radius: var(--radius-full);
-  background: var(--text-3);
 }
 
 .caption {

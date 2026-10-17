@@ -1,0 +1,91 @@
+/* Davet kodunun karakter hücreleri: Katıl'daki giriş ve davet panelindeki gösterim aynı görünür. */
+
+.code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.cells {
+  display: flex;
+  gap: 6px;
+}
+
+/* Dolgun, hafif gömük hücre; kod tek tek okunup yazılsın. */
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 64px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #181818, #1e1e1e);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.filled {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: linear-gradient(180deg, #202020, #262626);
+}
+
+.active {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 4px var(--accent-soft);
+}
+
+/* Boş sıradaki hücrede yanıp sönen imleç. */
+.caret::after {
+  content: "";
+  width: 2px;
+  height: 30px;
+  border-radius: 1px;
+  background: var(--text);
+  animation: caret 1s steps(1) infinite;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+:global([data-motion="off"]) .caret::after {
+  animation: none;
+}
+
+/* Kod beklenirken hücreler hafifçe nabız atar. */
+.waiting .cell {
+  animation: wait 1.2s ease-in-out infinite;
+}
+
+@keyframes wait {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+:global([data-motion="off"]) .waiting .cell {
+  animation: none;
+}
+
+.dash {
+  flex: none;
+  width: 16px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--text-3);
+}

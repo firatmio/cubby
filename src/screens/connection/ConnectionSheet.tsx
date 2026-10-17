@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Check, Copy, Globe, Home, Link2, Loader2, RotateCcw, Router, Send } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Copy, Link2, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type AccessView, type InviteLinks, type Route } from "../../lib/api";
 import { EVENT_INVITE_SHORT, listen } from "../../lib/events";
 import { useT } from "../../i18n";
-import { rise } from "../../lib/motion";
+import { rise, spring } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Button } from "../../ui/Button";
+import { CodeDisplay } from "../../ui/CodeCells";
 import { Dialog } from "../../ui/Dialog";
 import { IconButton } from "../../ui/IconButton";
 import { Sheet } from "../../ui/Sheet";
@@ -14,14 +15,20 @@ import { Toggle } from "../../ui/Toggle";
 import { useConnection } from "./useConnection";
 import styles from "./ConnectionSheet.module.css";
 
-function Address({ address }: { address: string }) {
-  const [copied, setCopied] = useState(false);
-  const tt = useT();
-  const copy = async () => {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+/** "Kopyalandı" bir süre görünür. */
+function useCopied<T extends string>() {
+  const [copied, setCopied] = useState<T | null>(null);
+  const copy = async (what: T, text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(what);
+    setTimeout(() => setCopied(null), 1600);
   };
+  return [copied, copy] as const;
+}
+
+function Address({ address }: { address: string }) {
+  const [copied, copy] = useCopied<"address">();
+  const tt = useT();
   return (
     <div className={styles.address}>
       <span className={styles.addressText}>{address}</span>
@@ -30,144 +37,108 @@ function Address({ address }: { address: string }) {
         size="sm"
         variant="ghost"
         label={copied ? tt.common.copied : tt.connection.copy}
-        onClick={copy}
+        onClick={() => copy("address", address)}
       />
     </div>
   );
 }
 
-function Working({ text }: { text: string }) {
-  return (
-    <p className={styles.working}>
-      <Loader2 size={15} className={styles.spin} aria-hidden />
-      {text}
-    </p>
-  );
-}
-
-function DirectRoute({ route }: { route: Route }) {
-  const t = useT().connection;
-  return (
-    <div className={styles.route}>
-      <div className={styles.routeHead}>
-        <Router size={16} aria-hidden />
-        <span>{t.viaRouter}</span>
-      </div>
-      {route.state === "working" && <Working text={t.checkingRouter} />}
-      {route.state === "ok" && route.address && (
-        <>
-          <Address address={route.address} />
-          <p className={styles.hint}>{t.routerHint}</p>
-        </>
-      )}
-      {route.state === "error" && (
-        <>
-          <p className={styles.hint}>{route.message}</p>
-          <ul className={styles.options}>
-            <li>
-              {t.upnpTipBefore}
-              <b>UPnP</b>
-              {t.upnpTipAfter}
-            </li>
-            <li>{t.appTip}</li>
-          </ul>
-        </>
-      )}
-    </div>
-  );
-}
-
 /**
- * Uygulamadan uygulamaya davet: arkadaşın kodu Cubby'de Katıl'a yazar ya da linke tıklar; modem
- * ayarı gerekmez. Kod davet sunucusundan alınır; ulaşılamazsa "Tekrar dene".
+ * Davetin kendisi: arkadaşın kodu Cubby'de Katıl'a yazar ya da linke tıklar; modem ayarı gerekmez.
+ * Kod davet sunucusundan alınır; ulaşılamazsa "Tekrar dene".
  */
-function InviteSection({ id }: { id: string }) {
+function Invite({ id }: { id: string }) {
+  const replaceInstance = useAppStore((s) => s.replaceInstance);
   const [links, setLinks] = useState<InviteLinks | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState<"link" | "code" | null>(null);
+  const [copied, copy] = useCopied<"code" | "link">();
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tt = useT();
   const t = tt.connection;
+
+  const got = useCallback(
+    (l: InviteLinks) => {
+      setLinks(l);
+      // Ana ekrandaki davet kartı da kodu göstersin.
+      if (l.short) api.getInstance(id).then(replaceInstance).catch(() => {});
+    },
+    [id, replaceInstance],
+  );
 
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
     api
       .createInvite(id)
-      .then(setLinks)
+      .then(got)
       .catch((e) => setError(errorMessage(e)))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, got]);
 
   useEffect(() => {
     setLinks(null);
     load();
   }, [load]);
 
-  // Süresi dolmuş kod arkada yenilenirse panel güncellenir.
+  // Süresi dolmuş kod arkada yenilenirse panel de güncellenir.
   useEffect(() => {
     let off: (() => void) | undefined;
     let live = true;
     void listen<{ id: string; links: InviteLinks }>(EVENT_INVITE_SHORT, (e) => {
-      if (e.payload.id === id) setLinks(e.payload.links);
+      if (e.payload.id === id) got(e.payload.links);
     }).then((u) => (live ? (off = u) : u()));
     return () => {
       live = false;
       off?.();
     };
-  }, [id]);
-
-  const copy = async (what: "link" | "code") => {
-    if (!links) return;
-    const text = what === "link" ? links.web : links.short;
-    if (!text) return;
-    await navigator.clipboard.writeText(text);
-    setCopied(what);
-    setTimeout(() => setCopied(null), 1600);
-  };
+  }, [id, got]);
 
   const reset = async () => {
     setError(null);
     try {
-      setLinks(await api.resetInvite(id));
+      got(await api.resetInvite(id));
       setConfirmReset(false);
     } catch (e) {
       setError(errorMessage(e));
     }
   };
 
+  const failed = !loading && !links?.short;
+
   return (
-    <section className={styles.section}>
-      <h3>
-        <Send size={17} aria-hidden /> {t.inviteTitle}
-        <span className={styles.recommended}>{t.recommended}</span>
-      </h3>
-      <p className={styles.hint}>{t.inviteText}</p>
-      {links?.short && (
-        <div className={styles.inviteCode}>
-          <span>{t.inviteCode}</span>
-          <b>{links.short}</b>
-        </div>
-      )}
-      <div className={styles.buttons}>
-        <Button size="sm" variant="primary" icon={copied === "code" ? Check : Copy} disabled={!links?.short} onClick={() => copy("code")}>
-          {copied === "code" ? tt.common.copied : t.copyCode}
-        </Button>
-        <Button size="sm" icon={copied === "link" ? Check : Link2} disabled={!links?.web} onClick={() => copy("link")}>
-          {copied === "link" ? tt.common.copied : t.copyLink}
-        </Button>
-        <Button size="sm" variant="ghost" icon={RotateCcw} disabled={!links} onClick={() => setConfirmReset(true)}>
-          {t.resetInvite}
-        </Button>
-      </div>
-      {links && !links.short && !loading && (
-        <p className={styles.shortFailed}>
-          <AlertTriangle size={15} aria-hidden /> {t.shortFailed}
-          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={load}>
+    <section className={styles.invite}>
+      <CodeDisplay code={links?.short ?? null} label={t.inviteCode} />
+      <p className={styles.inviteHint}>{failed ? t.shortFailed : t.inviteHint}</p>
+      <div className={styles.inviteActions}>
+        {failed ? (
+          <Button variant="primary" icon={RotateCcw} onClick={load}>
             {t.retryShort}
           </Button>
-        </p>
+        ) : (
+          <>
+            <Button
+              variant="primary"
+              icon={copied === "code" ? Check : Copy}
+              disabled={!links?.short}
+              onClick={() => links?.short && copy("code", links.short)}
+            >
+              {copied === "code" ? tt.common.copied : t.copyCode}
+            </Button>
+            <Button
+              icon={copied === "link" ? Check : Link2}
+              disabled={!links?.web}
+              onClick={() => links?.web && copy("link", links.web)}
+            >
+              {copied === "link" ? tt.common.copied : t.copyLink}
+            </Button>
+          </>
+        )}
+      </div>
+      {links?.short && (
+        <button type="button" className={styles.quiet} onClick={() => setConfirmReset(true)}>
+          <RotateCcw size={13} aria-hidden /> {t.resetInvite}
+        </button>
       )}
       {error && <p className={styles.error}>{error}</p>}
       {confirmReset && (
@@ -191,29 +162,62 @@ function InviteSection({ id }: { id: string }) {
   );
 }
 
-/** Arkadaşın nasıl girer: aynı evden (LAN) ya da internetten (modem üzerinden). */
-export function ConnectionSheet() {
-  const open = useAppStore((s) => s.sheet === "connection");
+/** Modem üzerinden açılan adres (UPnP) ya da neden açılamadığı. */
+function RouterAddress({ route }: { route: Route }) {
+  const t = useT().connection;
+  if (route.state === "working") {
+    return (
+      <p className={styles.working}>
+        <Loader2 size={15} className={styles.spin} aria-hidden />
+        {t.checkingRouter}
+      </p>
+    );
+  }
+  if (route.state === "ok" && route.address) {
+    return (
+      <>
+        <Address address={route.address} />
+        <p className={styles.hint}>{t.routerHint}</p>
+      </>
+    );
+  }
+  if (route.state === "error") {
+    return (
+      <p className={styles.hint}>
+        {route.message} {t.upnpTipBefore}
+        <b>UPnP</b>
+        {t.upnpTipAfter}
+      </p>
+    );
+  }
+  return null;
+}
+
+/**
+ * Cubby'si olmayan arkadaş için: Minecraft'ta Sunucu Ekle'ye yazılacak adres (aynı ev ya da modem
+ * üzerinden internet). Kapalı başlar; internete açıksa açık gelir.
+ */
+function WithoutCubby({ id }: { id: string }) {
   const openSheet = useAppStore((s) => s.openSheet);
   const setConnection = useAppStore((s) => s.setConnection);
-  const instance = useSelected();
-  const { status } = useServer(instance?.id ?? null);
-  const view = useConnection(open ? (instance?.id ?? null) : null);
+  const { status } = useServer(id);
+  const view = useConnection(id);
+  const [open, setOpen] = useState(false);
   const [access, setAccess] = useState<AccessView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const running = status === "running";
-  const id = instance?.id;
   const t = useT().connection;
 
   useEffect(() => {
-    if (!open || !id) return;
-    setError(null);
+    if (view?.internet) setOpen(true);
+  }, [view?.internet]);
+
+  useEffect(() => {
+    if (!open) return;
     api.worldAccess(id).then(setAccess).catch(() => setAccess(null));
   }, [open, id]);
 
   const setInternet = async (on: boolean) => {
-    if (!id) return;
     setBusy(true);
     setError(null);
     try {
@@ -225,65 +229,88 @@ export function ConnectionSheet() {
     }
   };
 
+  if (!view) return null;
   const openToEveryone = access && !access.offlineMode && !access.whitelistEnabled;
 
   return (
+    <section className={styles.more}>
+      <button type="button" className={styles.moreHead} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span>
+          <b>{t.withoutCubby}</b>
+          <span className={styles.hint}>{t.withoutCubbyText}</span>
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={spring}>
+          <ChevronDown size={18} aria-hidden />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            className={styles.moreBody}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={spring}
+          >
+            <div className={styles.moreInner}>
+              <div className={styles.group}>
+                <span className={styles.groupTitle}>{t.sameHome}</span>
+                {view.lan ? <Address address={view.lan} /> : <p className={styles.hint}>{t.noLan}</p>}
+              </div>
+
+              <div className={styles.group}>
+                <Toggle
+                  checked={view.internet}
+                  onChange={setInternet}
+                  disabled={busy}
+                  label={t.openInternet}
+                  description={t.openInternetText}
+                />
+                {error && <p className={styles.error}>{error}</p>}
+                <AnimatePresence initial={false}>
+                  {view.internet && (
+                    <motion.div className={styles.group} variants={rise} initial="hidden" animate="show" exit="exit">
+                      {status === "running" ? (
+                        <RouterAddress route={view.direct} />
+                      ) : (
+                        <p className={styles.hint}>{t.startToOpen}</p>
+                      )}
+                      {openToEveryone && (
+                        <div className={styles.warn}>
+                          <AlertTriangle size={15} aria-hidden />
+                          <span>
+                            {t.whitelistOff}{" "}
+                            <button type="button" className={styles.link} onClick={() => openSheet("players")}>
+                              {t.turnOnWhitelist}
+                            </button>
+                          </span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+/** Arkadaşını davet et: önce kod; Cubby'si olmayanlar için adresler katlanmış altta. */
+export function ConnectionSheet() {
+  const open = useAppStore((s) => s.sheet === "connection");
+  const openSheet = useAppStore((s) => s.openSheet);
+  const instance = useSelected();
+  const t = useT().connection;
+
+  return (
     <Sheet open={open && !!instance} title={t.title} subtitle={instance?.name} onClose={() => openSheet(null)}>
-      {view && (
+      {instance && (
         <div className={styles.scroll}>
-          {id && <InviteSection id={id} />}
-
-          <section className={styles.section}>
-            <h3>
-              <Home size={17} aria-hidden /> {t.sameHome}
-            </h3>
-            {view.lan ? <Address address={view.lan} /> : <p className={styles.hint}>{t.noLan}</p>}
-            <p className={styles.hint}>{t.lanHint}</p>
-          </section>
-
-          <section className={styles.section}>
-            <h3>
-              <Globe size={17} aria-hidden /> {t.internet}
-            </h3>
-            <Toggle
-              checked={view.internet}
-              onChange={setInternet}
-              disabled={busy}
-              label={t.openInternet}
-              description={t.openInternetText}
-            />
-            {error && <p className={styles.error}>{error}</p>}
-
-            <AnimatePresence initial={false}>
-              {view.internet && (
-                <motion.div
-                  className={styles.routes}
-                  variants={rise}
-                  initial="hidden"
-                  animate="show"
-                  exit="exit"
-                >
-                  {running ? (
-                    <DirectRoute route={view.direct} />
-                  ) : (
-                    <p className={styles.hint}>{t.startToOpen}</p>
-                  )}
-
-                  {openToEveryone && (
-                    <div className={styles.warn}>
-                      <AlertTriangle size={15} aria-hidden />
-                      <span>
-                        {t.whitelistOff}{" "}
-                        <button type="button" className={styles.link} onClick={() => openSheet("players")}>
-                          {t.turnOnWhitelist}
-                        </button>
-                      </span>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </section>
+          <Invite id={instance.id} />
+          <WithoutCubby id={instance.id} />
         </div>
       )}
     </Sheet>
