@@ -82,6 +82,15 @@
   font-size: var(--fs-xs);
 }
 
+.clipboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
 .checking {
   display: flex;
   align-items: center;

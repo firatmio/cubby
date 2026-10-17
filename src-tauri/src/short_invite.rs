@@ -61,6 +61,27 @@ pub fn normalize(input: &str) -> Option<String> {
     (code.len() == LEN && code.chars().all(|c| ALPHABET.contains(c))).then_some(code)
 }
 
+/// Serbest metinde (pano, sohbetten kopyalanmış mesaj) davet kodu: metnin kendisi kod olabilir ya da
+/// içinde bir davet linki veya tireli kod (`K7M-2QX`) geçebilir. Tiresiz altı harf yalnız metnin
+/// tamamıysa kabul edilir (sıradan bir kelime yanlışlıkla kod sanılmasın).
+pub fn find_in_text(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.len() > 4096 {
+        return None;
+    }
+    if let Some(code) = normalize(text) {
+        return Some(code);
+    }
+    text.split_whitespace()
+        .map(|w| w.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '/'))
+        .filter(|w| {
+            w.contains("/join")
+                || w.contains("://")
+                || (w.len() == LEN + 1 && w.as_bytes()[3] == b'-')
+        })
+        .find_map(normalize)
+}
+
 /// `host/join/KOD` ya da `host/join?code=KOD`; host davet sunucusu değilse `None`.
 /// Kök (`host/...`) Cubby'nin tanıtım sitesine ayrıldı.
 fn path_code<'a>(rest: &'a str, web: &str) -> Option<&'a str> {
@@ -203,6 +224,35 @@ mod tests {
             Some("K7M2QX")
         );
         assert_eq!(normalize("mcsm://join?c=k7m2qx").as_deref(), Some("K7M2QX"));
+    }
+
+    #[test]
+    fn finds_codes_in_text() {
+        assert_eq!(
+            find_in_text(
+                " k7m-2qx
+"
+            )
+            .as_deref(),
+            Some("K7M2QX")
+        );
+        assert_eq!(
+            find_in_text(&format!(
+                "Cubby'de dünyama gel: {} (kod K7M-2QX)",
+                web_link("K7M2QX")
+            ))
+            .as_deref(),
+            Some("K7M2QX")
+        );
+        assert_eq!(
+            find_in_text("Kodum: Q4R-8TW, bekliyorum!").as_deref(),
+            Some("Q4R8TW")
+        );
+        // Cümlenin içindeki sıradan altı harfli kelime kod sayılmaz; tek başınaysa sayılır.
+        assert_eq!(find_in_text("bu akşam master dosyasını gönder"), None);
+        assert_eq!(find_in_text("MASTER").as_deref(), Some("MASTER"));
+        assert_eq!(find_in_text("https://evil.example/join/K7M2QX"), None);
+        assert_eq!(find_in_text(""), None);
     }
 
     #[test]

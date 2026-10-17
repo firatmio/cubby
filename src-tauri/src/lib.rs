@@ -314,6 +314,7 @@ pub fn run() {
             join_cmds::server_entry_exists,
             join_cmds::refresh_joined,
             join_cmds::take_pending_invite,
+            join_cmds::clipboard_invite_code,
             join_cmds::update_joined_mods,
             join_cmds::play_joined,
             game_cmds::account_status,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, Copy, Download, ListPlus, Play, RefreshCw, Trash2 } from "lucide-react";
+import { Download, ListPlus, Network, Play, RefreshCw, Trash2 } from "lucide-react";
 import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { isModded, kindLabel } from "../../lib/format";
@@ -11,7 +11,7 @@ import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { IconButton } from "../../ui/IconButton";
 import hero from "../home/Hero.module.css";
-import cards from "../home/InfoCards.module.css";
+import { CopyButton, InfoDock, InfoItem } from "../home/InfoCards";
 import bar from "../home/ActionBar.module.css";
 import { NoticeBar } from "../home/NoticeBar";
 import { useGameNotice, type GameNotice } from "../home/useGameNotice";
@@ -64,29 +64,24 @@ export function JoinedCards({ view }: { view: JoinedView }) {
   const [exists] = useEntryExists(view.world.id);
   const [copied, setCopied] = useState(false);
   const t = useT();
-  const copy = async () => {
-    await navigator.clipboard.writeText(view.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
-  };
   return (
-    <motion.div className={cards.cards} variants={stagger} initial="hidden" animate="show" exit="exit">
-      <motion.div className={cards.card} variants={rise}>
-        <span className={cards.label}>{t.joined.serverList}</span>
-        <span className={cards.value}>{view.world.name}</span>
-        <span className={[cards.hint, exists === false && cards.alert].filter(Boolean).join(" ")}>
-          {exists === false ? t.joined.notInList : t.joined.inList}
-        </span>
-      </motion.div>
-      <motion.button type="button" className={[cards.card, cards.action].join(" ")} variants={rise} onClick={copy}>
-        <span className={cards.label}>{t.joined.localAddress}</span>
-        <span className={cards.value}>
-          {view.address}
-          {copied ? <Check size={15} aria-hidden /> : <Copy size={14} aria-hidden />}
-        </span>
-        <span className={cards.hint}>{copied ? t.common.copied : t.joined.worksWhileOpen}</span>
-      </motion.button>
-    </motion.div>
+    <InfoDock>
+      <InfoItem
+        icon={ListPlus}
+        label={t.joined.serverList}
+        value={view.world.name}
+        hint={exists === false ? t.joined.notInList : t.joined.inList}
+        alert={exists === false}
+      />
+      <InfoItem
+        icon={Network}
+        label={t.joined.localAddress}
+        value={view.address}
+        mono
+        hint={copied ? t.common.copied : t.joined.worksWhileOpen}
+        extra={<CopyButton text={view.address} label={t.connection.copy} onCopied={setCopied} />}
+      />
+    </InfoDock>
   );
 }
 

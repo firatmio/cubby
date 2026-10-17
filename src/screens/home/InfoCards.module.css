@@ -1,19 +1,43 @@
-.cards {
+/* Sol alt: tek bir cam şerit; öğeler arasında ince ayraç. Sağ alttaki eylem çubuğuyla aynı yükseklikte. */
+.dock {
   display: flex;
-  gap: var(--sp-3);
+  align-items: stretch;
   min-width: 0;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 225px; /* ben değiştirdim @firatmio*/
-  padding: var(--sp-4) var(--sp-5);
-  border: none;
+  padding: var(--sp-2);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   background: var(--glass);
   backdrop-filter: var(--blur);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.item + .item::before {
+  content: "";
+  align-self: center;
+  width: 1px;
+  height: 36px;
+  margin: 0 var(--sp-1);
+  background: var(--line);
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: clamp(204px, 15vw, 270px);
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
   text-align: left;
 }
 
@@ -23,7 +47,29 @@
 }
 
 .action:hover {
-  background: rgba(60, 60, 60, 0.7);
+  background: var(--hover);
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-2);
+}
+
+.action:hover .icon {
+  color: var(--text);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .label {
@@ -33,14 +79,17 @@
 }
 
 .value {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
   overflow: hidden;
   font-size: var(--fs-md);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Davet kodu: hücreli gösterimin küçük karşılığı. */
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
 }
 
 .hint {
@@ -55,20 +104,11 @@
   color: var(--warning);
 }
 
-.slot {
-  position: relative;
-  display: flex;
-}
-
-.withCopy {
-  display: block;
-  padding-right: 28px;
-}
-
+/* Kopyalama düğmesi öğenin içinde sağda; ana tıklama alanıyla çakışmaz. */
 .copy {
   position: absolute;
   top: 50%;
-  right: var(--sp-3);
+  right: var(--sp-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +120,9 @@
   color: var(--text-2);
   cursor: pointer;
   transform: translateY(-50%);
-  transition: background 140ms, color 140ms;
+  transition:
+    background 140ms,
+    color 140ms;
 }
 
 .copy:hover {
@@ -88,8 +130,6 @@
   color: var(--text);
 }
 
-/* Davet kodu: hücreli gösterimin küçük karşılığı. */
-.code {
-  font-family: var(--font-mono);
-  letter-spacing: 0.12em;
+.item:has(.copy) .main {
+  padding-right: 44px;
 }

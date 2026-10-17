@@ -255,6 +255,14 @@ pub async fn reset_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> 
     invite_for(&app, &id, true).await
 }
 
+/// Katıl penceresi açılınca: panoda davet kodu ya da linki varsa yalnız kodu döner (panonun geri
+/// kalanı arayüze gitmez).
+#[tauri::command]
+pub fn clipboard_invite_code() -> Option<String> {
+    let text = arboard::Clipboard::new().ok()?.get_text().ok()?;
+    short_invite::find_in_text(&text)
+}
+
 /// Kısa kod, web linki, uzun kod ya da `cubby://` linki → davet.
 async fn invite_from(app: &AppHandle, input: &str) -> AppResult<Invite> {
     match short_invite::normalize(input) {

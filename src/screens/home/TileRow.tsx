@@ -28,9 +28,9 @@ function Tile({ instance, selected }: { instance: Instance; selected: boolean })
         aria-pressed={selected}
         className={[styles.tile, selected && styles.selected].filter(Boolean).join(" ")}
         style={{ "--kind": KIND_COLORS[instance.loader] } as React.CSSProperties}
-        animate={{ scale: selected ? 1 : 0.82 }}
-        whileHover={{ scale: selected ? 1.02 : 0.86 }}
-        whileTap={{ scale: selected ? 0.97 : 0.8 }}
+        animate={{ scale: selected ? 1 : 0.88 }}
+        whileHover={{ scale: selected ? 1.02 : 0.92 }}
+        whileTap={{ scale: selected ? 0.97 : 0.86 }}
         transition={spring}
         onClick={() => select(instance.id)}
       >
@@ -87,9 +87,9 @@ function JoinedTile({ view, selected }: { view: JoinedView; selected: boolean })
         aria-pressed={selected}
         className={[styles.tile, selected && styles.selected].filter(Boolean).join(" ")}
         style={{ "--kind": KIND_COLORS[view.world.loader] } as React.CSSProperties}
-        animate={{ scale: selected ? 1 : 0.82 }}
-        whileHover={{ scale: selected ? 1.02 : 0.86 }}
-        whileTap={{ scale: selected ? 0.97 : 0.8 }}
+        animate={{ scale: selected ? 1 : 0.88 }}
+        whileHover={{ scale: selected ? 1.02 : 0.92 }}
+        whileTap={{ scale: selected ? 0.97 : 0.86 }}
         transition={spring}
         onClick={() => select(joinKey(view.world.id))}
       >
@@ -137,33 +137,31 @@ export function TileRow() {
       {joined.map((j) => (
         <JoinedTile key={j.world.id} view={j} selected={joinKey(j.world.id) === selectedId} />
       ))}
-      <div className={styles.slot}>
+      {/* Yeni dünya ve katıl: dünya kutucuğu gibi görünmesin diye ayrı, küçük bir cam kapsül. */}
+      <div className={styles.actions}>
         <motion.button
           type="button"
           aria-label={t.newWorld}
-          className={[styles.tile, styles.add].join(" ")}
-          animate={{ scale: 0.82 }}
-          whileHover={{ scale: 0.86 }}
-          whileTap={{ scale: 0.8 }}
+          title={t.newWorld}
+          className={styles.actionButton}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
           transition={spring}
           onClick={() => setView("setup")}
         >
-          <Plus size={30} aria-hidden />
+          <Plus size={22} aria-hidden />
         </motion.button>
-      </div>
-      <div className={styles.slot}>
         <motion.button
           type="button"
           aria-label={t.joinFriend}
           title={t.joinFriend}
-          className={[styles.tile, styles.add].join(" ")}
-          animate={{ scale: 0.82 }}
-          whileHover={{ scale: 0.86 }}
-          whileTap={{ scale: 0.8 }}
+          className={styles.actionButton}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
           transition={spring}
           onClick={() => openJoin("")}
         >
-          <LogIn size={28} aria-hidden />
+          <LogIn size={20} aria-hidden />
         </motion.button>
       </div>
     </nav>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { LOADER_LABELS, formatBytesMb, isModded, kindLabel } from "../../lib/format";
@@ -56,6 +56,10 @@ export function JoinDialog() {
   /** Eski uzun davet linkiyle (`cubby://join?d=…`) açıldıysa: kutular yerine bu kullanılır. */
   const [legacy, setLegacy] = useState<string | null>(null);
   const checking = useRef(false);
+  /** Kutuların başlangıç değeri; `key` değişince kutular bu kodla yeniden kurulur. */
+  const [seed, setSeed] = useState({ key: 0, code: "" });
+  const [fromClipboard, setFromClipboard] = useState(false);
+  const typed = useRef(false);
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +90,31 @@ export function JoinDialog() {
     // Davet sayfasından (`cubby://join?c=`) kodla gelinir; eski uzun linkler de çalışsın.
     const fromLink = initial ? extractCode(initial) : null;
     setCode(fromLink ?? "");
+    setSeed((s) => ({ key: s.key + 1, code: fromLink ?? "" }));
     setLegacy(initial && !fromLink ? initial : null);
     setPreview(null);
     setError(null);
-    if (initial) void check(fromLink ?? initial);
+    setFromClipboard(false);
+    typed.current = false;
+    if (initial) {
+      void check(fromLink ?? initial);
+      return;
+    }
+    // Elle açıldıysa: panoda kod ya da davet linki varsa kutular dolar ve önizleme açılır.
+    let live = true;
+    api
+      .clipboardInviteCode()
+      .then((c) => {
+        if (!live || !c || typed.current) return;
+        setCode(c);
+        setSeed((s) => ({ key: s.key + 1, code: c }));
+        setFromClipboard(true);
+        void check(c);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
   }, [initial, check]);
 
   if (initial === null) return null;
@@ -143,17 +168,24 @@ export function JoinDialog() {
         <>
           <p>{t.pasteHint}</p>
           <CodeInput
-            key={initial}
-            initial={extractCode(initial) ?? ""}
+            key={seed.key}
+            initial={seed.code}
             disabled={busy}
             onChange={(c) => {
+              typed.current = true;
               setCode(c);
               setLegacy(null);
               setError(null);
+              setFromClipboard(false);
             }}
             onComplete={(c) => void check(c)}
             onEnter={() => code.length === CODE_LEN && void check(code)}
           />
+          {fromClipboard && !busy && (
+            <p className={styles.clipboard}>
+              <ClipboardCheck size={15} aria-hidden /> {t.fromClipboard}
+            </p>
+          )}
           {busy && (
             <p className={styles.checking}>
               <Loader2 size={15} className={styles.spin} aria-hidden /> {t.reaching}

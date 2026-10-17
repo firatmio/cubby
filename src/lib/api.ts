@@ -540,6 +540,8 @@ export const api = {
   /** Yeni anahtar; eski linkler ve kodlar geçersiz olur. */
   resetInvite: (id: string) => invoke<InviteLinks>("reset_invite", { id }),
   previewInvite: (code: string) => invoke<InvitePreview>("preview_invite", { code }),
+  /** Panoda davet kodu ya da linki varsa yalnız kod (panonun kendisi gelmez). */
+  clipboardInviteCode: () => invoke<string | null>("clipboard_invite_code"),
   joinWorld: (code: string, force: boolean, installRecommended: boolean) =>
     invoke<JoinedView>("join_world", { code, force, installRecommended }),
   updateJoinedMods: (id: string) => invoke<JoinedView>("update_joined_mods", { id }),

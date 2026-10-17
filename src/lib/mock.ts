@@ -660,6 +660,9 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         web: noShort ? null : `https://cubby.quacomes.com/join/${short.replace("-", "")}`,
       };
     }
+    case "clipboard_invite_code":
+      // localStorage.mockClipboard = "K7M2QX": panoda kod varmış gibi.
+      return (typeof localStorage !== "undefined" && localStorage.getItem("mockClipboard")) || null;
     case "preview_invite":
       if (/^[a-z0-9]{3}-?[a-z0-9]{3}$/i.test(String(args.code).trim()) && !/^k7m-?2qx$/i.test(String(args.code).trim()))
         throw "Bu davet kodu bulunamadı ya da yenilenmiş. Arkadaşından yeni bir davet iste.";
