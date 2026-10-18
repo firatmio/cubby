@@ -5,8 +5,8 @@ import { pageX } from "./pageMotion";
 import { useAppStore, type Page } from "../store/appStore";
 import styles from "./Pages.module.css";
 
-/** Yerine otururken hafifçe aşar: esneme geri toplanırken bir kez jöle gibi sallanır. */
-const SLIME = { type: "spring", stiffness: 240, damping: 22, mass: 0.9 } as const;
+/** Esneyerek kayar, yerine aşmadan oturur (kritik sönümün az üstü): aşsaydı şeridin dışı görünürdü. */
+const SLIME = { type: "spring", stiffness: 240, damping: 31, mass: 0.9 } as const;
 /** Sade mod: kısa, düz kayma. */
 const PLAIN = { type: "tween", duration: 0.28, ease: [0.25, 1, 0.5, 1] } as const;
 
