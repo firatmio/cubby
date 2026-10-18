@@ -206,7 +206,6 @@ export function WorldSettingsSheet() {
                   tabs={difficulties}
                   active={form.difficulty}
                   onChange={(v) => set("difficulty", v)}
-                  layoutId="difficulty"
                 />
               </Field>
               <Field label={t.gamemode}>
@@ -214,7 +213,6 @@ export function WorldSettingsSheet() {
                   tabs={gamemodes}
                   active={form.gamemode}
                   onChange={(v) => set("gamemode", v)}
-                  layoutId="gamemode"
                 />
               </Field>
               <Toggle

@@ -1,4 +1,5 @@
 .tabs {
+  position: relative;
   display: flex;
   gap: var(--sp-1);
   padding: 4px;
@@ -8,7 +9,7 @@
 }
 
 .tab {
-  position: relative;
+  position: relative; /* hapın üstünde çizilsin */
   height: 32px;
   padding: 0 var(--sp-4);
   border: none;
@@ -34,13 +35,12 @@
   color: var(--on-primary);
 }
 
+/* Seçili sekmenin arkasında kayan hap; konumu ve genişliği PillTabs ölçer. */
 .pill {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  border-radius: var(--radius-full);
   background: var(--primary);
-}
-
-.label {
-  position: relative;
 }

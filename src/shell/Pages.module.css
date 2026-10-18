@@ -11,13 +11,18 @@
   will-change: transform;
 }
 
+/* Her sayfa kendi katmanında: kayarken esneme/eğilme her karede yeniden boyanmadan ekran kartında
+   uygulanır (yoksa Keşfet'in bütün kutucukları her karede yeniden çizilir, ilk girişler takılır). */
 .page {
   position: relative;
   flex: 0 0 50%;
   height: 100%;
+  will-change: transform;
 }
 
-/* Geçiş bitince görünmeyen sayfa çizilmez; durumu (kaydırma, arama) yerinde kalır. */
+/* Geçiş bitince görünmeyen sayfa çizilmez; durumu (kaydırma, arama) yerinde kalır. Sonsuz CSS
+   animasyonları gizliyken de her karede ana iş parçacığını uyandırır: sayfalarda yalnız görünen
+   (yüklenen) yer tutucular yanıp söner. */
 .page[data-hidden] {
   visibility: hidden;
 }

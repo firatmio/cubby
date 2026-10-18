@@ -118,9 +118,10 @@ export const ProjectTile = memo(function ProjectTile({
 });
 
 /** Yüklenirken aynı boyda yer tutucu. */
-export function SkeletonTile() {
+/** `still`: ekrandan uzak raflarda yanıp sönmez (görünmeyen yüzlerce animasyon ana iş parçacığını meşgul ediyordu). */
+export function SkeletonTile({ still = false }: { still?: boolean }) {
   return (
-    <div className={[styles.tile, styles.skeleton].join(" ")} aria-hidden>
+    <div className={[styles.tile, styles.skeleton, still && styles.still].filter(Boolean).join(" ")} aria-hidden>
       <span className={styles.art} />
       <span className={styles.tileBody}>
         <span className={styles.line} style={{ width: "70%" }} />

@@ -1,5 +1,5 @@
-import { useId } from "react";
-import { LayoutGroup, motion } from "motion/react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { snappy } from "../lib/motion";
 import styles from "./PillTabs.module.css";
 
@@ -7,38 +7,48 @@ type Props<T extends string> = {
   tabs: { id: T; label: string }[];
   active: T;
   onChange: (id: T) => void;
-  /** Aynı ekranda birden çok sekme grubu varsa kayan arka plan karışmasın. */
-  layoutId?: string;
 };
 
 /**
- * Hap sekmeler; seçili sekmenin beyaz arka planı yeni sekmeye kayar. Her örnek kendi
- * `LayoutGroup`'unda: kapanıp yeniden açılan bir grubun hapı, eskisinin son (ekran dışına kaymış
- * olabilecek) yerinden gelmez, yerinde başlar.
+ * Hap sekmeler; seçili sekmenin beyaz arka planı yeni sekmeye kayar.
+ * Konum sekmenin `offsetLeft`/`offsetWidth`'inden okunur: kayan sayfa ya da panelin transform'u bunu
+ * etkilemez, hap açılışta hep yerinde başlar (paylaşılan `layoutId` eskisinin ekran dışındaki son
+ * yerinden getiriyordu).
  */
-export function PillTabs<T extends string>({ tabs, active, onChange, layoutId = "pill" }: Props<T>) {
-  const group = useId();
+export function PillTabs<T extends string>({ tabs, active, onChange }: Props<T>) {
+  const box = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ x: number; width: number } | null>(null);
+  const labels = tabs.map((t) => t.label).join("|");
+
+  // Seçim ya da genişlikler (dil, yazı) değişince yeniden ölç; çizimden önce, titremesin.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => {
+      const tab = el.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (tab) setPos((p) => (p?.x === tab.offsetLeft && p.width === tab.offsetWidth ? p : { x: tab.offsetLeft, width: tab.offsetWidth }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [active, labels]);
+
   return (
-    <LayoutGroup id={group}>
-      <div className={styles.tabs} role="tablist">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={t.id === active}
-            className={[styles.tab, t.id === active && styles.active].filter(Boolean).join(" ")}
-            onClick={() => onChange(t.id)}
-          >
-            {t.id === active && (
-              // Düzen yalnız seçim değişince ölçülür: kayan sayfalar ve paneller (transform) yüzünden
-              // hap "yer değiştirdi" sanılıp ekran dışından getirilmesin.
-              <motion.span layoutId={layoutId} layoutDependency={active} className={styles.pill} transition={snappy} />
-            )}
-            <span className={styles.label}>{t.label}</span>
-          </button>
-        ))}
-      </div>
-    </LayoutGroup>
+    <div ref={box} className={styles.tabs} role="tablist">
+      {pos && <motion.span className={styles.pill} initial={false} animate={pos} transition={snappy} aria-hidden />}
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={t.id === active}
+          className={[styles.tab, t.id === active && styles.active].filter(Boolean).join(" ")}
+          onClick={() => onChange(t.id)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }

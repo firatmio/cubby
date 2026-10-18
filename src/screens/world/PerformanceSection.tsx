@@ -126,7 +126,6 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
           tabs={presets}
           active={preset}
           onChange={(k) => k !== "custom" && onPreset(PRESETS[k].view, PRESETS[k].sim)}
-          layoutId="perf-preset"
         />
       </Field>
 
@@ -149,7 +148,6 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
               tabs={RADII.map((r) => ({ id: String(r), label: t.radius(r) }))}
               active={String(radius)}
               onChange={(r) => setRadius(Number(r))}
-              layoutId="pregen-radius"
             />
             <p className={styles.hint}>{t.estimate(est.chunks, est.minutes, est.mb)}</p>
             <div className={styles.row}>

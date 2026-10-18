@@ -15,6 +15,13 @@ import {
 import { fetchCached, invalidate } from "../../lib/queryCache";
 import { useAppStore } from "../../store/appStore";
 
+type StoreState = ReturnType<typeof useAppStore.getState>;
+/** Keşfet ekranda mı. Bileşenler buna abone olmaz (store'a `subscribe` ile bakılır): sayfa değişince
+ * bütün kutucuklar geçişin tam ortasında yeniden çizilmesin. */
+export const discoverVisible = (s: StoreState = useAppStore.getState()) => s.page === "discover" && s.view === "home";
+/** Sayfa geçişi bu kadar sürer; Keşfet'e girince yapılacak yenileme ardından yapılır. */
+export const SLIDE_MS = 700;
+
 /** Mod paketleri dünyadan bağımsız: dünyalar arasında aynı önbelleği paylaşır. */
 const scope = (world: string, kind: ContentKind) => (kind === "modpack" ? "" : world);
 
@@ -54,7 +61,7 @@ export function mergeHits(prev: ModHit[], next: ModHit[]): ModHit[] {
 }
 
 /** Dünyaya (ya da oyuncunun Minecraft'ına) kurulu olanlar ve kur/güncelle/kaldır işleri. */
-export function useContentActions(world: string, kind: ContentKind, visible: boolean) {
+export function useContentActions(world: string, kind: ContentKind, armed: boolean) {
   const setModProgress = useAppStore((s) => s.setModProgress);
   const [installed, setInstalled] = useState<InstalledMod[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,12 +72,32 @@ export function useContentActions(world: string, kind: ContentKind, visible: boo
 
   useEffect(() => {
     // Mod paketleri bir dünyaya kurulmaz; kurulu listesi yok.
-    if (!visible || kind === "modpack") return;
-    const load: Promise<InstalledMod[]> = mod
-      ? api.modsInstalled(world)
-      : api.contentInstalled(world, kind).then((l) => l.items);
-    load.then(setInstalled).catch((e) => setError(errorMessage(e)));
-  }, [world, kind, mod, visible]);
+    if (!armed || kind === "modpack") return;
+    let live = true;
+    const load = () => {
+      const list: Promise<InstalledMod[]> = mod
+        ? api.modsInstalled(world)
+        : api.contentInstalled(world, kind).then((l) => l.items);
+      list
+        // Aynı liste yeniden gelirse çizim yapılmaz.
+        .then((next) => live && setInstalled((cur) => (cur && JSON.stringify(cur) === JSON.stringify(next) ? cur : next)))
+        .catch((e) => live && setError(errorMessage(e)));
+    };
+    load();
+    // Keşfet'e her girişte (dışarıda değişmiş olabilir) geçiş bitince yenilenir.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = useAppStore.subscribe((s, prev) => {
+      if (discoverVisible(s) && !discoverVisible(prev)) {
+        clearTimeout(timer);
+        timer = setTimeout(load, SLIDE_MS);
+      }
+    });
+    return () => {
+      live = false;
+      off();
+      clearTimeout(timer);
+    };
+  }, [world, kind, mod, armed]);
 
   const ids = useMemo(() => (installed ? new Set(installed.map((m) => m.projectId)) : null), [installed]);
   /** Liste geldiyse ona, gelmediyse aramanın söylediğine güvenilir. */

@@ -310,7 +310,6 @@ export function SetupFlow() {
               setLastModLoader(l);
               setKind(l);
             }}
-            layoutId="mod-loader"
           />
           <span className={styles.modLoadersText}>
             {modLoaderText(t)[isModded(kind) ? kind : lastModLoader]}

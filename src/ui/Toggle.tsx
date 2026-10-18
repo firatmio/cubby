@@ -26,7 +26,8 @@ export function Toggle({ checked, onChange, label, description, disabled }: Prop
         {description && <span className={styles.description}>{description}</span>}
       </span>
       <span className={[styles.track, checked && styles.on].filter(Boolean).join(" ")}>
-        <motion.span className={styles.knob} layout transition={snappy} />
+        {/* `layout` yerine sabit kayma: panel kayarken ölçülüp yanlış yerden gelmesin. */}
+        <motion.span className={styles.knob} initial={false} animate={{ x: checked ? 18 : 0 }} transition={snappy} />
       </span>
     </button>
   );

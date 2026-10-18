@@ -40,7 +40,7 @@ export function AdvancedSheet() {
     >
       {instance && (
         <>
-          <PillTabs tabs={tabs} active={tab} onChange={setTab} layoutId="advanced-tab" />
+          <PillTabs tabs={tabs} active={tab} onChange={setTab} />
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}

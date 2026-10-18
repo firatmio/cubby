@@ -410,15 +410,18 @@
   grid-template-columns: min(calc(var(--fh) * 16 / 9), 60%) minmax(0, 1fr);
 }
 
-/* Aynı görselin büyütülmüş, bulanık ve koyulaştırılmış kopyası bandın tamamını doldurur. */
+/* Aynı görselin büyütülmüş, bulanık ve koyulaştırılmış kopyası bandın tamamını doldurur.
+   Bulanıklık 1/8 boyutta yapılıp büyütülür: aynı görünüm, ~64 kat daha az boyama. */
 .featuredBlur {
   position: absolute;
   top: -48px;
   left: -48px;
-  width: calc(100% + 96px);
-  height: calc(100% + 96px);
+  width: calc((100% + 96px) / 8);
+  height: calc((100% + 96px) / 8);
   object-fit: cover;
-  filter: blur(40px) brightness(0.42) saturate(1.25);
+  filter: blur(5px) brightness(0.42) saturate(1.25);
+  transform: scale(8);
+  transform-origin: 0 0;
   pointer-events: none;
 }
 
@@ -864,7 +867,9 @@
 }
 
 :global([data-motion="off"]) .skeleton *,
-:global([data-motion="off"]) .line {
+:global([data-motion="off"]) .line,
+.skeleton.still .art,
+.skeleton.still .line {
   animation: none;
 }
 

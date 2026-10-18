@@ -64,7 +64,6 @@ export function AppSettingsSheet() {
               ]}
               active={view.settings.language ?? "auto"}
               onChange={(c) => save({ ...view.settings, language: c === "auto" ? null : c })}
-              layoutId="language-tab"
             />
           </Card>
           <Card title={t.motion.title} description={motionOff ? t.motion.offNote : t.motion.text}>
@@ -76,7 +75,6 @@ export function AppSettingsSheet() {
               ]}
               active={settingFrom(view.settings.animations)}
               onChange={(c) => save({ ...view.settings, animations: c === "auto" ? null : c })}
-              layoutId="motion-tab"
             />
           </Card>
           <AccountCard />

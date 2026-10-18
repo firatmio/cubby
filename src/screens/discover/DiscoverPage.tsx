@@ -25,7 +25,7 @@ import { ResultGrid } from "./ResultGrid";
 import { Showcase } from "./Showcase";
 import type { ShelfDef } from "./Shelf";
 import { SkeletonTile } from "./ProjectTile";
-import { useContentActions, usePreview } from "./useBrowse";
+import { discoverVisible, useContentActions, usePreview } from "./useBrowse";
 import { ClientLine, InstallToast } from "./parts";
 import { WorldPicker } from "./WorldPicker";
 import styles from "./Discover.module.css";
@@ -138,7 +138,6 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
   const kind = kinds.includes(storedTab) ? storedTab : kinds[0];
   const plugin = kind === "mod" && loader === "paper";
   const modpack = kind === "modpack";
-  const visible = useAppStore((s) => s.page === "discover" && s.view === "home");
   const sheet = useAppStore((s) => s.sheet);
   const { status } = useServer(own ? world : null);
   const level = useMotionLevel();
@@ -147,7 +146,9 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
   const d = tt.discover;
   const active = status === "running" || status === "starting";
 
-  const actions = useContentActions(world, kind, visible);
+  // Görünmüyorken hemen değil, kısa bir bekleme ve boşta kalınca yükle.
+  const [armed, setArmed] = useState(() => discoverVisible());
+  const actions = useContentActions(world, kind, armed);
   const preview = usePreview(world, kind);
   const [view, setView] = useState<View>("browse");
   const [query, setQuery] = useState("");
@@ -156,8 +157,6 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
   const [busyRestart, setBusyRestart] = useState(false);
   // Shader için oyuncunun Minecraft'ına mod kurulumu açık olmalı (kendi dünyanda).
   const [clientSync, setClientSync] = useState(true);
-  // Görünmüyorken hemen değil, kısa bir bekleme ve boşta kalınca yükle.
-  const [armed, setArmed] = useState(visible);
   const scroller = useRef<HTMLDivElement>(null);
   const hits = useRef(new Map<string, ModHit>());
   // Aynı mod birden çok rafta olabilir: klavye gezintisi kimliğe değil, odaktaki kutucuğun kendisine bakar.
@@ -165,7 +164,7 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
 
   useEffect(() => {
     if (armed) return;
-    if (visible) {
+    if (discoverVisible()) {
       setArmed(true);
       return;
     }
@@ -173,8 +172,13 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
       if ("requestIdleCallback" in window) requestIdleCallback(() => setArmed(true), { timeout: 2000 });
       else setArmed(true);
     }, PREFETCH_DELAY);
-    return () => clearTimeout(timer);
-  }, [armed, visible]);
+    // Beklerken Keşfet'e geçilirse hemen.
+    const off = useAppStore.subscribe((s) => discoverVisible(s) && setArmed(true));
+    return () => {
+      clearTimeout(timer);
+      off();
+    };
+  }, [armed]);
 
   // Sekme değişince arama ve görünüm baştan; açık önizleme kapanır.
   const { open: openPreview, close, refreshPlan } = preview;
@@ -219,9 +223,9 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
 
   // Önizleme açıkken ok tuşlarıyla kutucuklar arasında gezilir; Esc kapatır.
   useEffect(() => {
-    if (!visible || !selectedId) return;
+    if (!selectedId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (sheet || (e.target as HTMLElement | null)?.closest?.("input, textarea")) return;
+      if (!discoverVisible() || sheet || (e.target as HTMLElement | null)?.closest?.("input, textarea")) return;
       if (e.key === "Escape") {
         close();
         return;
@@ -246,7 +250,7 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [visible, selectedId, sheet, openPreview, close, level]);
+  }, [selectedId, sheet, openPreview, close, level]);
 
   const seeAll = useCallback((def: ShelfDef) => {
     setGrid({ category: def.category });
@@ -324,12 +328,12 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
         </header>
         <div className={styles.kindRow}>
           {kinds.length > 1 ? (
-            <PillTabs tabs={kinds.map((k) => ({ id: k, label: kindLabel(k) }))} active={kind} onChange={setTab} layoutId={`discover-kind-${world}`} />
+            <PillTabs tabs={kinds.map((k) => ({ id: k, label: kindLabel(k) }))} active={kind} onChange={setTab} />
           ) : (
             <span className={styles.kindSingle}>{kindLabel(kind)}</span>
           )}
           {!needsSync && !modpack && (
-            <PillTabs tabs={views} active={view} onChange={setView} layoutId={`discover-view-${world}`} />
+            <PillTabs tabs={views} active={view} onChange={setView} />
           )}
         </div>
         {!own && !modpack && (
@@ -401,7 +405,7 @@ function ContentBrowser({ world, loader, own, kinds }: BrowserProps) {
                 </button>
               ))}
             </div>
-            <PillTabs tabs={sorts} active={sort} onChange={setSort} layoutId={`discover-sort-${world}`} />
+            <PillTabs tabs={sorts} active={sort} onChange={setSort} />
           </div>
         )}
 

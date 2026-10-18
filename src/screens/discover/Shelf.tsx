@@ -98,7 +98,7 @@ export function Shelf({ world, kind, def, plugin, scrollRoot, selectedId, isInst
                   onPrefetch={onPrefetch}
                 />
               ))
-            : Array.from({ length: 6 }, (_, i) => <SkeletonTile key={i} />)}
+            : Array.from({ length: 6 }, (_, i) => <SkeletonTile key={i} still={!near} />)}
         </div>
         {edges.left && (
           <button type="button" className={[styles.shelfArrow, styles.shelfArrowLeft].join(" ")} aria-label={t.scrollLeft} onClick={() => page(-1)}>
