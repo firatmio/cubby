@@ -1,45 +1,108 @@
-.wrap {
-  position: relative;
+/* Kapalıyken: hap. */
+.trigger {
   display: inline-flex;
   align-items: center;
+  gap: var(--sp-2);
   min-width: 0;
-}
-
-.select {
-  width: 100%;
   height: 30px;
-  padding: 0 32px 0 var(--sp-3);
+  padding: 0 12px 0 var(--sp-3);
   border: 1px solid transparent;
   border-radius: var(--radius-full);
   background: #232323;
   color: var(--text);
-  color-scheme: dark;
   font: inherit;
   font-size: var(--fs-sm);
-  outline: none;
-  appearance: none;
+  text-align: left;
   cursor: pointer;
   transition:
     border-color 140ms,
     background 140ms;
 }
 
-.select:hover:not(:disabled) {
+.trigger:hover:not(:disabled),
+.open {
   background: var(--surface-2);
 }
 
-.select:focus {
+.trigger:focus-visible,
+.open {
   border-color: var(--line-strong);
+  outline: none;
 }
 
-.select:disabled {
+.trigger:disabled {
   color: var(--text-3);
   cursor: default;
 }
 
+.value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chevron {
-  position: absolute;
-  right: 12px;
+  flex: none;
   color: var(--text-3);
-  pointer-events: none;
+  transition: transform 160ms;
+}
+
+.open .chevron {
+  transform: rotate(180deg);
+}
+
+/* Açıkken: pencereye sabit, cam yüzey. */
+.menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-pop);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 30px;
+  padding: 0 10px 0 var(--sp-3);
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.active {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.option[aria-selected="true"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  flex: none;
+  color: var(--accent);
 }
