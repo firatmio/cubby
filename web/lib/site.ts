@@ -5,6 +5,7 @@
  * nonce'lu. Görseller `public/site/` altında, uygulamanın gerçek ekranlarından.
  */
 
+import { boosterUI, discoverUI, inviteUI, playersUI, UI_SCRIPT, UI_STYLE } from "./appui.js";
 import { DOWNLOAD_PATH, escapeHtml } from "./html.js";
 import type { Lang } from "./i18n.js";
 import { formatSize, type LatestRelease } from "./release.js";
@@ -36,32 +37,28 @@ const TEXT = {
       "Arkadaşın kodu Cubby'de Katıl'a yazar ya da linke tıklar. Farklı şehirde, farklı internette olsa da doğrudan bağlanır.",
     rows: [
       {
-        img: "kesfet",
-        size: [1142, 548],
+        ui: "discover",
         eyebrow: "Keşfet",
         title: "Mod, shader, kaynak paketi. Tek tık.",
         text: "Modrinth'in tamamı uygulamanın içinde. Dünyanın sürümüne uyanı, gerektirdikleriyle birlikte kurar.",
         points: ["Mod paketinden tek tıkla yeni dünya", "Arkadaşın gereken modları kendiliğinden alır", "Güncellemeler tek düğmeyle"],
       },
       {
-        img: "davet",
-        size: [560, 484],
+        ui: "invite",
         eyebrow: "Arkadaşını davet et",
         title: "Kodu at, gelsinler",
         text: "Davet linki dünyanın kapağıyla açılır; arkadaşın dünyanın açık olup olmadığını, kimin çağırdığını görür.",
         points: ["WhatsApp ve Discord'da kapaklı önizleme", "Cubby'si yoksa üç adımda kurar", "Kodu yenileyince eski davet geçersiz"],
       },
       {
-        img: "performans",
-        size: [560, 660],
+        ui: "booster",
         eyebrow: "Hızlandırıcı",
         title: "Zayıf bilgisayarda da akıcı",
         text: "Oyunun davranışını değiştirmeden sunucuyu hızlandırır; saf Minecraft dünyalarında da çalışır.",
         points: ["Dünya hazırlama 1,5 kat daha hızlı (ölçtük)", "Sunucu zorlanırsa söyler ve çözüm önerir", "Arkadaşın hiçbir şey kurmaz"],
       },
       {
-        img: "oyuncular",
-        size: [560, 618],
+        ui: "players",
         eyebrow: "Oyuncular",
         title: "Kim girer, sen seçersin",
         text: "Beyaz liste, yöneticiler ve atma tek ekranda. Premium olmayan (TLauncher) arkadaşlar da güvenle girer.",
@@ -143,32 +140,28 @@ const TEXT = {
       "Your friend types the code into Join in Cubby or clicks the link. Different city, different internet: they still connect directly.",
     rows: [
       {
-        img: "kesfet",
-        size: [1142, 548],
+        ui: "discover",
         eyebrow: "Discover",
         title: "Mods, shaders, resource packs. One click.",
         text: "All of Modrinth inside the app. It installs what fits your world's version, along with everything it needs.",
         points: ["A new world from a modpack in one click", "Friends get the mods they need automatically", "Updates with one button"],
       },
       {
-        img: "davet",
-        size: [560, 484],
+        ui: "invite",
         eyebrow: "Invite a friend",
         title: "Send the code, they're in",
         text: "The invite link opens on your world's cover; friends see whether it's open and who's inviting them.",
         points: ["Cover previews in WhatsApp and Discord", "No Cubby yet? Three steps to install", "Renew the code and old invites stop working"],
       },
       {
-        img: "performans",
-        size: [560, 660],
+        ui: "booster",
         eyebrow: "Booster",
         title: "Smooth even on a weak PC",
         text: "Speeds up the server without changing how the game plays; works on vanilla worlds too.",
         points: ["World pre-generation 1.5× faster (we measured)", "Tells you when the server struggles, with fixes", "Friends install nothing"],
       },
       {
-        img: "oyuncular",
-        size: [560, 618],
+        ui: "players",
         eyebrow: "Players",
         title: "You choose who gets in",
         text: "Whitelist, operators and kicking on one screen. Non-premium (TLauncher) friends can join safely too.",
@@ -315,11 +308,9 @@ linear-gradient(to right,rgba(22,22,22,.75),rgba(22,22,22,0) 60%)}
 .row.flip{grid-template-columns:1.15fr 1fr}
 .row.flip .text{order:2}
 /* Geniş görüntü (Keşfet) küçültülürse okunmaz: yazı üstte, görüntü tam genişlikte. */
-.row.wide{grid-template-columns:1fr;gap:40px}
+.row.wide{grid-template-columns:minmax(0,1fr);gap:40px}
 .row.wide .text{display:grid;grid-template-columns:1fr 1fr;gap:12px 64px;align-items:end}
 .row.wide .points{margin:0}
-.shot{overflow:hidden;border:1px solid var(--line-strong);border-radius:18px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
-.shot.narrow{justify-self:center;width:min(100%,560px);border-radius:28px}
 .points{margin:22px 0 0;padding:0;list-style:none;color:var(--text-2)}
 .points li{display:flex;gap:10px;padding:5px 0}
 .points li::before{content:"";flex:none;width:8px;height:8px;margin-top:9px;border-radius:50%;background:var(--accent)}
@@ -594,13 +585,21 @@ export function sitePage(lang: Lang, origin: string, release: LatestRelease | nu
   const footer = `<footer><span>© Cubby · ${e(t.rights)}</span><nav><a href="${REPO_URL}" rel="noopener">${e(t.footer[0])}</a><a href="${REPO_URL}/releases" rel="noopener">${e(t.footer[1])}</a><a href="/join">${e(t.footer[2])}</a></nav></footer>`;
   const rows = t.rows
     .map((r, i) => {
-      const wide = r.size[0] >= 1000;
+      const wide = r.ui === "discover";
       const cls = wide ? " wide" : i % 2 ? " flip" : "";
       const text = wide
         ? `<div class="text"><div><p class="eyebrow">${e(r.eyebrow)}</p><h2>${e(r.title)}</h2></div><div><p class="lead">${e(r.text)}</p><ul class="points">${r.points.map((p) => `<li>${e(p)}</li>`).join("")}</ul></div></div>`
         : `<div class="text"><p class="eyebrow">${e(r.eyebrow)}</p><h2>${e(r.title)}</h2><p class="lead">${e(r.text)}</p><ul class="points">${r.points.map((p) => `<li>${e(p)}</li>`).join("")}</ul></div>`;
+      const ui =
+        r.ui === "discover"
+          ? discoverUI(lang, r.eyebrow)
+          : r.ui === "invite"
+            ? inviteUI(lang)
+            : r.ui === "booster"
+              ? boosterUI(lang)
+              : playersUI(lang);
       return `<section class="row${cls}">${text}
-<div class="shot${wide ? "" : " narrow"}"><img src="${shot(r.img)}" alt="${e(r.title)}" decoding="async" width="${r.size[0]}" height="${r.size[1]}"></div></section>`;
+${ui}</section>`;
     })
     .join("\n");
   const page = (i: number, cls: string, bg: string, body: string) =>
@@ -706,7 +705,7 @@ ${footer}
 <link rel="icon" href="/icon.png">
 <link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="preload" as="image" href="/site/kapak.webp">
-<style>${STYLE}</style>
+<style>${STYLE}${UI_STYLE}</style>
 </head>
 <body>
 <header class="bar">
@@ -725,7 +724,7 @@ ${features}
 ${faq}
 ${download}
 </div></div>
-<script nonce="${nonce}">${SCRIPT}</script>
+<script nonce="${nonce}">${SCRIPT}${UI_SCRIPT}</script>
 </body>
 </html>`;
 }
