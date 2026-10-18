@@ -702,12 +702,25 @@ pub struct SettingsView {
     screenshots_found: bool,
     /// Launcher'dan bulunan oyuncu adı (ayar boşsa bu kullanılır).
     detected_player_name: Option<String>,
+    /// `.minecraft`'tan algılanan launcher (resmi ya da TLauncher).
+    mc_launcher: Option<crate::client::Launcher>,
+    /// Bulunan Prism Launcher: exe'si (yoksa veri klasörü).
+    prism_found: Option<String>,
+    /// Oyunu şu an açacak launcher (ayar + algılama).
+    active_launcher: Option<crate::client::Launcher>,
 }
 
 #[tauri::command]
-pub fn get_settings(store: State<'_, SettingsStore>) -> SettingsView {
+pub fn get_settings(app: AppHandle, store: State<'_, SettingsStore>) -> SettingsView {
     let shots = store.screenshots_dir();
+    let prism = crate::client_cmds::prism_install(&app);
     SettingsView {
+        mc_launcher: store
+            .minecraft_dir()
+            .as_deref()
+            .and_then(crate::client::detect_launcher),
+        prism_found: prism.map(|p| p.exe.unwrap_or(p.data_dir).to_string_lossy().into_owned()),
+        active_launcher: crate::client_cmds::target(&app).ok().map(|t| t.launcher()),
         language: store.lang(),
         settings: store.get(),
         minecraft_dir: store
@@ -730,6 +743,8 @@ pub fn update_settings(
     let lang_changed = settings.language != store.get().language;
     let channel_changed = settings.beta_updates != store.get().beta_updates;
     let name_changed = settings.player_name != store.get().player_name;
+    let launcher_changed =
+        settings.launcher != store.get().launcher || settings.prism_exe != store.get().prism_exe;
     store.set(settings)?;
     // Davet sayfalarındaki "… seni çağırıyor".
     if name_changed {
@@ -742,13 +757,14 @@ pub fn update_settings(
     if channel_changed {
         crate::updates::recheck(&app);
     }
-    // "Modları kendi Minecraft'ıma da kur" yeni açıldıysa modlu dünyalar hemen eşitlensin.
-    if turned_on {
+    // "Modları kendi Minecraft'ıma da kur" yeni açıldıysa ya da launcher değiştiyse modlu dünyalar
+    // hemen (yeni launcher'da) eşitlensin.
+    if turned_on || launcher_changed {
         for inst in instance::list(&app) {
             crate::client_cmds::spawn_sync(&app, &inst.id);
         }
     }
-    Ok(get_settings(store))
+    Ok(get_settings(app, store))
 }
 
 #[tauri::command]

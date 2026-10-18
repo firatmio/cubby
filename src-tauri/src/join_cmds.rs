@@ -309,6 +309,8 @@ pub struct InvitePreview {
     own_world: Option<String>,
     /// Daha önce katılınmış (güncellenecek).
     already_joined: bool,
+    /// Oyunu açacak launcher (Prism'de sürümü Prism indirir).
+    launcher: Option<crate::client::Launcher>,
     minecraft_dir: Option<String>,
     minecraft_running: bool,
     required_version: String,
@@ -352,12 +354,12 @@ fn missing_mods(
     world: &str,
     list: &[ClientMod],
 ) -> ModCheck {
-    let mc = minecraft_dir(app);
-    let launcher = mc.as_deref().and_then(crate::client::detect_launcher);
-    let have: std::collections::HashSet<String> = match (&mc, launcher) {
-        (Some(mc), Some(l)) => {
+    let target = crate::client_cmds::target(app).ok();
+    let launcher = target.as_ref().map(crate::client_cmds::Target::launcher);
+    let have: std::collections::HashSet<String> = match &target {
+        Some(t) => {
             let dir = crate::client_cmds::dir_name(name, &join_key(host, world));
-            let (_, mods_dir) = crate::client::targets(mc, l, &dir);
+            let (_, mods_dir) = t.dirs(&dir, true);
             let mut have: std::collections::HashSet<String> =
                 mods::scan(&mods_dir).into_iter().map(|(_, s)| s).collect();
             have.extend(
@@ -367,7 +369,7 @@ fn missing_mods(
             );
             have
         }
-        _ => Default::default(),
+        None => Default::default(),
     };
     let item = |m: &ClientMod| ModItem {
         title: m.title.clone(),
@@ -434,7 +436,14 @@ pub async fn preview_invite(
     } else {
         (None, None)
     };
-    let mc = minecraft_dir(&app);
+    let prism = match crate::client_cmds::target(&app) {
+        Ok(crate::client_cmds::Target::Prism(p)) => Some(p),
+        _ => None,
+    };
+    let mc = match &prism {
+        Some(p) => Some(p.instances.clone()),
+        None => minecraft_dir(&app),
+    };
     let required = client::required_version(
         invite.loader,
         &invite.mc_version,
@@ -442,9 +451,11 @@ pub async fn preview_invite(
     );
     Ok(InvitePreview {
         already_joined: joins.find(&invite.host, &invite.world).await.is_some(),
-        version_installed: mc
-            .as_deref()
-            .is_some_and(|d| client::version_installed(d, &required)),
+        launcher: crate::client_cmds::target(&app).ok().map(|t| t.launcher()),
+        version_installed: prism.is_some()
+            || mc
+                .as_deref()
+                .is_some_and(|d| client::version_installed(d, &required)),
         minecraft_dir: mc.map(|d| d.display().to_string()),
         minecraft_running: client::minecraft_running(),
         required_version: required,
@@ -531,7 +542,9 @@ async fn install_client_mods(
     )
     .await?;
     let game_dir = match launcher {
-        crate::client::Launcher::Official => mods_dir.parent().map(|p| p.display().to_string()),
+        crate::client::Launcher::Official | crate::client::Launcher::Prism => {
+            mods_dir.parent().map(|p| p.display().to_string())
+        }
         crate::client::Launcher::TLauncher => None,
     };
 
@@ -748,9 +761,12 @@ pub async fn remove_joined(app: AppHandle, joins: Joins<'_>, id: String) -> AppR
         }
     }
     // Profil ve doğrudan bağlanan sürüm (resmi Launcher) ya da ortak klasördeki bu dünyanın
-    // modları (TLauncher) kaldırılır.
+    // modları (TLauncher) kaldırılır; Prism'in örneği kalır ama sunucuya bağlanmaz.
+    let key = join_key(&removed.host, &removed.world);
+    if let Some(p) = crate::client_cmds::prism_install(&app) {
+        crate::client::prism::forget(&p, &crate::client_cmds::dir_name(&removed.name, &key));
+    }
     if let Some(mc) = minecraft_dir(&app) {
-        let key = join_key(&removed.host, &removed.world);
         crate::client::remove_version(
             &mc,
             &crate::client::quickplay_id(&crate::client_cmds::dir_name(&removed.name, &key)),
@@ -791,6 +807,9 @@ pub async fn play_joined(
     let key = join_key(&w.host, &w.world);
     let profile_key = format!("mcsm-join-{key}");
     let dir = dir_name(&w.name, &key);
+    if let crate::client_cmds::Target::Prism(p) = crate::client_cmds::target(&app)? {
+        return play_in_prism(&app, w, &p, &dir).await;
+    }
     let (launcher, pick) = match (&w.profile, &w.loader_version) {
         // Modlar kuruldu: profil ve mod altyapısının sürümü zaten var.
         (Some(_), Some(lv)) if w.loader.is_modded() => {
@@ -842,6 +861,55 @@ pub async fn play_joined(
         direct,
         launcher,
         pick,
+        &w.mc_version,
+    ))
+}
+
+/// Prism: dünyanın örneği hazırlanır (modlu dünyada modlar örnekte değilse, ör. başka launcher'la
+/// katılmıştı, yeniden kurulur) ve oyun Prism'in komutuyla doğrudan dünyada açılır.
+async fn play_in_prism(
+    app: &AppHandle,
+    mut w: JoinedWorld,
+    p: &crate::client::prism::PrismInstall,
+    dir: &str,
+) -> AppResult<crate::client_cmds::LaunchResult> {
+    let game = crate::client::prism::game_dir(p, dir);
+    let in_prism = w.game_dir.as_deref().map(std::path::Path::new) == Some(game.as_path());
+    if w.loader.is_modded() && w.profile.is_some() && !in_prism {
+        let host = w
+            .host
+            .parse()
+            .map_err(|_| AppError::msg(tx!("Davet bozuk.", "Broken invite.")))?;
+        let list = app
+            .state::<Arc<P2p>>()
+            .manifest(host, &w.world, &w.token)
+            .await?;
+        let with = w.with_recommended;
+        w = install_client_mods(app, &w, list, with).await?;
+    }
+    let name = crate::client_cmds::profile_name(&w.name);
+    let addr = w.address();
+    let (game, id) = crate::client::prism::prepare(
+        p,
+        dir,
+        &crate::client::prism::InstanceSpec {
+            name: &name,
+            kind: w.loader,
+            mc_version: &w.mc_version,
+            loader_version: w.loader_version.as_deref(),
+            addr: Some(&addr),
+            icon_png: None,
+        },
+    )?;
+    let mut root = servers_dat::read(&game)?;
+    if !servers_dat::contains(&mut root, &addr) {
+        servers_dat::upsert(&mut root, &addr, &w.name);
+        servers_dat::write(&game, &root)?;
+    }
+    Ok(crate::client_cmds::launch_now(
+        app,
+        crate::client::Launcher::Prism,
+        id,
         &w.mc_version,
     ))
 }

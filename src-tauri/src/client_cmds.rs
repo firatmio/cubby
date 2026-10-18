@@ -10,7 +10,7 @@ use base64::engine::general_purpose::STANDARD;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
 
-use crate::client::{self, Launcher, ProfileSpec, Wanted, launch, manifest};
+use crate::client::{self, Launcher, ProfileSpec, Wanted, launch, manifest, prism};
 use crate::commands::{AppState, server_port};
 use crate::covers::SERVER_ICON;
 use crate::error::{AppError, AppResult};
@@ -112,6 +112,120 @@ fn profile_icon(server_dir: &Path) -> String {
         .unwrap_or_else(|| "Furnace".into())
 }
 
+/// Oyunu açacak launcher ve onun klasörü: ayar ya da algılama.
+#[derive(Debug, Clone)]
+pub enum Target {
+    /// Resmi Launcher ya da TLauncher: `.minecraft`.
+    Mc {
+        mc: PathBuf,
+        launcher: Launcher,
+    },
+    Prism(prism::PrismInstall),
+}
+
+impl Target {
+    pub fn launcher(&self) -> Launcher {
+        match self {
+            Target::Mc { launcher, .. } => *launcher,
+            Target::Prism(_) => Launcher::Prism,
+        }
+    }
+
+    /// Dünyanın oyun klasörü ve `mods`'u. Modsuz dünyada resmi Launcher ve TLauncher ana klasörü
+    /// kullanır; Prism'de her dünyanın kendi örneği vardır.
+    pub fn dirs(&self, dir: &str, modded: bool) -> (PathBuf, PathBuf) {
+        match self {
+            Target::Mc { mc, launcher } if modded => client::targets(mc, *launcher, dir),
+            Target::Mc { mc, .. } => (mc.clone(), mc.join("mods")),
+            Target::Prism(p) => {
+                let game = prism::game_dir(p, dir);
+                let mods = game.join("mods");
+                (game, mods)
+            }
+        }
+    }
+
+    /// TLauncher'da modlar ortak klasörde (dünyaya göre etkin/pasif edilir).
+    pub fn shared(&self) -> bool {
+        self.launcher() == Launcher::TLauncher
+    }
+}
+
+/// Seçili launcher. "Otomatik": Prism bulunursa Prism (oyun ona uğramadan açılır), yoksa
+/// `.minecraft`'tan algılanan.
+pub fn target(app: &AppHandle) -> AppResult<Target> {
+    let s = app.state::<SettingsStore>().get();
+    let find_prism = || prism::find(s.prism_exe.as_deref());
+    let mc_with = |launcher: Launcher| -> AppResult<Target> {
+        Ok(Target::Mc {
+            mc: minecraft_dir(app)?,
+            launcher,
+        })
+    };
+    match s.launcher.as_deref() {
+        Some("prism") => find_prism().map(Target::Prism).ok_or_else(|| {
+            AppError::msg(tx!(
+                "Prism Launcher bulunamadı. Ayarlar'dan Prism Launcher'ı seç.",
+                "Prism Launcher not found. Choose Prism Launcher in Settings."
+            ))
+        }),
+        Some("official") => mc_with(Launcher::Official),
+        Some("tLauncher") => mc_with(Launcher::TLauncher),
+        _ => {
+            if let Some(p) = find_prism().filter(|p| p.exe.is_some()) {
+                return Ok(Target::Prism(p));
+            }
+            let mc = minecraft_dir(app)?;
+            let launcher = client::detect_launcher(&mc).ok_or_else(|| AppError::msg(tx!("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.", "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again.")))?;
+            Ok(Target::Mc { mc, launcher })
+        }
+    }
+}
+
+/// Prism'in kurulu yeri (seçili olmasa da: silinen dünyanın örneğini kapatmak için).
+pub fn prism_install(app: &AppHandle) -> Option<prism::PrismInstall> {
+    prism::find(app.state::<SettingsStore>().get().prism_exe.as_deref())
+}
+
+/// `profile_icon`'un PNG'si (Prism'e dosya olarak).
+fn icon_png(icon: &str) -> Option<Vec<u8>> {
+    icon.strip_prefix("data:image/png;base64,")
+        .and_then(|b| STANDARD.decode(b).ok())
+}
+
+/// Prism'de dünyanın örneği + sunucu listesi. Dönen: (oyun klasörü, örnek kimliği).
+#[allow(clippy::too_many_arguments)]
+fn prepare_prism(
+    p: &prism::PrismInstall,
+    kind: LoaderKind,
+    world_name: &str,
+    dir: &str,
+    mc_version: &str,
+    loader_version: Option<&str>,
+    icon: &str,
+    server: Option<(&str, &str)>,
+) -> AppResult<(PathBuf, String)> {
+    let name = profile_name(world_name);
+    let (game, id) = prism::prepare(
+        p,
+        dir,
+        &prism::InstanceSpec {
+            name: &name,
+            kind,
+            mc_version,
+            loader_version,
+            addr: server.map(|(ip, _)| ip),
+            icon_png: icon_png(icon),
+        },
+    )?;
+    if let Some((ip, name)) = server {
+        let mut root = servers_dat::read(&game)?;
+        servers_dat::upsert(&mut root, ip, name);
+        servers_dat::write(&game, &root)?;
+    }
+    Ok((game, id))
+}
+
 pub fn minecraft_dir(app: &AppHandle) -> AppResult<PathBuf> {
     app.state::<SettingsStore>()
         .minecraft_dir()
@@ -183,10 +297,23 @@ pub async fn prepare_client(
     server_entry: Option<(&str, &str)>,
     on_line: &mut (impl FnMut(String) + Send),
 ) -> AppResult<(Launcher, PathBuf, bool, String)> {
-    let mc = minecraft_dir(app)?;
-    let launcher = client::detect_launcher(&mc).ok_or_else(|| {
-        AppError::msg(tx!("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.", "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again."))
-    })?;
+    let (mc, launcher) = match target(app)? {
+        // Prism mod altyapısını ve Minecraft'ı kendisi indirir: yalnız örnek, modlar ve sunucu listesi.
+        Target::Prism(p) => {
+            let (game, id) = prepare_prism(
+                &p,
+                kind,
+                world_name,
+                dir,
+                mc_version,
+                Some(loader_version),
+                &icon,
+                server_entry,
+            )?;
+            return Ok((Launcher::Prism, game.join("mods"), false, id));
+        }
+        Target::Mc { mc, launcher } => (mc, launcher),
+    };
     let version_id =
         ensure_client_version(app, &mc, kind, mc_version, loader_version, on_line).await?;
     let version = play_version(
@@ -262,7 +389,7 @@ pub fn write_profile(
             })?;
             Ok(name)
         }
-        Launcher::TLauncher => Ok(version.to_string()),
+        Launcher::TLauncher | Launcher::Prism => Ok(version.to_string()),
     }
 }
 
@@ -276,17 +403,44 @@ pub fn prepare_plain(
     icon: &str,
     addr: &str,
 ) -> AppResult<(Launcher, String)> {
-    let mc = minecraft_dir(app)?;
-    let launcher = client::detect_launcher(&mc).ok_or_else(|| {
-        AppError::msg(tx!("Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.", "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again."))
-    })?;
+    let (mc, launcher) = match target(app)? {
+        Target::Prism(p) => {
+            let (_, id) = prepare_prism(
+                &p,
+                LoaderKind::Vanilla,
+                world_name,
+                dir,
+                mc_version,
+                None,
+                icon,
+                Some((addr, world_name)),
+            )?;
+            return Ok((Launcher::Prism, id));
+        }
+        Target::Mc { mc, launcher } => (mc, launcher),
+    };
     let version = play_version(&mc, dir, mc_version, mc_version, Some(addr))?;
     let pick = write_profile(&mc, launcher, key, world_name, &version, None, icon)?;
     Ok((launcher, pick))
 }
 
-/// Launcher'ı açar ve sonucu döner.
-pub fn launch_now(launcher: Launcher, pick: String, mc_version: &str) -> LaunchResult {
+/// Launcher'ı açar ve sonucu döner. Prism'de oyun Prism'in komutuyla doğrudan dünyada açılır.
+pub fn launch_now(
+    app: &AppHandle,
+    launcher: Launcher,
+    pick: String,
+    mc_version: &str,
+) -> LaunchResult {
+    if launcher == Launcher::Prism {
+        let opened = prism_install(app).is_some_and(|p| prism::launch(&p, &pick));
+        return LaunchResult {
+            opened,
+            launcher: Some(launcher),
+            pick: Some(pick),
+            direct: true,
+            ..Default::default()
+        };
+    }
     let was_running = launch::launcher_running();
     LaunchResult {
         opened: launch::open_launcher(launcher),
@@ -324,7 +478,7 @@ pub fn start_or_fallback(
     };
     LaunchResult {
         note: failed,
-        ..launch_now(launcher, pick, mc_version)
+        ..launch_now(app, launcher, pick, mc_version)
     }
 }
 
@@ -495,7 +649,10 @@ pub fn join_after_start(app: &AppHandle, id: &str) {
         let prepared = prepare_play(&app, &inst).await;
         // Oyun Launcher'sız açılabiliyorsa dosyaları sunucu açılırken hazırlanır.
         let direct = match &prepared {
-            Ok((launcher, _)) if crate::game_cmds::direct_available(&app, &inst.mc_version) => {
+            Ok((launcher, _))
+                if *launcher != Launcher::Prism
+                    && crate::game_cmds::direct_available(&app, &inst.mc_version) =>
+            {
                 let dir = dir_name(&inst.name, &inst.id);
                 let game_dir = match (inst.loader.is_modded(), minecraft_dir(&app)) {
                     (true, Ok(mc)) => Some(client::targets(&mc, *launcher, &dir).0),
@@ -535,10 +692,14 @@ pub fn join_after_start(app: &AppHandle, id: &str) {
 
 /// Dünya silinince profili ve doğrudan bağlanan sürümü kaldırır (oyun klasörüne dokunulmaz).
 pub fn forget_world(app: &AppHandle, inst: &Instance) {
+    let dir = dir_name(&inst.name, &inst.id);
+    if let Some(p) = prism_install(app) {
+        prism::forget(&p, &dir);
+    }
     let Ok(mc) = minecraft_dir(app) else {
         return;
     };
-    client::remove_version(&mc, &client::quickplay_id(&dir_name(&inst.name, &inst.id)));
+    client::remove_version(&mc, &client::quickplay_id(&dir));
     if client::detect_launcher(&mc) == Some(Launcher::Official) {
         let _ = client::edit_profiles(&mc, |root| {
             client::remove_profile(root, &profile_key(&inst.id));

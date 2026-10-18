@@ -75,7 +75,11 @@ export function ClientLine({ id }: { id: string }) {
       {status.state === "ok" && (
         <span>
           <Check size={15} aria-hidden />{" "}
-          {status.launcher === "tLauncher" ? t.clientOkTL(status.pick ?? "") : t.clientOk(status.pick ?? "")}
+          {status.launcher === "prism"
+            ? t.clientOkPrism
+            : status.launcher === "tLauncher"
+              ? t.clientOkTL(status.pick ?? "")
+              : t.clientOk(status.pick ?? "")}
           {status.blocked.length > 0 && t.clientBlocked(status.blocked.join(", "))}
         </span>
       )}

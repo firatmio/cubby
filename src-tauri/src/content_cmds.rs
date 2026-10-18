@@ -69,30 +69,20 @@ struct Game {
 }
 
 fn game(app: &AppHandle, w: &World) -> AppResult<Game> {
-    let mc = crate::client_cmds::minecraft_dir(app)?;
-    if !w.loader.is_modded() {
-        return Ok(Game {
-            dir: mc,
-            mods: None,
-        });
-    }
-    let launcher = client::detect_launcher(&mc).ok_or_else(|| {
-        AppError::msg(tx!(
-            "Minecraft Launcher ya da TLauncher bulunamadı. Minecraft'ı en az bir kez açtıktan sonra tekrar dene.",
-            "Minecraft Launcher or TLauncher not found. Open Minecraft at least once, then try again."
-        ))
-    })?;
-    let (dir, mods) = client::targets(
-        &mc,
-        launcher,
-        &crate::client_cmds::dir_name(&w.name, &w.key),
-    );
-    if launcher == Launcher::Official {
-        client::prepare_game_dir(&mc, &dir)?;
+    let target = crate::client_cmds::target(app)?;
+    let modded = w.loader.is_modded();
+    let (dir, mods) = target.dirs(&crate::client_cmds::dir_name(&w.name, &w.key), modded);
+    if let crate::client_cmds::Target::Mc {
+        mc,
+        launcher: Launcher::Official,
+    } = &target
+        && modded
+    {
+        client::prepare_game_dir(mc, &dir)?;
     }
     Ok(Game {
         dir,
-        mods: Some((mods, launcher == Launcher::TLauncher)),
+        mods: modded.then(|| (mods, target.shared())),
     })
 }
 

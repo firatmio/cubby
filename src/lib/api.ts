@@ -79,6 +79,10 @@ export interface AppSettings {
   betaUpdates: boolean;
   /** Oyundaki adın (davet sayfasında "… seni çağırıyor"); null = Launcher'dan */
   playerName: string | null;
+  /** Oyunu açan launcher; null = otomatik (Prism varsa Prism) */
+  launcher: Launcher | null;
+  /** Prism Launcher'ın exe'si (bulunamadıysa oyuncu seçer) */
+  prismExe: string | null;
 }
 
 /** Güncellemenin durumu (Rust `updates::Status`). */
@@ -144,7 +148,7 @@ export interface WhatsNew {
   notes: string;
 }
 
-export type Launcher = "official" | "tLauncher";
+export type Launcher = "official" | "tLauncher" | "prism";
 
 /** Kendi Minecraft'ına mod eşitlemesinin durumu (host). */
 export interface ClientStatus {
@@ -343,6 +347,8 @@ export interface JoinedView {
 }
 
 export interface InvitePreview {
+  /** Oyunu açacak launcher (Prism'de sürümü Prism indirir) */
+  launcher: Launcher | null;
   name: string;
   loader: LoaderKind;
   mcVersion: string;
@@ -393,6 +399,12 @@ export interface SettingsView {
   screenshotsFound: boolean;
   /** Launcher'dan bulunan oyuncu adı */
   detectedPlayerName: string | null;
+  /** .minecraft'tan algılanan launcher (resmi ya da TLauncher) */
+  mcLauncher: Launcher | null;
+  /** Bulunan Prism Launcher (exe ya da veri klasörü) */
+  prismFound: string | null;
+  /** Oyunu şu an açacak launcher */
+  activeLauncher: Launcher | null;
 }
 
 export interface PlayStats {
@@ -709,6 +721,17 @@ function mockMediaUrl(path: string): string {
 export async function pickFolder(title: string): Promise<string | null> {
   if (import.meta.env.DEV && IS_MOCK) return "D:\\Oyunlar\\Sunucular";
   const picked = await openDialog({ directory: true, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** Program (.exe) seçme penceresi; iptal edilirse null. */
+export async function pickExe(title: string): Promise<string | null> {
+  if (import.meta.env.DEV && IS_MOCK) return "C:\\Users\\sen\\AppData\\Local\\Programs\\PrismLauncher\\prismlauncher.exe";
+  const picked = await openDialog({
+    multiple: false,
+    title,
+    filters: [{ name: "Program", extensions: ["exe"] }],
+  });
   return typeof picked === "string" ? picked : null;
 }
 

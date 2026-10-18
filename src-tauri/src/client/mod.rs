@@ -4,9 +4,11 @@
 //!
 //! - Resmi Launcher: her dünya `launcher_profiles.json`'da kendi profili ve `.minecraft/mcsm/<ad>` oyun klasörüyle.
 //! - Yalnız TLauncher: ortak `.minecraft/mods`; bizim koyduklarımız dünya değişince `mods/_disabled`'a alınır.
+//! - Prism Launcher: her dünyanın kendi örneği; oyun Prism'in komutuyla doğrudan açılır (`prism`).
 
 pub mod launch;
 pub mod manifest;
+pub mod prism;
 
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
@@ -29,9 +31,12 @@ const QUILT_META: &str = "https://meta.quiltmc.org/v3/versions/loader";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
+// "TLauncher" ürünün adı; arayüz "tLauncher" olarak bekliyor.
+#[allow(clippy::enum_variant_names)]
 pub enum Launcher {
     Official,
     TLauncher,
+    Prism,
 }
 
 /// Resmi Launcher'ın kendine özgü dosyaları varsa resmi; yoksa TLauncher izleri varsa TLauncher.
@@ -653,6 +658,12 @@ pub fn targets(mc_dir: &Path, launcher: Launcher, dir_name: &str) -> (PathBuf, P
             (game, mods)
         }
         Launcher::TLauncher => (mc_dir.to_path_buf(), mc_dir.join("mods")),
+        // Prism'in klasörü `.minecraft` değil, örneğidir: `client_cmds::Target::dirs`.
+        Launcher::Prism => {
+            let game = mc_dir.join(PROFILES_DIR).join(dir_name);
+            let mods = game.join("mods");
+            (game, mods)
+        }
     }
 }
 

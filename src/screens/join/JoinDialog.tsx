@@ -239,7 +239,9 @@ export function JoinDialog() {
                 </Item>
               )}
               {!isModded(preview.loader) &&
-                (preview.versionInstalled ? (
+                (preview.launcher === "prism" ? (
+                  <Item ok>{t.versionPrism}</Item>
+                ) : preview.versionInstalled ? (
                   <Item ok>{t.versionInstalled(preview.requiredVersion)}</Item>
                 ) : (
                   <Item ok={false}>{t.versionDownload(preview.mcVersion)}</Item>
@@ -265,7 +267,9 @@ export function JoinDialog() {
                   )}
                   {(preview.mods.required.length > 0 || (withRecommended && preview.mods.recommended.length > 0)) && (
                     <Item ok>
-                      {preview.mods.launcher === "tLauncher"
+                      {preview.mods.launcher === "prism"
+                        ? t.loaderPrism(preview.name)
+                        : preview.mods.launcher === "tLauncher"
                         ? t.loaderTLauncher(`${LOADER_LABELS[preview.loader]} ${preview.loaderVersion ?? ""}`.trim())
                         : t.loaderProfile(`${LOADER_LABELS[preview.loader]} ${preview.loaderVersion ?? ""}`.trim(), preview.name)}
                     </Item>

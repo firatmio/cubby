@@ -30,6 +30,11 @@ pub struct AppSettings {
     pub beta_updates: bool,
     /// Oyundaki adın (davet sayfasında "… seni çağırıyor"); `None` = Launcher'dan okunur.
     pub player_name: Option<String>,
+    /// Oyunu açan launcher: `"official"`, `"tLauncher"`, `"prism"`; `None` = otomatik (Prism varsa
+    /// Prism, yoksa `.minecraft`'tan algılanan).
+    pub launcher: Option<String>,
+    /// Prism Launcher'ın exe'si (bulunamadıysa oyuncu seçer).
+    pub prism_exe: Option<PathBuf>,
 }
 
 impl Default for AppSettings {
@@ -44,6 +49,8 @@ impl Default for AppSettings {
             auto_update: true,
             beta_updates: false,
             player_name: None,
+            launcher: None,
+            prism_exe: None,
         }
     }
 }
@@ -96,6 +103,14 @@ impl SettingsStore {
             return Err(AppError::msg(tx!(
                 "Seçilen Minecraft klasörü bulunamadı",
                 "The selected Minecraft folder was not found"
+            )));
+        }
+        if let Some(exe) = &new.prism_exe
+            && !exe.is_file()
+        {
+            return Err(AppError::msg(tx!(
+                "Seçilen Prism Launcher dosyası bulunamadı",
+                "The selected Prism Launcher file was not found"
             )));
         }
         if let Some(parent) = self.file.parent() {

@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { FolderOpen, RotateCcw } from "lucide-react";
 import { useLang, useT } from "../../i18n";
 import { settingFrom, useMotion, type MotionSetting } from "../../lib/perf";
-import { api, errorMessage, pickFolder, type AppSettings, type SettingsView } from "../../lib/api";
+import { api, errorMessage, pickExe, pickFolder, type AppSettings, type Launcher, type SettingsView } from "../../lib/api";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Input } from "../../ui/Input";
 import { PillTabs } from "../../ui/PillTabs";
+import { Select } from "../../ui/Select";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
 import { AccountCard } from "./AccountCard";
@@ -16,6 +17,45 @@ import styles from "../instance/sections.module.css";
 import own from "./AppSettingsSheet.module.css";
 
 type LangChoice = "auto" | "tr" | "en";
+
+/** Oyunu açan launcher: otomatik ya da seçilen; Prism'in yeri bulunamadıysa seçilir. */
+function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSettings) => Promise<void> }) {
+  const t = useT().settings;
+  const label = (l: Launcher | null) =>
+    l === "prism" ? t.launcherPrism : l === "tLauncher" ? t.launcherTL : l === "official" ? t.launcherOfficial : t.launcherNone;
+  const choosePrism = async () => {
+    const exe = await pickExe(t.prismPick);
+    if (exe) await save({ ...view.settings, prismExe: exe, launcher: "prism" });
+  };
+  return (
+    <Card title={t.launcher} description={t.launcherText}>
+      <Select
+        aria-label={t.launcher}
+        value={view.settings.launcher ?? "auto"}
+        onChange={(v) => save({ ...view.settings, launcher: v === "auto" ? null : (v as Launcher) })}
+        options={[
+          { value: "auto", label: t.launcherAuto(label(view.activeLauncher)) },
+          { value: "official", label: t.launcherOfficial },
+          { value: "tLauncher", label: t.launcherTL },
+          { value: "prism", label: t.launcherPrism },
+        ]}
+      />
+      <p className={own.path} title={view.prismFound ?? undefined}>
+        {t.prismAt(view.prismFound)}
+      </p>
+      <div className={styles.row}>
+        <Button size="sm" icon={FolderOpen} onClick={choosePrism}>
+          {t.prismChoose}
+        </Button>
+        {view.settings.prismExe && (
+          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={() => save({ ...view.settings, prismExe: null })}>
+            {t.reset}
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 /** Davet sayfasındaki "… seni çağırıyor" adı; yazarken değil, çıkınca (ya da Enter'da) kaydedilir. */
 function PlayerNameCard({ view, save }: { view: SettingsView; save: (s: AppSettings) => Promise<void> }) {
@@ -124,6 +164,7 @@ export function AppSettingsSheet() {
             />
           </Card>
 
+          <LauncherCard view={view} save={save} />
           <Card
             title={t.settings.mcFolder}
             description={t.settings.mcFolderText}
