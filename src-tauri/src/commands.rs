@@ -706,6 +706,8 @@ pub struct SettingsView {
     mc_launcher: Option<crate::client::Launcher>,
     /// Bulunan Prism Launcher: exe'si (yoksa veri klasörü).
     prism_found: Option<String>,
+    /// Bulunan TLauncher: exe'si ya da kısayolu.
+    tlauncher_found: Option<String>,
     /// Oyunu şu an açacak launcher (ayar + algılama).
     active_launcher: Option<crate::client::Launcher>,
 }
@@ -720,6 +722,8 @@ pub fn get_settings(app: AppHandle, store: State<'_, SettingsStore>) -> Settings
             .as_deref()
             .and_then(crate::client::detect_launcher),
         prism_found: prism.map(|p| p.exe.unwrap_or(p.data_dir).to_string_lossy().into_owned()),
+        tlauncher_found: crate::client_cmds::tlauncher_path(&app)
+            .map(|p| p.to_string_lossy().into_owned()),
         active_launcher: crate::client_cmds::target(&app).ok().map(|t| t.launcher()),
         language: store.lang(),
         settings: store.get(),
@@ -743,8 +747,9 @@ pub fn update_settings(
     let lang_changed = settings.language != store.get().language;
     let channel_changed = settings.beta_updates != store.get().beta_updates;
     let name_changed = settings.player_name != store.get().player_name;
-    let launcher_changed =
-        settings.launcher != store.get().launcher || settings.prism_exe != store.get().prism_exe;
+    let launcher_changed = settings.launcher != store.get().launcher
+        || settings.prism_exe != store.get().prism_exe
+        || settings.tlauncher_exe != store.get().tlauncher_exe;
     store.set(settings)?;
     // Davet sayfalarındaki "… seni çağırıyor".
     if name_changed {

@@ -10,7 +10,11 @@ export function launchHint(r: LaunchResult, worldName: string): { tone: "info" |
   const then = r.direct ? t.thenDirect : t.thenMenu(worldName);
   const pick = r.pick ?? "";
   if (r.launcher === "prism") return { tone: "info", text: r.opened ? t.prism : t.prismClosed(worldName) };
-  if (r.launcher === "tLauncher") return { tone: "info", text: why + t.tlauncher(pick) + then };
+  if (r.launcher === "tLauncher") {
+    if (!r.opened) return { tone: "info", text: why + t.tlauncherMissing + t.tlauncher(pick) + then };
+    if (r.wasRunning) return { tone: "info", text: why + t.tlauncherRunning(pick) + then };
+    return { tone: "info", text: why + t.tlauncherOpening(pick) + then };
+  }
   if (!r.opened) return { tone: "info", text: why + t.openLauncher(pick) + then };
   if (r.wasRunning) return { tone: "info", text: why + t.alreadyOpen(pick) + then };
   return { tone: "info", text: why + t.opening(pick) + then };

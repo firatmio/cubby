@@ -5,10 +5,12 @@
 //! - Resmi Launcher: her dünya `launcher_profiles.json`'da kendi profili ve `.minecraft/mcsm/<ad>` oyun klasörüyle.
 //! - Yalnız TLauncher: ortak `.minecraft/mods`; bizim koyduklarımız dünya değişince `mods/_disabled`'a alınır.
 //! - Prism Launcher: her dünyanın kendi örneği; oyun Prism'in komutuyla doğrudan açılır (`prism`).
+//! - TLauncher'ı Cubby açar, dünyanın sürümü seçili gelir (`tlauncher`).
 
 pub mod launch;
 pub mod manifest;
 pub mod prism;
+pub mod tlauncher;
 
 use std::collections::{HashMap, HashSet};
 use std::io::Read;

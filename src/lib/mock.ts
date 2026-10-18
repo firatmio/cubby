@@ -96,7 +96,7 @@ const shots = Array.from({ length: 7 }, (_, i) => ({
   file: `2026-10-0${(i % 9) + 1}_1${i}.2${i}.0${i}.png`,
   takenAt: Date.now() - (i + 1) * 5 * HOUR,
 }));
-let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null, animations: null as "full" | "simple" | null, autoUpdate: true, betaUpdates: false, playerName: null as string | null, launcher: null as Launcher | null, prismExe: null as string | null };
+let settings = { minecraftDir: null as string | null, useScreenshots: true, eulaAccepted: true, clientSync: true, language: null as "tr" | "en" | null, animations: null as "full" | "simple" | null, autoUpdate: true, betaUpdates: false, playerName: null as string | null, launcher: null as Launcher | null, prismExe: null as string | null, tlauncherExe: null as string | null };
 
 const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
@@ -1224,7 +1224,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       byId(args.id).javaPath = args.path;
       return { ...byId(args.id) };
     case "get_settings":
-      return { settings, language: settings.language ?? (navigator.language.startsWith("tr") ? "tr" : "en"), minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true, detectedPlayerName: "firatmio", mcLauncher: "official", prismFound: settings.prismExe ?? "C:\\Users\\sen\\AppData\\Local\\Programs\\PrismLauncher\\prismlauncher.exe", activeLauncher: settings.launcher ?? "prism" };
+      return { settings, language: settings.language ?? (navigator.language.startsWith("tr") ? "tr" : "en"), minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true, detectedPlayerName: "firatmio", mcLauncher: "official", prismFound: settings.prismExe ?? "C:\\Users\\sen\\AppData\\Local\\Programs\\PrismLauncher\\prismlauncher.exe", tlauncherFound: settings.tlauncherExe ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft\\TLauncher.exe", activeLauncher: settings.launcher ?? "prism" };
     case "update_settings":
       settings = args.settings;
       return mockInvoke("get_settings");

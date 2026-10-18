@@ -18,7 +18,43 @@ import own from "./AppSettingsSheet.module.css";
 
 type LangChoice = "auto" | "tr" | "en";
 
-/** Oyunu açan launcher: otomatik ya da seçilen; Prism'in yeri bulunamadıysa seçilir. */
+/** Bir launcher'ın bulunduğu yer ve elle seçme düğmesi. */
+function LauncherPath({
+  found,
+  chosen,
+  label,
+  choose,
+  onChoose,
+  onReset,
+}: {
+  found: string | null;
+  chosen: boolean;
+  label: string;
+  choose: string;
+  onChoose: () => void;
+  onReset: () => void;
+}) {
+  const t = useT().settings;
+  return (
+    <>
+      <p className={own.path} title={found ?? undefined}>
+        {label}
+      </p>
+      <div className={styles.row}>
+        <Button size="sm" icon={FolderOpen} onClick={onChoose}>
+          {choose}
+        </Button>
+        {chosen && (
+          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={onReset}>
+            {t.reset}
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Oyunu açan launcher: otomatik ya da seçilen; Prism ya da TLauncher bulunamadıysa yeri seçilir. */
 function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSettings) => Promise<void> }) {
   const t = useT().settings;
   const label = (l: Launcher | null) =>
@@ -26,6 +62,10 @@ function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSetting
   const choosePrism = async () => {
     const exe = await pickExe(t.prismPick);
     if (exe) await save({ ...view.settings, prismExe: exe, launcher: "prism" });
+  };
+  const chooseTl = async () => {
+    const exe = await pickExe(t.tlauncherPick);
+    if (exe) await save({ ...view.settings, tlauncherExe: exe, launcher: "tLauncher" });
   };
   return (
     <Card title={t.launcher} description={t.launcherText}>
@@ -40,19 +80,22 @@ function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSetting
           { value: "prism", label: t.launcherPrism },
         ]}
       />
-      <p className={own.path} title={view.prismFound ?? undefined}>
-        {t.prismAt(view.prismFound)}
-      </p>
-      <div className={styles.row}>
-        <Button size="sm" icon={FolderOpen} onClick={choosePrism}>
-          {t.prismChoose}
-        </Button>
-        {view.settings.prismExe && (
-          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={() => save({ ...view.settings, prismExe: null })}>
-            {t.reset}
-          </Button>
-        )}
-      </div>
+      <LauncherPath
+        found={view.prismFound}
+        chosen={!!view.settings.prismExe}
+        label={t.prismAt(view.prismFound)}
+        choose={t.prismChoose}
+        onChoose={choosePrism}
+        onReset={() => save({ ...view.settings, prismExe: null })}
+      />
+      <LauncherPath
+        found={view.tlauncherFound}
+        chosen={!!view.settings.tlauncherExe}
+        label={t.tlauncherAt(view.tlauncherFound)}
+        choose={t.tlauncherChoose}
+        onChoose={chooseTl}
+        onReset={() => save({ ...view.settings, tlauncherExe: null })}
+      />
     </Card>
   );
 }

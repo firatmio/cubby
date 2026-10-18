@@ -22,7 +22,7 @@ pub fn launcher_running() -> bool {
     })
 }
 
-/// Resmi Launcher'ı açar (açıksa öne getirir). TLauncher'ın yeri belli olmadığı için açılmaz.
+/// Resmi Launcher'ı açar (açıksa öne getirir). TLauncher ve Prism kendi modüllerinden açılır.
 pub fn open_launcher(launcher: Launcher) -> bool {
     if launcher != Launcher::Official {
         return false;

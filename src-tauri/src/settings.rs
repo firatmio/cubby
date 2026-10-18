@@ -35,6 +35,8 @@ pub struct AppSettings {
     pub launcher: Option<String>,
     /// Prism Launcher'ın exe'si (bulunamadıysa oyuncu seçer).
     pub prism_exe: Option<PathBuf>,
+    /// TLauncher'ın exe'si (bulunamadıysa oyuncu seçer).
+    pub tlauncher_exe: Option<PathBuf>,
 }
 
 impl Default for AppSettings {
@@ -51,6 +53,7 @@ impl Default for AppSettings {
             player_name: None,
             launcher: None,
             prism_exe: None,
+            tlauncher_exe: None,
         }
     }
 }
@@ -113,6 +116,14 @@ impl SettingsStore {
                 "The selected Prism Launcher file was not found"
             )));
         }
+        if let Some(exe) = &new.tlauncher_exe
+            && !exe.is_file()
+        {
+            return Err(AppError::msg(tx!(
+                "Seçilen TLauncher dosyası bulunamadı",
+                "The selected TLauncher file was not found"
+            )));
+        }
         if let Some(parent) = self.file.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -124,9 +135,19 @@ impl SettingsStore {
         Ok(())
     }
 
-    /// Geçerli Minecraft klasörü (ayar ya da varsayılan).
+    /// Geçerli Minecraft klasörü: ayar; yoksa varsayılan `.minecraft` (varsa); yoksa TLauncher'ın
+    /// kendi ayarındaki oyun klasörü; yoksa varsayılan.
     pub fn minecraft_dir(&self) -> Option<PathBuf> {
-        self.get().minecraft_dir.or_else(default_minecraft_dir)
+        if let Some(dir) = self.get().minecraft_dir {
+            return Some(dir);
+        }
+        let default = default_minecraft_dir();
+        if default.as_ref().is_some_and(|d| d.is_dir()) {
+            return default;
+        }
+        crate::client::tlauncher::props_path()
+            .and_then(|p| crate::client::tlauncher::game_dir(&p))
+            .or(default)
     }
 
     pub fn screenshots_dir(&self) -> Option<PathBuf> {

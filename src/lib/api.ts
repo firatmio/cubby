@@ -83,6 +83,8 @@ export interface AppSettings {
   launcher: Launcher | null;
   /** Prism Launcher'ın exe'si (bulunamadıysa oyuncu seçer) */
   prismExe: string | null;
+  /** TLauncher'ın exe'si (bulunamadıysa oyuncu seçer) */
+  tlauncherExe: string | null;
 }
 
 /** Güncellemenin durumu (Rust `updates::Status`). */
@@ -403,6 +405,8 @@ export interface SettingsView {
   mcLauncher: Launcher | null;
   /** Bulunan Prism Launcher (exe ya da veri klasörü) */
   prismFound: string | null;
+  /** Bulunan TLauncher (exe ya da kısayolu) */
+  tlauncherFound: string | null;
   /** Oyunu şu an açacak launcher */
   activeLauncher: Launcher | null;
 }

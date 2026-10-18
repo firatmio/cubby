@@ -10,7 +10,7 @@ use base64::engine::general_purpose::STANDARD;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
 
-use crate::client::{self, Launcher, ProfileSpec, Wanted, launch, manifest, prism};
+use crate::client::{self, Launcher, ProfileSpec, Wanted, launch, manifest, prism, tlauncher};
 use crate::commands::{AppState, server_port};
 use crate::covers::SERVER_ICON;
 use crate::error::{AppError, AppResult};
@@ -424,6 +424,27 @@ pub fn prepare_plain(
     Ok((launcher, pick))
 }
 
+/// TLauncher'ı açmanın yolu (ayar ya da algılama).
+pub fn tlauncher_path(app: &AppHandle) -> Option<PathBuf> {
+    tlauncher::find(app.state::<SettingsStore>().get().tlauncher_exe.as_deref())
+}
+
+/// TLauncher'ı dünyanın sürümü seçili açar (açıksa seçim değiştirilemez; oyuncuya söylenir).
+fn launch_tlauncher(app: &AppHandle, pick: String, mc_version: &str) -> LaunchResult {
+    let was_running = tlauncher::running();
+    if !was_running && let Some(props) = tlauncher::props_path() {
+        tlauncher::select_version(&props, &pick);
+    }
+    LaunchResult {
+        opened: tlauncher_path(app).is_some_and(|p| tlauncher::open(&p)),
+        launcher: Some(Launcher::TLauncher),
+        pick: Some(pick),
+        was_running,
+        direct: client::quickplay_supported(mc_version),
+        ..Default::default()
+    }
+}
+
 /// Launcher'ı açar ve sonucu döner. Prism'de oyun Prism'in komutuyla doğrudan dünyada açılır.
 pub fn launch_now(
     app: &AppHandle,
@@ -440,6 +461,9 @@ pub fn launch_now(
             direct: true,
             ..Default::default()
         };
+    }
+    if launcher == Launcher::TLauncher {
+        return launch_tlauncher(app, pick, mc_version);
     }
     let was_running = launch::launcher_running();
     LaunchResult {
