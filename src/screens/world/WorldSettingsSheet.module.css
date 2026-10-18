@@ -141,3 +141,24 @@
   font-size: var(--fs-sm);
   font-weight: 600;
 }
+
+/* Hızlandırıcı'nın mod listesi: ikon, ad, görevi. */
+.boostList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: var(--sp-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.boostList li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.boostList b {
+  font-weight: 600;
+}

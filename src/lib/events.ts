@@ -18,6 +18,7 @@ import {
   type UpdateView,
   type JoinedWorld,
   type Pregen,
+  type BoostView,
 } from "./api";
 
 type Unlisten = () => void;
@@ -46,6 +47,7 @@ const EVENT_JOIN_STATUS = "join://status";
 const EVENT_JOIN_WORLD = "join://world";
 const EVENT_HEALTH = "server://health";
 const EVENT_PREGEN = "server://pregen";
+const EVENT_BOOST = "boost://status";
 const EVENT_MODS_PROGRESS = "mods://progress";
 const EVENT_CLIENT_STATUS = "client://status";
 const EVENT_JOIN_PROGRESS = "join://progress";
@@ -96,6 +98,9 @@ export async function bindBackendEvents(): Promise<() => void> {
     }),
     listen<{ id: string; overloaded: boolean; behindMs: number }>(EVENT_HEALTH, ({ payload }) => {
       store().setHealth(payload.id, payload.overloaded, payload.behindMs);
+    }),
+    listen<{ id: string; boost: BoostView }>(EVENT_BOOST, ({ payload }) => {
+      store().setBoost(payload.id, payload.boost);
     }),
     listen<{ id: string; pregen: Pregen }>(EVENT_PREGEN, ({ payload }) => {
       store().setPregen(payload.id, payload.pregen);

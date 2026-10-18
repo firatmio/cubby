@@ -218,11 +218,42 @@ const setPregen = (id: string, p: Partial<MockPregen>) => {
   Object.assign(pregenOf(id), p);
   emit("server://pregen", { id, pregen: pregens[id] });
 };
+// Hızlandırıcı taklidi: `applied` son açılışta uygulanan durum (null: hiç açılmadı).
+type MockBoost = { enabled: boolean; applied: boolean | null; suspect: boolean };
+const boosts: Record<string, MockBoost> = {
+  "mock-1": { enabled: true, applied: true, suspect: false },
+  "mock-3": { enabled: true, applied: null, suspect: false },
+};
+const BOOST_MODS = [
+  { title: "Lithium", role: "logic" },
+  { title: "C2ME", role: "chunks" },
+  { title: "ScalableLux", role: "light" },
+  { title: "FerriteCore", role: "memory" },
+];
+const boostOf = (id: string) => (boosts[id] ??= { enabled: false, applied: null, suspect: false });
+const boostView = (id: string) => {
+  const b = boostOf(id);
+  const loader = byId(id).loader;
+  const mode = loader === "paper" ? "javaOnly" : loader === "vanilla" ? "vanillaFabric" : "mods";
+  return {
+    enabled: b.enabled,
+    mode,
+    mods: mode === "javaOnly" ? [] : BOOST_MODS.map((m) => ({ ...m, active: b.enabled && b.applied === true })),
+    unavailable: mode === "javaOnly" ? [] : ["ModernFix"],
+    verified: b.applied === true,
+    suspect: b.suspect,
+    pendingRestart: status[id] === "running" && mode !== "javaOnly" && b.applied !== null && b.applied !== b.enabled,
+    threads: 6,
+    lastError: null,
+  };
+};
+const emitBoost = (id: string) => emit("boost://status", { id, boost: boostView(id) });
+
 const perfView = (id: string) => ({
   pregen: pregenOf(id),
   overloaded: health[id]?.overloaded ?? false,
   behindMs: health[id]?.behindMs ?? 0,
-  supported: byId(id).loader !== "vanilla",
+  supported: byId(id).loader !== "vanilla" || boostOf(id).enabled,
   chunkyInstalled: pregens[id] !== undefined,
 });
 
@@ -354,10 +385,13 @@ const MODS: MockMod[] = [
   { projectId: "Vebnzrzj", slug: "luckperms", title: "LuckPerms", description: "A permissions plugin for Minecraft servers.", downloads: 5_400_000, clientNeed: "none", plugin: true },
   { projectId: "UmLGoGij", slug: "essentialsx", title: "EssentialsX", description: "The essential plugin suite for Minecraft servers.", downloads: 3_100_000, clientNeed: "none", plugin: true },
 ];
-const modsInstalled: Record<string, { file: string; projectId: string | null; dependency: boolean; update: string | null }[]> = {
+const modsInstalled: Record<
+  string,
+  { file: string; projectId: string | null; dependency: boolean; update: string | null; managed?: boolean }[]
+> = {
   "mock-1": [
     { file: "fabric-api-0.161.0+26.3.jar", projectId: "P7dR8mSH", dependency: true, update: "0.162.0+26.3" },
-    { file: "lithium-fabric-0.18.1+mc26.3.jar", projectId: "gvQqBUqZ", dependency: false, update: null },
+    { file: "lithium-fabric-0.18.1+mc26.3.jar", projectId: "gvQqBUqZ", dependency: false, update: null, managed: true },
     { file: "benim-modum.jar", projectId: null, dependency: false, update: null },
   ],
   "mock-2": [],
@@ -428,10 +462,12 @@ function installedView(id: string) {
       projectId: m.projectId,
       versionNumber: m.projectId ? m.file.replace(/^[a-z-]+-/, "").replace(/\.jar$/, "") : null,
       icon: m.projectId ? `modicon/${m.projectId}` : null,
-      clientNeed: mod?.clientNeed ?? null,
+      // Hızlandırıcı'nınkiler yalnız sunucuda (Rust'taki `installed_view` gibi).
+      clientNeed: m.managed ? "none" : (mod?.clientNeed ?? null),
       dependency: m.dependency,
       known: !!m.projectId,
       update: m.update,
+      managed: !!m.managed,
     };
   });
 }
@@ -460,6 +496,8 @@ async function boot(id: string) {
     log(id, info(l));
   }
   setStatus(id, "running");
+  boostOf(id).applied = boostOf(id).enabled;
+  emitBoost(id);
   if (byId(id).internet) void netUp(id);
   // Bekleyen ya da yarım kalan hazırlık açılınca sürer (Rust'taki `perf::install` gibi).
   const p = pregens[id];
@@ -1071,6 +1109,12 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "pregen_resume":
       setPregen(args.id, { state: "running", autoPaused: false });
       return perfView(args.id);
+    case "boost_status":
+      return boostView(args.id);
+    case "boost_set":
+      Object.assign(boostOf(args.id), { enabled: args.enabled, suspect: false });
+      emitBoost(args.id);
+      return boostView(args.id);
     case "pregen_cancel":
       setPregen(args.id, { ...IDLE });
       return perfView(args.id);

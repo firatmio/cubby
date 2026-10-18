@@ -3,6 +3,7 @@
 mod i18n;
 
 mod auth;
+mod boost;
 mod client;
 mod client_cmds;
 mod commands;
@@ -215,6 +216,7 @@ pub fn run() {
                 net::install(app.handle(), net.clone());
                 app.manage(perf::Perf::default());
                 perf::install(app.handle());
+                boost::install(app.handle());
                 join_cmds::install_refresh(app.handle());
                 app.manage(net);
                 sessions::install(app.handle());
@@ -344,6 +346,8 @@ pub fn run() {
             perf::pregen_pause,
             perf::pregen_resume,
             perf::pregen_cancel,
+            boost::boost_status,
+            boost::boost_set,
             updates::update_status,
             updates::update_check,
             updates::update_download,

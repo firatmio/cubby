@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Pause, Play, Sparkles, X } from "lucide-react";
+import { AlertTriangle, Pause, Play, Sparkles, X, Zap } from "lucide-react";
 import { api, errorMessage, type PerfView, type Pregen } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 import { useT } from "../../i18n";
@@ -8,6 +8,7 @@ import { Button } from "../../ui/Button";
 import { Field } from "../../ui/Input";
 import { PillTabs } from "../../ui/PillTabs";
 import { Progress } from "../../ui/Progress";
+import { BoosterCard } from "./BoosterCard";
 import styles from "./WorldSettingsSheet.module.css";
 
 /** Görüş / simülasyon mesafesi hazır ayarları (chunk). */
@@ -52,6 +53,8 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
   const health = useAppStore((s) => s.health[id]);
   const setPregen = useAppStore((s) => s.setPregen);
   const setHealth = useAppStore((s) => s.setHealth);
+  const boost = useAppStore((s) => s.boost[id]);
+  const setBoost = useAppStore((s) => s.setBoost);
   const status = useAppStore((s) => s.servers[id]?.status ?? "stopped");
   const [perf, setPerf] = useState<PerfView | null>(null);
   const [radius, setRadius] = useState<number>(2000);
@@ -67,10 +70,20 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
     setHealth(id, v.overloaded, v.behindMs);
   };
 
-  useEffect(() => {
-    // `got` yalnız store ayarlayıcılarını kullanır; dünya değişince yeniden yüklenir.
+  const reload = () => {
     api.perfStatus(id).then(got).catch((e) => setError(errorMessage(e)));
-  }, [id]);
+  };
+
+  // `got` yalnız store ayarlayıcılarını kullanır; dünya değişince yeniden yüklenir.
+  useEffect(reload, [id]);
+
+  /** Uyarıdan ya da önceden hazırlamadan "Hızlandırıcıyı aç". */
+  const enableBoost = () =>
+    run("boost", async () => {
+      setBoost(id, await api.boostSet(id, true));
+      return api.perfStatus(id);
+    });
+  const boostOff = !!boost && !boost.enabled && boost.mode !== "javaOnly";
 
   const run = async (key: string, fn: () => Promise<PerfView>) => {
     setBusy(key);
@@ -117,9 +130,19 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
                 {t.useBalanced}
               </button>
             )}
+            {boostOff && (
+              <>
+                {" "}
+                <button type="button" className={styles.link} onClick={enableBoost}>
+                  {t.useBoost}
+                </button>
+              </>
+            )}
           </span>
         </div>
       )}
+
+      <BoosterCard id={id} onChanged={reload} />
 
       <Field label={t.viewLabel} hint={t.presetHint[preset]}>
         <PillTabs
@@ -138,7 +161,14 @@ export function PerformanceSection({ id, view, sim, onPreset }: Props) {
         </div>
 
         {perf && !perf.supported ? (
-          <p className={styles.hint}>{t.notSupported}</p>
+          <>
+            <p className={styles.hint}>{t.needsBoost}</p>
+            <div className={styles.row}>
+              <Button size="sm" icon={Zap} loading={busy === "boost"} onClick={enableBoost}>
+                {t.useBoost}
+              </Button>
+            </div>
+          </>
         ) : !p || p.state === "idle" || p.state === "done" ? (
           <>
             {p?.state === "done" && (

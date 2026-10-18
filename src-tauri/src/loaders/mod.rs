@@ -269,6 +269,18 @@ impl Loaders {
     pub fn content_dir(&self, kind: LoaderKind) -> Option<&'static str> {
         dispatch!(self, kind, l => l.content_dir())
     }
+
+    /// Saf dünyanın klasörüne arka planda Fabric (Hızlandırıcı); bkz. `FabricLoader::install_over_vanilla`.
+    pub async fn install_fabric_over_vanilla(
+        &self,
+        mc_version: &str,
+        server_dir: &Path,
+        on_stage: &mut (impl FnMut(InstallStage) + Send),
+    ) -> AppResult<Option<String>> {
+        self.fabric
+            .install_over_vanilla(mc_version, server_dir, on_stage)
+            .await
+    }
 }
 
 /// NeoForge/Forge installer'ının adresi (installer kullanmayan türlerde `None`).

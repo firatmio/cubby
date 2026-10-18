@@ -29,6 +29,10 @@ pub struct ModRecord {
     pub title: Option<String>,
     #[serde(default)]
     pub need: Option<ClientNeed>,
+    /// Hızlandırıcı kurdu (ya da onun bağımlılığı): yalnız sunucuda, arkadaşlara gitmez, Performans'tan
+    /// açılıp kapanır.
+    #[serde(default)]
+    pub managed: bool,
 }
 
 /// Sürümün `ext` uzantılı kurulacak dosyası (modlarda `jar`, paketlerde `zip`): önce `primary`.
@@ -328,6 +332,7 @@ fn record(name: &str, v: &Version, f: &VersionFile) -> ModRecord {
         dependency: false,
         title: None,
         need: None,
+        managed: false,
     }
 }
 
@@ -522,6 +527,7 @@ mod tests {
             dependency: true,
             title: None,
             need: None,
+            managed: false,
         };
         save_records(&dir, std::slice::from_ref(&r)).unwrap();
         assert_eq!(load_records(&dir), vec![r.clone()]);

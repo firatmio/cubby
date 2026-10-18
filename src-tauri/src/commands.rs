@@ -320,6 +320,8 @@ pub async fn create_instance(
         if settings.get().eula_accepted {
             write_eula(&server_dir)?;
         }
+        // Hızlandırıcı yeni dünyalarda açık; mod paketlerinin ayarına karışılmaz.
+        crate::boost::init_new(&dir.join(crate::sessions::META_DIR), req.modpack.is_none());
         inst.save(&dir)?;
         registry.insert(&id, dir.clone())?;
         Ok(inst)
@@ -501,22 +503,19 @@ pub async fn start_server(
         "-Dstdout.encoding=UTF-8".into(),
         "-Dstderr.encoding=UTF-8".into(),
     ];
-    args.extend(state.loaders.launch_args(
-        inst.loader,
-        &inst.mc_version,
-        inst.loader_version.as_deref(),
-    ));
+    args.extend(crate::boost::jvm_flags(inst.ram_max_mb, java.major));
+    let handle = app.clone();
     state
         .servers
-        .start(
-            &app,
-            &id,
-            LaunchSpec {
+        .start_with(&app, &id, |log| async move {
+            // Hızlandırıcı: modlar (saf dünyada arka planda Fabric) burada hazırlanır.
+            args.extend(crate::boost::prepare(&handle, &inst, &log).await?);
+            Ok(LaunchSpec {
                 java: java.path,
                 args,
                 cwd: server_dir,
-            },
-        )
+            })
+        })
         .await?;
     // "Başlat ve katıl": sunucu hazır olunca Launcher açılır.
     if join == Some(true) {

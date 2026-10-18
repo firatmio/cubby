@@ -470,7 +470,8 @@ fn view(app: &AppHandle, id: &str) -> AppResult<PerfView> {
         pregen: load_pregen(&meta),
         overloaded,
         behind_ms,
-        supported: inst.loader != LoaderKind::Vanilla,
+        // Saf dünyada Hızlandırıcı açıkken arka plandaki Fabric'e kurulur.
+        supported: inst.loader != LoaderKind::Vanilla || crate::boost::load(&meta).enabled,
         chunky_installed: chunky_installed(&meta),
     })
 }
@@ -488,12 +489,6 @@ pub async fn pregen_start(app: AppHandle, id: String, radius: u32) -> AppResult<
         return Err(AppError::msg(tx!("Geçersiz yarıçap.", "Invalid radius.")));
     }
     let inst = instance::get(&app, &id)?;
-    if inst.loader == LoaderKind::Vanilla {
-        return Err(AppError::msg(tx!(
-            "Saf Minecraft dünyalarında önceden hazırlama yok; modlu ya da Paper dünya gerekir.",
-            "Pre-generation isn't available on vanilla worlds; it needs a modded or Paper world."
-        )));
-    }
     let meta = meta(&app, &id)?;
     let running = app.state::<AppState>().servers.snapshot(&id).status
         == crate::server::ServerStatus::Running;
@@ -503,14 +498,7 @@ pub async fn pregen_start(app: AppHandle, id: String, radius: u32) -> AppResult<
         ..Pregen::default()
     };
     if !chunky_installed(&meta) {
-        crate::mods_cmds::mods_install(
-            app.clone(),
-            app.state(),
-            app.state(),
-            id.clone(),
-            CHUNKY.into(),
-        )
-        .await?;
+        install_chunky(&app, &inst).await?;
         update_pregen(&app, &id, |p| *p = fresh(PregenState::Pending));
         return view(&app, &id);
     }
@@ -521,6 +509,30 @@ pub async fn pregen_start(app: AppHandle, id: String, radius: u32) -> AppResult<
         update_pregen(&app, &id, |p| *p = fresh(PregenState::Pending));
     }
     view(&app, &id)
+}
+
+/// Chunky dünyanın sunucusuna; saf dünyada Hızlandırıcı'nın arka plandaki Fabric'ine.
+async fn install_chunky(app: &AppHandle, inst: &instance::Instance) -> AppResult<()> {
+    let _guard = crate::mods_cmds::OPS.lock().await;
+    let Some(loader) = crate::boost::server_loader(app, inst).await? else {
+        return Err(AppError::msg(tx!(
+            "Saf dünyada önceden hazırlama için Hızlandırıcı açık olmalı.",
+            "On a vanilla world, pre-generation needs the Booster turned on."
+        )));
+    };
+    match crate::boost::install_server_mod(app, inst, loader, CHUNKY, false).await? {
+        crate::boost::Outcome::Installed | crate::boost::Outcome::Already => {}
+        _ => {
+            return Err(AppError::msg(tx!(
+                "Chunky bu dünyanın sürümü için yayınlanmamış.",
+                "Chunky isn't released for this world's version."
+            )));
+        }
+    }
+    if inst.loader.is_modded() {
+        crate::client_cmds::spawn_sync(app, &inst.id);
+    }
+    Ok(())
 }
 
 #[tauri::command]

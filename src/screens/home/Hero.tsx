@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
-import { AlertTriangle, Sparkles } from "lucide-react";
-import type { Instance } from "../../lib/api";
+import { AlertTriangle, Sparkles, Zap } from "lucide-react";
+import { api, type Instance } from "../../lib/api";
 import { kindCaption, relativeTime } from "../../lib/format";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore, useServer } from "../../store/appStore";
@@ -18,10 +18,22 @@ export function Hero({ instance }: { instance: Instance }) {
   const pregen = useAppStore((s) => s.pregen[instance.id]);
   const health = useAppStore((s) => s.health[instance.id]);
   const openPerformance = useAppStore((s) => s.openWorldPerformance);
+  const boost = useAppStore((s) => s.boost[instance.id]);
+  const setBoost = useAppStore((s) => s.setBoost);
   const t = useT().home;
   const live = status === "running";
   const preparing = live && (pregen?.state === "running" || pregen?.state === "paused");
   const overloaded = live && !!health?.overloaded && !(pregen && busyWithPregen(pregen));
+  // Hızlandırıcı açıldıktan sonraki ilk açılış çöktü: kapatıp yeniden dene.
+  const suspect = status === "crashed" && !!boost?.suspect;
+  const retryWithoutBoost = async () => {
+    try {
+      setBoost(instance.id, await api.boostSet(instance.id, false));
+      await api.startServer(instance.id);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const detail =
     status === "running"
@@ -49,6 +61,12 @@ export function Hero({ instance }: { instance: Instance }) {
           <button type="button" className={styles.chip} onClick={openPerformance}>
             <Sparkles size={13} aria-hidden />
             {(pregen.state === "paused" ? t.pregenPausedChip : t.pregenChip)(Math.floor(pregen.percent))}
+          </button>
+        )}
+        {suspect && (
+          <button type="button" className={[styles.chip, styles.warn].join(" ")} onClick={retryWithoutBoost}>
+            <Zap size={13} aria-hidden />
+            {t.boostSuspect}
           </button>
         )}
         {overloaded && (

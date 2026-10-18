@@ -458,6 +458,8 @@ pub struct InstalledView {
     known: bool,
     /// Daha yeni bir sürüm varsa numarası.
     update: Option<String>,
+    /// Hızlandırıcı kurdu: Performans'tan açılıp kapanır.
+    managed: bool,
 }
 
 async fn installed_view(
@@ -489,6 +491,7 @@ async fn installed_view(
                     dependency: false,
                     title: None,
                     need: None,
+                    managed: false,
                 });
             }
         }
@@ -504,7 +507,12 @@ async fn installed_view(
     for r in records.iter_mut() {
         if let Some(p) = projects.iter().find(|p| p.id == r.project_id) {
             r.title = Some(p.title.clone());
-            r.need = Some(client_need(&p.environment, p.client_side));
+            // Hızlandırıcı'nınkiler yalnız sunucuda kalır; Modrinth'in söylediği arkadaşlara göndermesin.
+            r.need = Some(if r.managed {
+                ClientNeed::None
+            } else {
+                client_need(&p.environment, p.client_side)
+            });
         }
     }
     let _ = mods::save_records(&c.meta, &records);
@@ -533,7 +541,12 @@ async fn installed_view(
                     |p| p.title.clone(),
                 ),
                 icon: project.and_then(|p| icons.remember(&p.id, p.icon_url.as_ref())),
-                client_need: project.map(|p| client_need(&p.environment, p.client_side)),
+                client_need: if rec.is_some_and(|r| r.managed) {
+                    Some(ClientNeed::None)
+                } else {
+                    project.map(|p| client_need(&p.environment, p.client_side))
+                },
+                managed: rec.is_some_and(|r| r.managed),
                 project_id: rec.map(|r| r.project_id.clone()),
                 version_number: rec
                     .and_then(|r| versions.iter().find(|v| v.id == r.version_id))
@@ -637,6 +650,11 @@ async fn update_one(
     )
     .await?;
     new.dependency = rec.dependency;
+    // Hızlandırıcı'nın modu güncellenince de onun kalır (yalnız sunucuda).
+    new.managed = rec.managed;
+    if rec.managed {
+        new.need = Some(ClientNeed::None);
+    }
     records.retain(|r| r.file != file && r.file != new.file);
     records.push(new);
     mods::save_records(&c.meta, &records)

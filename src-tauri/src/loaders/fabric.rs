@@ -142,8 +142,6 @@ impl Loader for FabricLoader {
                     ))
                 })?,
         };
-        let installer = self.latest_installer().await?;
-
         let java_major = self
             .mojang
             .install_server_jar(
@@ -152,11 +150,38 @@ impl Loader for FabricLoader {
                 on_stage,
             )
             .await?;
+        self.install_launcher(req.mc_version, &loader_version, server_dir, on_stage)
+            .await?;
 
+        Ok(Installed {
+            java_major,
+            loader_version: Some(loader_version),
+        })
+    }
+
+    fn launch_args(&self, _mc: &str, _loader: Option<&str>) -> Vec<String> {
+        vec!["-jar".into(), LAUNCHER_JAR.into(), "nogui".into()]
+    }
+
+    fn content_dir(&self) -> Option<&'static str> {
+        Some("mods")
+    }
+}
+
+impl FabricLoader {
+    /// Fabric başlatıcısını indirir ve `mods` klasörünü açar (vanilla jar'ı önbellekte olmalı).
+    async fn install_launcher(
+        &self,
+        mc_version: &str,
+        loader_version: &str,
+        server_dir: &Path,
+        on_stage: &mut (impl FnMut(InstallStage) + Send),
+    ) -> AppResult<()> {
+        let installer = self.latest_installer().await?;
         let url = format!(
             "{META}/versions/loader/{}/{}/{}/server/jar",
-            encode_segment(req.mc_version),
-            encode_segment(&loader_version),
+            encode_segment(mc_version),
+            encode_segment(loader_version),
             encode_segment(&installer)
         );
         let jar = server_dir.join(LAUNCHER_JAR);
@@ -171,19 +196,38 @@ impl Loader for FabricLoader {
         .await?;
         ensure_jar(&jar).await?;
         tokio::fs::create_dir_all(server_dir.join("mods")).await?;
-
-        Ok(Installed {
-            java_major,
-            loader_version: Some(loader_version),
-        })
+        Ok(())
     }
 
-    fn launch_args(&self, _mc: &str, _loader: Option<&str>) -> Vec<String> {
-        vec!["-jar".into(), LAUNCHER_JAR.into(), "nogui".into()]
-    }
-
-    fn content_dir(&self) -> Option<&'static str> {
-        Some("mods")
+    /// Saf bir dünyanın sunucu klasörüne arka planda Fabric kurar (Hızlandırıcı). Dünyanın kendi
+    /// `server.jar`'ı başlatıcının önbelleğine kopyalanır, yeniden indirilmez. Kurulan Fabric
+    /// sürümünü döner; bu Minecraft sürümü için Fabric yoksa `None`.
+    pub async fn install_over_vanilla(
+        &self,
+        mc_version: &str,
+        server_dir: &Path,
+        on_stage: &mut (impl FnMut(InstallStage) + Send),
+    ) -> AppResult<Option<String>> {
+        let Some(loader_version) = self.list_loader_versions(mc_version).await?.recommended else {
+            return Ok(None);
+        };
+        let cache = vanilla_cache_path(server_dir, mc_version);
+        let own = server_dir.join(super::mojang::SERVER_JAR);
+        if !cache.exists() {
+            if own.exists() {
+                if let Some(parent) = cache.parent() {
+                    tokio::fs::create_dir_all(parent).await?;
+                }
+                tokio::fs::copy(&own, &cache).await?;
+            } else {
+                self.mojang
+                    .install_server_jar(mc_version, &cache, on_stage)
+                    .await?;
+            }
+        }
+        self.install_launcher(mc_version, &loader_version, server_dir, on_stage)
+            .await?;
+        Ok(Some(loader_version))
     }
 }
 

@@ -22,6 +22,7 @@ import {
   type LoaderKind,
   type UpdateView,
   type Pregen,
+  type BoostView,
 } from "../lib/api";
 
 /** Konsolda tutulan en fazla satır. */
@@ -76,6 +77,9 @@ interface AppStore {
   setHealth: (id: string, overloaded: boolean, behindMs: number) => void;
   pregen: Record<string, Pregen>;
   setPregen: (id: string, pregen: Pregen) => void;
+  /** Hızlandırıcı durumu (Performans kartı, çöküş hapı). */
+  boost: Record<string, BoostView>;
+  setBoost: (id: string, boost: BoostView) => void;
   /** Dünya ayarları açılınca Performans bölümüne kaydırılsın (zorlanma hapından gelince). */
   worldFocus: "performance" | null;
   openWorldPerformance: () => void;
@@ -187,6 +191,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     health: {},
     setHealth: (id, overloaded, behindMs) => set((st) => ({ health: { ...st.health, [id]: { overloaded, behindMs } } })),
     pregen: {},
+    boost: {},
+    setBoost: (id, boost) => set((st) => ({ boost: { ...st.boost, [id]: boost } })),
     setPregen: (id, pregen) => set((st) => ({ pregen: { ...st.pregen, [id]: pregen } })),
     worldFocus: null,
     openWorldPerformance: () => set({ worldFocus: "performance", sheet: "world" }),

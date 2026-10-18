@@ -106,12 +106,33 @@ export interface Pregen {
   doneAt: number | null;
 }
 
+export type BoostRole = "logic" | "chunks" | "light" | "memory" | "startup";
+
+/** Hızlandırıcı: Java ayarları + yalnız sunucuda çalışan hızlandırma modları. */
+export interface BoostView {
+  enabled: boolean;
+  /** mods: modlu dünya · vanillaFabric: saf dünya arka planda Fabric · javaOnly: Paper */
+  mode: "mods" | "vanillaFabric" | "javaOnly";
+  /** Bu dünyada kullanılabilenler; `active`: son açılışta yüklendi */
+  mods: { title: string; role: BoostRole; active: boolean }[];
+  /** Bu sürüm/yükleyici için olmayanların adları */
+  unavailable: string[];
+  verified: boolean;
+  /** Açıldıktan sonraki ilk açılış çöktü */
+  suspect: boolean;
+  /** Açık dünyada ayar son açılıştan beri değişti */
+  pendingRestart: boolean;
+  /** C2ME'nin kullandığı iş parçacığı */
+  threads: number;
+  lastError: string | null;
+}
+
 export interface PerfView {
   pregen: Pregen;
   /** "Can't keep up!" uyarıları: sunucu zorlanıyor */
   overloaded: boolean;
   behindMs: number;
-  /** Önceden hazırlama bu dünyada yapılabilir mi (modlu ya da Paper) */
+  /** Önceden hazırlama bu dünyada yapılabilir mi (modlu, Paper ya da Hızlandırıcılı saf dünya) */
   supported: boolean;
   chunkyInstalled: boolean;
 }
@@ -249,6 +270,8 @@ export interface InstalledMod {
   known: boolean;
   /** Daha yeni sürüm numarası */
   update: string | null;
+  /** Hızlandırıcı kurdu: Performans'tan açılıp kapanır */
+  managed?: boolean;
   /** Etkin shader (yalnız shader'larda) */
   active?: boolean;
   /** Sunucunun girenlere zorunlu gönderdiği kaynak paketi */
@@ -595,6 +618,8 @@ export const api = {
   pregenPause: (id: string) => invoke<PerfView>("pregen_pause", { id }),
   pregenResume: (id: string) => invoke<PerfView>("pregen_resume", { id }),
   pregenCancel: (id: string) => invoke<PerfView>("pregen_cancel", { id }),
+  boostStatus: (id: string) => invoke<BoostView>("boost_status", { id }),
+  boostSet: (id: string, enabled: boolean) => invoke<BoostView>("boost_set", { id, enabled }),
   updateStatus: () => invoke<UpdateView>("update_status"),
   updateCheck: () => invoke<UpdateView>("update_check"),
   updateDownload: () => invoke<UpdateView>("update_download"),

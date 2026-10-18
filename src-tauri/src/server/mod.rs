@@ -111,6 +111,19 @@ struct State {
     exit_rx: Option<watch::Receiver<bool>>,
 }
 
+/// Açılış hazırlığında konsola sistem satırı yazmak için.
+pub struct StartLog {
+    app: AppHandle,
+    handle: Arc<ServerHandle>,
+}
+
+impl StartLog {
+    pub fn line(&self, line: impl Into<String>) {
+        self.handle
+            .push_log(&self.app, LogStream::System, line.into());
+    }
+}
+
 pub struct ServerHandle {
     id: String,
     state: Mutex<State>,
@@ -323,7 +336,13 @@ impl ServerManager {
         self.map().values().any(|h| h.status().is_active())
     }
 
-    pub async fn start(&self, app: &AppHandle, id: &str, spec: LaunchSpec) -> AppResult<()> {
+    /// Durum hemen "açılıyor" olur; `prepare` (ör. Hızlandırıcı modlarını indirmek) konsola satır
+    /// yazarak çalışır, sonra Java başlar. Arada "durdur" denirse Java hiç açılmaz.
+    pub async fn start_with<F, Fut>(&self, app: &AppHandle, id: &str, prepare: F) -> AppResult<()>
+    where
+        F: FnOnce(StartLog) -> Fut,
+        Fut: std::future::Future<Output = AppResult<LaunchSpec>>,
+    {
         let h = self.get_or_create(id);
         {
             let mut s = h.lock();
@@ -340,6 +359,22 @@ impl ServerManager {
             s.rejected.clear();
         }
         h.emit_status(app, ServerStatus::Starting);
+        let log = StartLog {
+            app: app.clone(),
+            handle: h.clone(),
+        };
+        let spec = match prepare(log).await {
+            Ok(spec) => spec,
+            Err(e) => {
+                h.push_log(app, LogStream::System, e.to_string());
+                h.set_status(app, ServerStatus::Stopped);
+                return Err(e);
+            }
+        };
+        if h.status() != ServerStatus::Starting {
+            h.set_status(app, ServerStatus::Stopped);
+            return Ok(());
+        }
         process::spawn(app, &h, spec).await
     }
 

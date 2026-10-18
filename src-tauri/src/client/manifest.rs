@@ -191,6 +191,7 @@ mod tests {
             dependency: false,
             title: None,
             need: None,
+            managed: false,
         };
         let pack = pack_client(
             &d,
@@ -209,5 +210,19 @@ mod tests {
         let mut with_pack = list.clone();
         with_pack.extend(pack);
         assert_ne!(rev(&with_pack), rev(&list));
+
+        // Hızlandırıcı'nın modu ("*" ortamlı olsa da) arkadaşa gitmez: kaydı yalnız sunucu der.
+        let sha = mods::scan(&d)
+            .into_iter()
+            .find(|(f, _)| f == "both.jar")
+            .unwrap()
+            .1;
+        let managed = ModRecord {
+            sha1: sha,
+            need: Some(ClientNeed::None),
+            managed: true,
+            ..rec("both.jar", "gvQqBUqZ")
+        };
+        assert!(build(&d, &[managed], LoaderKind::Fabric).is_empty());
     }
 }

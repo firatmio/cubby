@@ -1,6 +1,7 @@
-import { RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2, Zap } from "lucide-react";
 import type { ContentKind, InstalledMod } from "../../lib/api";
 import { useT } from "../../i18n";
+import { useAppStore } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
@@ -27,6 +28,7 @@ export function InstalledView({ kind, installed, plugin, busy, onUpdate, onUpdat
   const tt = useT();
   const t = tt.mods;
   const d = tt.discover;
+  const openPerformance = useAppStore((s) => s.openWorldPerformance);
   if (installed === null) {
     return (
       <div className={styles.rows}>
@@ -76,7 +78,8 @@ export function InstalledView({ kind, installed, plugin, busy, onUpdate, onUpdat
             <span className={styles.rowText}>
               <span className={styles.rowTitle}>
                 {m.title}
-                {m.dependency && <Badge>{t.dependency}</Badge>}
+                {m.managed && <Badge tone="accent">{tt.perf.boostTitle}</Badge>}
+                {m.dependency && !m.managed && <Badge>{t.dependency}</Badge>}
                 {!m.known && <Badge>{t.manual}</Badge>}
                 {m.active && <Badge tone="accent">{d.activeShader}</Badge>}
                 {m.forced && <Badge tone="warning">{d.forced}</Badge>}
@@ -104,14 +107,19 @@ export function InstalledView({ kind, installed, plugin, busy, onUpdate, onUpdat
               {t.update}
             </Button>
           )}
-          <IconButton
-            icon={Trash2}
-            size="sm"
-            variant="ghost"
-            label={t.removeToTrash}
-            disabled={busy !== null}
-            onClick={() => onRemove(m.file)}
-          />
+          {m.managed ? (
+            // Hızlandırıcı'nın modu tek tek kaldırılmaz; Performans'tan kapatılır.
+            <IconButton icon={Zap} size="sm" variant="ghost" label={d.managedHint} onClick={openPerformance} />
+          ) : (
+            <IconButton
+              icon={Trash2}
+              size="sm"
+              variant="ghost"
+              label={t.removeToTrash}
+              disabled={busy !== null}
+              onClick={() => onRemove(m.file)}
+            />
+          )}
         </div>
       ))}
     </div>

@@ -340,6 +340,7 @@ pub async fn install(
                 .file
                 .env
                 .and_then(|e| (e.client == Side::Unsupported).then_some(ClientNeed::None)),
+            managed: false,
         };
         let dest = match j.place {
             Place::Server => {
@@ -414,6 +415,7 @@ pub async fn install(
             dependency: false,
             title: None,
             need: None,
+            managed: false,
         });
     }
 
