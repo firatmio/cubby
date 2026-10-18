@@ -3,14 +3,14 @@
 import { normalizeCode } from "../lib/code.js";
 import { invitePage, messagePage } from "../lib/html.js";
 import { html, newNonce, originOf } from "../lib/http.js";
-import { pickLang, TEXT } from "../lib/i18n.js";
+import { langOf, TEXT } from "../lib/i18n.js";
 import { LOADER_LABELS } from "../lib/invite.js";
 import { statusKey, statusView, type StatusUpdate } from "../lib/meta.js";
 import { formatSize, latestRelease } from "../lib/release.js";
 import { LOOKUP_RULES, allowed, inviteKey, redis, type InviteRecord } from "../lib/store.js";
 
 export async function GET(req: Request): Promise<Response> {
-  const lang = pickLang(req.headers.get("accept-language"));
+  const { lang } = langOf(req);
   const t = TEXT[lang];
   const origin = originOf(req);
   const code = normalizeCode(new URL(req.url).searchParams.get("code"));

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ALPHABET, CODE_LEN, formatCode, hashOwner, newCode, newOwner, normalizeCode } from "./code.js";
 import { escapeHtml, invitePage, notFoundPage } from "./html.js";
-import { pickLang } from "./i18n.js";
+import { langOf, pickLang } from "./i18n.js";
 import { MAX_INVITE_LEN, parseInvite } from "./invite.js";
 import { COVER_MAX_BYTES, cleanHost, parseMeta, parseStatus, statusView } from "./meta.js";
 import { formatSize, latestFrom } from "./release.js";
@@ -173,6 +173,11 @@ describe("sayfa", () => {
     expect(pickLang("de-DE,tr;q=0.5")).toBe("tr");
     expect(pickLang("de-DE")).toBe("en");
     expect(pickLang(null)).toBe("en");
+    const req = (url: string, headers: Record<string, string> = {}) => new Request(url, { headers });
+    expect(langOf(req("https://x/?lang=en", { "accept-language": "tr" }))).toEqual({ lang: "en", chosen: "en" });
+    expect(langOf(req("https://x/", { cookie: "a=1; lang=en", "accept-language": "tr" }))).toEqual({ lang: "en", chosen: null });
+    expect(langOf(req("https://x/", { cookie: "lang=english", "accept-language": "tr" })).lang).toBe("tr");
+    expect(langOf(req("https://x/?lang=de", { "accept-language": "tr" })).lang).toBe("tr");
   });
 });
 

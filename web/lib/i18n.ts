@@ -93,3 +93,14 @@ export function pickLang(header: string | null): Lang {
   }
   return "en";
 }
+
+/** `?lang=` (seçilince çereze yazılır), sonra `lang` çerezi, sonra tarayıcının dili. */
+export function langOf(req: Request): { lang: Lang; chosen: Lang | null } {
+  const q = new URL(req.url).searchParams.get("lang");
+  if (q === "tr" || q === "en") return { lang: q, chosen: q };
+  const c = /(?:^|;\s*)lang=(tr|en)(?:;|$)/.exec(req.headers.get("cookie") ?? "");
+  return { lang: c ? (c[1] as Lang) : pickLang(req.headers.get("accept-language")), chosen: null };
+}
+
+/** Dil seçimini bir yıl hatırlayan çerez. */
+export const langCookie = (lang: Lang) => `lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
