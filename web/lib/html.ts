@@ -273,22 +273,3 @@ export function notFoundPage(lang: Lang, origin: string): string {
 </main>`,
   );
 }
-
-/** Kök sayfa (ana site gelene kadar). */
-export function homePage(lang: Lang, origin: string): string {
-  const t = TEXT[lang];
-  const e = escapeHtml;
-  return layout(
-    lang,
-    { title: t.homeTitle, desc: t.homeDesc, url: origin, image: `${origin}/icon.png` },
-    {},
-    `<main class="page single">
-<section class="hero">
-<p class="eyebrow">${e(t.windowsOnly)}</p>
-<h1>${e(t.homeHeading)}</h1>
-<p class="lede">${e(t.homeDesc)}</p>
-<div class="actions"><a class="btn primary" href="${DOWNLOAD_PATH}">${e(t.download)}</a></div>
-</section>
-</main>`,
-  );
-}
