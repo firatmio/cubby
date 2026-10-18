@@ -1,0 +1,52 @@
+/* Küçük yuvarlak soru işareti. */
+.button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  transition:
+    color 140ms,
+    border-color 140ms,
+    background 140ms;
+}
+
+.button:hover,
+.button:focus-visible {
+  border-color: var(--text-2);
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
+}
+
+/* Tooltip ile aynı görünüm; pencereye sabit. */
+.tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 300px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 1.5;
+  pointer-events: none;
+  animation: tip-in 140ms ease-out;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+}

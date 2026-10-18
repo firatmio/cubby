@@ -534,6 +534,358 @@ const en: Dict = {
     searchSetting: "Search settings",
     managedHint: "Changed from the Players panel",
   },
+  props: {
+    groups: {
+      game: "Game",
+      world: "World",
+      players: "Players and chat",
+      performance: "Performance",
+      network: "Network",
+      resourcePack: "Resource pack",
+      admin: "Admin and remote access",
+      other: "Other",
+    },
+    units: {
+      blocks: "blocks",
+      chunks: "chunks",
+      seconds: "s",
+      minutes: "min",
+      ms: "ms",
+      percent: "%",
+      bytes: "bytes",
+      packets: "packets/s",
+    },
+    invalidNumber: "Must be a whole number",
+    invalidRange: (min: number, max: number) => `Must be between ${nEn(min)} and ${nEn(max)}`,
+    noResults: "No settings match this search.",
+    otherHelp: "Cubby doesn't know this setting (it may come from a mod or a newer version); its value is edited as is.",
+    showSecret: "Show",
+    hideSecret: "Hide",
+    unsaved: "Unsaved change",
+    keys: {
+      "gamemode": {
+        label: "Game mode",
+        help: "The game mode players get.",
+      },
+      "difficulty": {
+        label: "Difficulty",
+        help: "How strong monsters are and how much hunger hurts. No monsters spawn on Peaceful.",
+      },
+      "hardcore": {
+        label: "Hardcore (one life)",
+        help: "A player who dies becomes a spectator and can't play again. Difficulty is locked to Hard.",
+      },
+      "pvp": {
+        label: "Players can hit each other",
+        help: "When off, players can't hurt each other.",
+      },
+      "force-gamemode": {
+        label: "Reset game mode on join",
+        help: "Players go back to the game mode above every time they join.",
+      },
+      "allow-flight": {
+        label: "Allow flight",
+        help: "Players who can fly in Survival (e.g. thanks to a mod) aren't kicked for cheating. Turn on if a mod adds flying.",
+      },
+      "max-players": {
+        label: "Max players",
+        help: "How many players can be online at the same time.",
+      },
+      "spawn-protection": {
+        label: "Spawn protection",
+        help: "Only operators can break or place blocks this many blocks around spawn. 0 turns it off.",
+      },
+      "player-idle-timeout": {
+        label: "Kick idle players",
+        help: "Players who don't move for this many minutes are kicked. 0 turns it off.",
+      },
+      "pause-when-empty-seconds": {
+        label: "Pause when empty",
+        help: "With nobody online, the world pauses after this many seconds so the computer can rest. 0 or less turns it off.",
+      },
+      "level-name": {
+        label: "World folder",
+        help: "The folder the world is saved in. Changing it creates a new, empty world; the old one stays in its folder.",
+      },
+      "level-seed": {
+        label: "Seed",
+        help: "The code that decides how the world is generated. Only matters when a new world is created.",
+      },
+      "level-type": {
+        label: "World type",
+        help: "The shape of the terrain. Only matters when a new world is created.",
+      },
+      "generate-structures": {
+        label: "Generate structures",
+        help: "Villages, temples, strongholds and so on. Only affects areas that haven't been generated yet.",
+      },
+      "generator-settings": {
+        label: "Generator settings",
+        help: "Advanced settings for flat or custom worlds (JSON). Leave it if you're not sure.",
+      },
+      "max-world-size": {
+        label: "World border",
+        help: "How far the world border is from the centre. Players can't go past it.",
+      },
+      "initial-enabled-packs": {
+        label: "Data packs enabled at start",
+        help: "Data packs turned on when a new world is created, separated by commas.",
+      },
+      "initial-disabled-packs": {
+        label: "Data packs disabled at start",
+        help: "Data packs turned off when a new world is created, separated by commas.",
+      },
+      "region-file-compression": {
+        label: "Save compression",
+        help: "How world files are compressed. Standard takes the least space; fast uses less CPU but more space.",
+      },
+      "motd": {
+        label: "Server list description",
+        help: "The text shown under the world's name in Minecraft's server list.",
+      },
+      "online-mode": {
+        label: "Only paid accounts",
+        help: "When on, only paid Minecraft accounts can join. Changed in the Players panel.",
+      },
+      "white-list": {
+        label: "Whitelist",
+        help: "When on, only names you've added can join. Changed in the Players panel.",
+      },
+      "enforce-whitelist": {
+        label: "Enforce whitelist",
+        help: "A player removed from the list is kicked right away. Changed in the Players panel.",
+      },
+      "enforce-secure-profile": {
+        label: "Require signed chat",
+        help: "When on, players whose chat isn't signed by Mojang can't join.",
+      },
+      "enable-status": {
+        label: "Show in server list",
+        help: "When off, the server looks offline in the list but can still be joined.",
+      },
+      "hide-online-players": {
+        label: "Hide online players",
+        help: "The server list doesn't show who's online.",
+      },
+      "chat-spam-threshold-seconds": {
+        label: "Chat spam limit",
+        help: "The time window used to limit players who send too many messages too quickly.",
+      },
+      "command-spam-threshold-seconds": {
+        label: "Command spam limit",
+        help: "The time window used to limit players who send too many commands too quickly.",
+      },
+      "log-ips": {
+        label: "Log player IPs",
+        help: "Players' IP addresses are written to the server log when they join.",
+      },
+      "enable-code-of-conduct": {
+        label: "Code of conduct",
+        help: "Shows players the server's code of conduct when they join; it's read from the codeofconduct files in the server folder.",
+      },
+      "bug-report-link": {
+        label: "Bug report link",
+        help: "An address where players can report problems; shown in the game's menu.",
+      },
+      "view-distance": {
+        label: "View distance",
+        help: "How much of the world is sent to players. Lower values ease the server and the connection.",
+      },
+      "simulation-distance": {
+        label: "Simulation distance",
+        help: "Things within this distance keep working: animals, crops, redstone. Lower values ease the server.",
+      },
+      "entity-broadcast-range-percentage": {
+        label: "Entity visibility range",
+        help: "How far away mobs and items are shown (percent). Lowering it eases the connection and CPU.",
+      },
+      "sync-chunk-writes": {
+        label: "Safe saving",
+        help: "The world is written to disk without delay: less risk of losing data in a power cut, but saving is a bit slower.",
+      },
+      "max-tick-time": {
+        label: "Freeze watchdog",
+        help: "If the server hangs on a single step for longer than this, it shuts itself down. -1 turns it off.",
+      },
+      "max-chained-neighbor-updates": {
+        label: "Chained block update limit",
+        help: "How many block updates can happen in a row at once. Stops huge redstone machines from freezing the server. Leave it if you're not sure.",
+      },
+      "network-compression-threshold": {
+        label: "Network compression threshold",
+        help: "Packets larger than this are compressed. -1 turns it off. Leave it if you're not sure.",
+      },
+      "rate-limit": {
+        label: "Packet rate limit",
+        help: "Players sending more packets per second than this are kicked. 0 turns it off.",
+      },
+      "server-port": {
+        label: "Port",
+        help: "The number the server listens on. Usually 25565; it must differ if you run two worlds at once.",
+      },
+      "server-ip": {
+        label: "Bind IP",
+        help: "The server only accepts connections on this address. Leave it empty.",
+      },
+      "accepts-transfers": {
+        label: "Accept transfers",
+        help: "Lets another server send players here.",
+      },
+      "prevent-proxy-connections": {
+        label: "Block proxy connections",
+        help: "Players whose IP differs from the one they gave Mojang (e.g. a VPN) can't join.",
+      },
+      "use-native-transport": {
+        label: "Native transport",
+        help: "Uses a faster network path on Linux; no effect on Windows.",
+      },
+      "resource-pack": {
+        label: "Resource pack URL",
+        help: "Download address of the resource pack offered to players on join. Cubby fills it in when you pick a pack in Discover.",
+      },
+      "resource-pack-sha1": {
+        label: "Pack SHA-1",
+        help: "A checksum used to make sure the pack downloaded correctly.",
+      },
+      "resource-pack-id": {
+        label: "Pack ID",
+        help: "The pack's unique ID (UUID).",
+      },
+      "resource-pack-prompt": {
+        label: "Pack prompt",
+        help: "The message shown when players are asked to accept the pack.",
+      },
+      "require-resource-pack": {
+        label: "Require resource pack",
+        help: "Players who decline the pack can't join.",
+      },
+      "op-permission-level": {
+        label: "Operator permission",
+        help: "What operators (op) can do. Full access includes stopping the server.",
+      },
+      "function-permission-level": {
+        label: "Function permission",
+        help: "The permission data pack functions run with.",
+      },
+      "broadcast-console-to-ops": {
+        label: "Show console commands to ops",
+        help: "Commands sent from the console appear in operators' chat.",
+      },
+      "broadcast-rcon-to-ops": {
+        label: "Show RCON commands to ops",
+        help: "Commands sent over RCON appear in operators' chat.",
+      },
+      "enable-rcon": {
+        label: "Remote console (RCON)",
+        help: "Lets other programs send commands with a password. Keep it off unless you need it.",
+      },
+      "rcon.port": {
+        label: "RCON port",
+        help: "The port the remote console listens on.",
+      },
+      "rcon.password": {
+        label: "RCON password",
+        help: "The password for the remote console. RCON won't work if it's empty.",
+      },
+      "enable-query": {
+        label: "Query",
+        help: "Lets server list websites ask for details such as the player count.",
+      },
+      "query.port": {
+        label: "Query port",
+        help: "The port Query listens on.",
+      },
+      "enable-jmx-monitoring": {
+        label: "JMX monitoring",
+        help: "Exposes server metrics to Java's monitoring tools. For developers.",
+      },
+      "management-server-enabled": {
+        label: "Management server",
+        help: "Minecraft's official interface for managing the server from another program. Advanced; keep it off unless you need it.",
+      },
+      "management-server-host": {
+        label: "Management host",
+        help: "The address the management server listens on.",
+      },
+      "management-server-port": {
+        label: "Management port",
+        help: "The management server's port. 0 picks a free one.",
+      },
+      "management-server-secret": {
+        label: "Management secret",
+        help: "The secret key programs use to connect to the management server.",
+      },
+      "management-server-allowed-origins": {
+        label: "Allowed origins",
+        help: "Addresses allowed to connect to the management server from a browser.",
+      },
+      "management-server-tls-enabled": {
+        label: "Encrypted connection (TLS)",
+        help: "Connections to the management server are encrypted.",
+      },
+      "management-server-tls-keystore": {
+        label: "TLS keystore",
+        help: "The certificate file for the encrypted connection.",
+      },
+      "management-server-tls-keystore-password": {
+        label: "Keystore password",
+        help: "The certificate file's password.",
+      },
+      "status-heartbeat-interval": {
+        label: "Status heartbeat",
+        help: "How often, in seconds, programs connected to the management server get a status update. 0 turns it off.",
+      },
+      "text-filtering-config": {
+        label: "Text filtering config",
+        help: "Settings for an external chat filtering service. Advanced.",
+      },
+      "text-filtering-version": {
+        label: "Text filtering version",
+        help: "Which version of the chat filtering service to use. Advanced.",
+      },
+    },
+    options: {
+      "gamemode": {
+        "survival": "Survival",
+        "creative": "Creative",
+        "adventure": "Adventure",
+        "spectator": "Spectator",
+      },
+      "difficulty": {
+        "peaceful": "Peaceful",
+        "easy": "Easy",
+        "normal": "Normal",
+        "hard": "Hard",
+      },
+      "level-type": {
+        "minecraft:normal": "Normal",
+        "minecraft:flat": "Flat",
+        "minecraft:large_biomes": "Large biomes",
+        "minecraft:amplified": "Amplified",
+      },
+      "region-file-compression": {
+        "deflate": "Standard",
+        "lz4": "Fast",
+        "none": "No compression",
+      },
+      "op-permission-level": {
+        "1": "1 · Build in spawn protection",
+        "2": "2 · Cheat commands",
+        "3": "3 · Manage players",
+        "4": "4 · Full access",
+      },
+      "function-permission-level": {
+        "1": "1 · Build in spawn protection",
+        "2": "2 · Cheat commands",
+        "3": "3 · Manage players",
+        "4": "4 · Full access",
+      },
+      "text-filtering-version": {
+        "0": "0",
+        "1": "1",
+      },
+    },
+  },
   instance: {
     consoleStopped: "The server is off. Logs will stream here when you press Start.",
     waiting: "Waiting…",

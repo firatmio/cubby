@@ -56,3 +56,23 @@
 .on .knob {
   background: var(--on-primary);
 }
+
+/* Etiketsiz anahtar (`Switch`): yalnız ray ve topuz. */
+.bare {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  cursor: pointer;
+}
+
+.bare:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bare:focus-visible {
+  outline: 2px solid var(--line-strong);
+  outline-offset: 2px;
+}

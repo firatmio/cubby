@@ -28,44 +28,120 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-3);
   border-radius: var(--radius-card);
   background: var(--surface);
 }
 
+.group + .group {
+  margin-top: var(--sp-3);
+}
+
+/* Grup başlığı: kaydırırken üstte kalır. */
+.groupTitle {
+  position: sticky;
+  top: calc(var(--sp-2) * -1);
+  z-index: 1;
+  margin: 0 calc(var(--sp-2) * -1);
+  padding: var(--sp-3) calc(var(--sp-2) + var(--sp-3)) var(--sp-2);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 230px);
   align-items: center;
-  gap: var(--sp-3);
-  padding: 2px var(--sp-2);
+  gap: var(--sp-4);
+  padding: 7px var(--sp-3);
   border-radius: var(--radius-sm);
+  transition: background 120ms;
 }
 
 .row:hover {
   background: var(--hover);
 }
 
+/* Değiştirilmiş (kaydedilmemiş) satır: solda ince vurgu. */
+.edited {
+  box-shadow: inset 2px 0 0 var(--warning);
+}
+
+.labelCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.labelLine {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .key {
   overflow: hidden;
-  color: var(--text-2);
+  color: var(--text-3);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
   user-select: text;
 }
 
+.control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.select {
+  width: 100%;
+}
+
+.number {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
 .value {
+  flex: 1;
+  min-width: 0;
   height: 30px;
   padding: 0 var(--sp-3);
   border: 1px solid transparent;
   border-radius: var(--radius-full);
   background: #232323;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
   outline: none;
   user-select: text;
+  transition:
+    border-color 140ms,
+    background 140ms;
+}
+
+.value:hover:not(:disabled) {
+  background: var(--surface-2);
 }
 
 .value:focus {
@@ -76,8 +152,34 @@
   color: var(--text-3);
 }
 
-.edited {
-  border-color: var(--warning);
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.invalid,
+.invalid:focus {
+  border-color: var(--danger);
+}
+
+/* Sabit genişlik: "chunk", "%", "paket/sn" fark etmeksizin kutular hizalı. */
+.unit {
+  flex: none;
+  width: 54px;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+
+.problem {
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.empty {
+  padding: var(--sp-5);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
 }
 
 .footer {
@@ -89,6 +191,11 @@
 
 .hint {
   color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.unsaved {
+  color: var(--warning);
   font-size: var(--fs-sm);
 }
 

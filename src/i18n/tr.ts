@@ -539,6 +539,358 @@ const tr = {
     searchSetting: "Ayar ara",
     managedHint: "Oyuncular panelinden değiştirilir",
   },
+  props: {
+    groups: {
+      game: "Oyun",
+      world: "Dünya",
+      players: "Oyuncular ve sohbet",
+      performance: "Performans",
+      network: "Ağ",
+      resourcePack: "Kaynak paketi",
+      admin: "Yönetim ve uzaktan erişim",
+      other: "Diğer",
+    },
+    units: {
+      blocks: "blok",
+      chunks: "chunk",
+      seconds: "sn",
+      minutes: "dk",
+      ms: "ms",
+      percent: "%",
+      bytes: "bayt",
+      packets: "paket/sn",
+    },
+    invalidNumber: "Bir tam sayı olmalı",
+    invalidRange: (min: number, max: number) => `${nTr(min)}–${nTr(max)} arası olmalı`,
+    noResults: "Bu aramayla eşleşen ayar yok.",
+    otherHelp: "Bu ayarı Cubby tanımıyor (bir moddan ya da yeni bir sürümden olabilir); değeri olduğu gibi düzenlenir.",
+    showSecret: "Göster",
+    hideSecret: "Gizle",
+    unsaved: "Kaydedilmemiş değişiklik",
+    keys: {
+      "gamemode": {
+        label: "Oyun modu",
+        help: "Oyunculara verilen oyun modu.",
+      },
+      "difficulty": {
+        label: "Zorluk",
+        help: "Canavarların ne kadar güçlü olduğu ve açlığın ne kadar can yaktığı. Barışçılda canavar doğmaz.",
+      },
+      "hardcore": {
+        label: "Zorlu mod (tek can)",
+        help: "Ölen oyuncu izleyici moduna geçer ve bir daha oynayamaz. Zorluk en yükseğe kilitlenir.",
+      },
+      "pvp": {
+        label: "Oyuncular birbirine vurabilsin",
+        help: "Kapalıyken oyuncular birbirine zarar veremez.",
+      },
+      "force-gamemode": {
+        label: "Girişte oyun modunu sıfırla",
+        help: "Oyuncu her girişte yukarıdaki oyun moduna döner; oyunda değiştirilen mod kalmaz.",
+      },
+      "allow-flight": {
+        label: "Uçmaya izin ver",
+        help: "Hayatta kalmada uçabilen oyuncular (ör. bir mod sayesinde) hile yapıyor sanılıp atılmaz. Uçuş ekleyen modlar varsa aç.",
+      },
+      "max-players": {
+        label: "En fazla oyuncu",
+        help: "Aynı anda oyunda olabilecek oyuncu sayısı.",
+      },
+      "spawn-protection": {
+        label: "Doğuş koruması",
+        help: "Doğuş noktasının çevresindeki bu kadar bloğu yalnız yöneticiler kırıp koyabilir. 0 kapatır.",
+      },
+      "player-idle-timeout": {
+        label: "Hareketsiz oyuncuyu at",
+        help: "Bu kadar dakika hiç hareket etmeyen oyuncu sunucudan atılır. 0 kapatır.",
+      },
+      "pause-when-empty-seconds": {
+        label: "Boşken duraklat",
+        help: "Kimse yokken bu kadar saniye sonra dünya durur, bilgisayar dinlenir. 0 ya da daha küçük bir değer kapatır.",
+      },
+      "level-name": {
+        label: "Dünya klasörü",
+        help: "Dünyanın kaydedildiği klasörün adı. Değiştirirsen yeni, boş bir dünya oluşur; eskisi kendi klasöründe kalır.",
+      },
+      "level-seed": {
+        label: "Tohum",
+        help: "Dünyanın nasıl oluşacağını belirleyen kod. Yalnız yeni bir dünya oluşurken etkilidir.",
+      },
+      "level-type": {
+        label: "Dünya tipi",
+        help: "Arazinin şekli. Yalnız yeni bir dünya oluşurken etkilidir.",
+      },
+      "generate-structures": {
+        label: "Yapılar oluşsun",
+        help: "Köy, tapınak, kale gibi yapılar. Yalnız henüz oluşmamış bölgeleri etkiler.",
+      },
+      "generator-settings": {
+        label: "Üretici ayarları",
+        help: "Düz ya da özel dünyalar için gelişmiş ayar (JSON). Bilmiyorsan dokunma.",
+      },
+      "max-world-size": {
+        label: "Dünya sınırı",
+        help: "Dünya sınırının merkezden uzaklığı. Oyuncular bunun ötesine geçemez.",
+      },
+      "initial-enabled-packs": {
+        label: "Başta açık veri paketleri",
+        help: "Yeni bir dünya oluşurken açılacak veri paketleri, virgülle ayrılır.",
+      },
+      "initial-disabled-packs": {
+        label: "Başta kapalı veri paketleri",
+        help: "Yeni bir dünya oluşurken kapalı başlayacak veri paketleri, virgülle ayrılır.",
+      },
+      "region-file-compression": {
+        label: "Kayıt sıkıştırması",
+        help: "Dünya dosyalarının nasıl sıkıştırılacağı. Standart en az yeri kaplar; hızlı olan daha az işlemci kullanır ama daha çok yer kaplar.",
+      },
+      "motd": {
+        label: "Sunucu listesindeki açıklama",
+        help: "Minecraft'ın sunucu listesinde dünyanın adının altında görünen yazı.",
+      },
+      "online-mode": {
+        label: "Yalnız satın alınmış hesaplar",
+        help: "Açıkken yalnız satın alınmış Minecraft hesapları girebilir. Oyuncular panelinden değiştirilir.",
+      },
+      "white-list": {
+        label: "Beyaz liste",
+        help: "Açıkken yalnız listeye eklediğin isimler girebilir. Oyuncular panelinden değiştirilir.",
+      },
+      "enforce-whitelist": {
+        label: "Beyaz listeyi hemen uygula",
+        help: "Listeden çıkarılan oyuncu oyundaysa hemen atılır. Oyuncular panelinden değiştirilir.",
+      },
+      "enforce-secure-profile": {
+        label: "İmzalı sohbet zorunlu",
+        help: "Açıkken sohbet mesajlarını Mojang'ın imzalamadığı oyuncular sunucuya giremez.",
+      },
+      "enable-status": {
+        label: "Sunucu listesinde görünsün",
+        help: "Kapalıyken sunucu listede çevrimdışı gibi görünür ama yine de girilebilir.",
+      },
+      "hide-online-players": {
+        label: "Oyuncu listesini gizle",
+        help: "Sunucu listesinde kimlerin oyunda olduğu görünmez.",
+      },
+      "chat-spam-threshold-seconds": {
+        label: "Sohbet spam sınırı",
+        help: "Kısa sürede çok fazla mesaj gönderen oyuncuyu sınırlamak için kullanılan süre.",
+      },
+      "command-spam-threshold-seconds": {
+        label: "Komut spam sınırı",
+        help: "Kısa sürede çok fazla komut gönderen oyuncuyu sınırlamak için kullanılan süre.",
+      },
+      "log-ips": {
+        label: "Oyuncu IP'lerini kaydet",
+        help: "Giren oyuncuların IP adresleri sunucu günlüğüne yazılır.",
+      },
+      "enable-code-of-conduct": {
+        label: "Davranış kuralları",
+        help: "Oyunculara girişte sunucunun davranış kurallarını gösterir; kurallar sunucu klasöründeki codeofconduct dosyalarından okunur.",
+      },
+      "bug-report-link": {
+        label: "Hata bildirme bağlantısı",
+        help: "Oyuncuların sorun bildirebileceği adres; oyunun menüsünde görünür.",
+      },
+      "view-distance": {
+        label: "Görüş mesafesi",
+        help: "Oyunculara gönderilen dünyanın genişliği. Düşük değer sunucuyu ve interneti rahatlatır.",
+      },
+      "simulation-distance": {
+        label: "Simülasyon mesafesi",
+        help: "Bu uzaklıktaki şeyler çalışmaya devam eder: hayvanlar, ekinler, redstone. Düşük değer sunucuyu rahatlatır.",
+      },
+      "entity-broadcast-range-percentage": {
+        label: "Canlıların görünme mesafesi",
+        help: "Canlıların ve eşyaların ne kadar uzaktan görüneceği (yüzde). Düşürmek interneti ve işlemciyi rahatlatır.",
+      },
+      "sync-chunk-writes": {
+        label: "Güvenli kayıt",
+        help: "Dünya diske beklenmeden yazılır: elektrik kesilirse veri kaybı riski azalır ama kayıt biraz yavaşlar.",
+      },
+      "max-tick-time": {
+        label: "Donma koruması",
+        help: "Sunucu tek bir adımda bu kadar milisaniyeden uzun takılırsa kendini kapatır. -1 kapatır.",
+      },
+      "max-chained-neighbor-updates": {
+        label: "Zincirleme blok güncelleme sınırı",
+        help: "Tek seferde art arda olabilecek blok güncellemesi sayısı. Dev redstone makinelerinin sunucuyu dondurmasını önler. Bilmiyorsan dokunma.",
+      },
+      "network-compression-threshold": {
+        label: "Ağ sıkıştırma eşiği",
+        help: "Bundan büyük paketler sıkıştırılarak gönderilir. -1 kapatır. Bilmiyorsan dokunma.",
+      },
+      "rate-limit": {
+        label: "Paket hız sınırı",
+        help: "Saniyede bundan fazla paket gönderen oyuncu atılır. 0 kapatır.",
+      },
+      "server-port": {
+        label: "Port",
+        help: "Sunucunun bağlantı beklediği kapı numarası. Genelde 25565; aynı anda iki dünya açacaksan farklı olmalı.",
+      },
+      "server-ip": {
+        label: "Bağlanılacak IP",
+        help: "Sunucu yalnız bu adresten bağlantı kabul eder. Boş bırak.",
+      },
+      "accepts-transfers": {
+        label: "Başka sunuculardan aktarım",
+        help: "Başka bir sunucunun oyuncuyu buraya göndermesine izin verir.",
+      },
+      "prevent-proxy-connections": {
+        label: "Vekil bağlantıları engelle",
+        help: "Oyunun bağlandığı IP, Mojang'a bildirdiğinden farklıysa (ör. VPN) giremez.",
+      },
+      "use-native-transport": {
+        label: "Hızlı ağ sürücüsü",
+        help: "Linux'ta daha hızlı bir ağ yolu kullanır; Windows'ta etkisi yok.",
+      },
+      "resource-pack": {
+        label: "Kaynak paketi adresi",
+        help: "Oyunculara girişte önerilecek kaynak paketinin indirme adresi. Keşfet'ten paket seçince Cubby kendisi doldurur.",
+      },
+      "resource-pack-sha1": {
+        label: "Paketin SHA-1'i",
+        help: "Paketin doğru indiğini kontrol etmek için kullanılan özet.",
+      },
+      "resource-pack-id": {
+        label: "Paket kimliği",
+        help: "Paketin benzersiz kimliği (UUID).",
+      },
+      "resource-pack-prompt": {
+        label: "Paket mesajı",
+        help: "Oyuncuya paketi kabul edip etmeyeceği sorulurken gösterilen mesaj.",
+      },
+      "require-resource-pack": {
+        label: "Paket zorunlu",
+        help: "Paketi reddeden oyuncu sunucuya giremez.",
+      },
+      "op-permission-level": {
+        label: "Yönetici yetkisi",
+        help: "Yöneticilerin (op) neler yapabileceği. Tam yetki sunucuyu kapatmayı da kapsar.",
+      },
+      "function-permission-level": {
+        label: "Fonksiyon yetkisi",
+        help: "Veri paketlerindeki fonksiyonların hangi yetkiyle çalışacağı.",
+      },
+      "broadcast-console-to-ops": {
+        label: "Konsol komutlarını yöneticilere göster",
+        help: "Konsoldan gönderilen komutlar oyundaki yöneticilerin sohbetinde görünür.",
+      },
+      "broadcast-rcon-to-ops": {
+        label: "Uzaktan komutları yöneticilere göster",
+        help: "RCON ile gönderilen komutlar oyundaki yöneticilerin sohbetinde görünür.",
+      },
+      "enable-rcon": {
+        label: "Uzaktan konsol (RCON)",
+        help: "Başka programların şifreyle komut göndermesine izin verir. Gerekmedikçe kapalı kalsın.",
+      },
+      "rcon.port": {
+        label: "RCON portu",
+        help: "Uzaktan konsolun dinlediği port.",
+      },
+      "rcon.password": {
+        label: "RCON şifresi",
+        help: "Uzaktan konsola bağlanmak için şifre. Boşsa RCON çalışmaz.",
+      },
+      "enable-query": {
+        label: "Sorgu (Query)",
+        help: "Sunucu listesi sitelerinin oyuncu sayısı gibi bilgileri sorgulamasına izin verir.",
+      },
+      "query.port": {
+        label: "Sorgu portu",
+        help: "Sorgunun dinlediği port.",
+      },
+      "enable-jmx-monitoring": {
+        label: "JMX izleme",
+        help: "Sunucunun ölçümlerini Java'nın izleme araçlarına açar. Geliştiriciler için.",
+      },
+      "management-server-enabled": {
+        label: "Yönetim arayüzü",
+        help: "Sunucuyu başka bir programdan yönetmek için Minecraft'ın resmi arayüzü. Gelişmiş; gerekmedikçe kapalı kalsın.",
+      },
+      "management-server-host": {
+        label: "Yönetim arayüzü adresi",
+        help: "Yönetim arayüzünün dinlediği adres.",
+      },
+      "management-server-port": {
+        label: "Yönetim arayüzü portu",
+        help: "Yönetim arayüzünün portu. 0 ise boş bir port seçilir.",
+      },
+      "management-server-secret": {
+        label: "Yönetim arayüzü anahtarı",
+        help: "Yönetim arayüzüne bağlanan programların kullandığı gizli anahtar.",
+      },
+      "management-server-allowed-origins": {
+        label: "İzin verilen kaynaklar",
+        help: "Yönetim arayüzüne tarayıcıdan bağlanabilecek adresler.",
+      },
+      "management-server-tls-enabled": {
+        label: "Şifreli bağlantı (TLS)",
+        help: "Yönetim arayüzü bağlantıları şifrelenir.",
+      },
+      "management-server-tls-keystore": {
+        label: "TLS anahtar deposu",
+        help: "Şifreli bağlantı için sertifika dosyası.",
+      },
+      "management-server-tls-keystore-password": {
+        label: "Anahtar deposu şifresi",
+        help: "Sertifika dosyasının şifresi.",
+      },
+      "status-heartbeat-interval": {
+        label: "Durum bildirimi aralığı",
+        help: "Yönetim arayüzüne bağlı programlara sunucunun durumunun kaç saniyede bir bildirileceği. 0 kapatır.",
+      },
+      "text-filtering-config": {
+        label: "Sohbet filtresi ayarı",
+        help: "Dış bir sohbet filtreleme hizmetinin ayarı. Gelişmiş.",
+      },
+      "text-filtering-version": {
+        label: "Sohbet filtresi sürümü",
+        help: "Sohbet filtreleme hizmetinin hangi sürümle konuşulacağı. Gelişmiş.",
+      },
+    },
+    options: {
+      "gamemode": {
+        "survival": "Hayatta kalma",
+        "creative": "Yaratıcı",
+        "adventure": "Macera",
+        "spectator": "İzleyici",
+      },
+      "difficulty": {
+        "peaceful": "Barışçıl",
+        "easy": "Kolay",
+        "normal": "Normal",
+        "hard": "Zor",
+      },
+      "level-type": {
+        "minecraft:normal": "Normal",
+        "minecraft:flat": "Düz",
+        "minecraft:large_biomes": "Büyük biyomlar",
+        "minecraft:amplified": "Yükseltilmiş",
+      },
+      "region-file-compression": {
+        "deflate": "Standart",
+        "lz4": "Hızlı",
+        "none": "Sıkıştırma yok",
+      },
+      "op-permission-level": {
+        "1": "1 · Korumalı alanda yapı",
+        "2": "2 · Hile komutları",
+        "3": "3 · Oyuncu yönetimi",
+        "4": "4 · Tam yetki",
+      },
+      "function-permission-level": {
+        "1": "1 · Korumalı alanda yapı",
+        "2": "2 · Hile komutları",
+        "3": "3 · Oyuncu yönetimi",
+        "4": "4 · Tam yetki",
+      },
+      "text-filtering-version": {
+        "0": "0",
+        "1": "1",
+      },
+    },
+  },
   instance: {
     consoleStopped: "Sunucu kapalı. Başlat'a bastığında kayıtlar burada akacak.",
     waiting: "Bekleniyor…",

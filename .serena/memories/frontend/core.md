@@ -17,10 +17,11 @@ Arka planlar `shell/Backdrops` şeridinde (Oyna: dünya kapağı `Background`, K
 - `lib/api.ts` — invoke + tipler; `mediaUrl(path, v)` → `convertFileSrc("", "media") + path` (`cover/<id>`, `thumb/<id>`, `shot/<dosya>`).
 - `lib/mock.ts` — YALNIZ dev: Tauri yokken sahte veri (`bun run dev` + tarayıcı). Her kullanım `import.meta.env.DEV && IS_MOCK` + dinamik import; prod paket kontrolü: dist'te "mockInvoke" aranır ("stop-color" React'ten gelir, yanlış alarm). Mock dosyasını düzenlemek HMR ile store'u tutarsızlaştırabilir → sayfayı yenile.
 - `lib/motion.ts` — `spring`, `rise`, `stagger`, `screen`, `press` ön ayarları (`motion/react`).
-- `ui/` — Button (hap, motion), IconButton (daire + ipucu), Sheet (sağdan, portal), Dialog (portal), PillTabs (kayan beyaz arka plan; konum offsetLeft/offsetWidth ile ölçülür, `layoutId` KULLANMA: useId yeniden açılışta aynı çıkar, hap eski ekran dışı yerinden gelir), SelectList, Toggle (topuz `animate x`, `layout` değil), Slider, Input/Field, Progress, Badge/StatusDot, Card/EmptyState.
+- `ui/` — Button (hap, motion), IconButton (daire + ipucu), Sheet (sağdan, portal), Dialog (portal), PillTabs (kayan beyaz arka plan; konum offsetLeft/offsetWidth ile ölçülür, `layoutId` KULLANMA: useId yeniden açılışta aynı çıkar, hap eski ekran dışı yerinden gelir), SelectList, Toggle (topuz `animate x`, `layout` değil), Switch (etiketsiz anahtar, Toggle.module.css `.bare`), Select (hap görünümlü yerel select), HelpTip ("?" + pencereye sabit portal balon; kaydırılan alanlarda kesilmez), Slider, Input/Field, Progress, Badge/StatusDot, Card/EmptyState.
 
 ## Stil kuralları
 - Token'lar `styles/tokens.css`; griler nötr, ana buton beyaz, renk yalnız vurgu/durum. Butonlar tam hap/daire, kartlar 24px, kutucuklar 28px.
 - Ana eylem her ekranda sağ altta; kenar boşluğu 48px (`--edge`).
 - Kullanıcıya görünen dil: "dünya", "arkadaşın" ("kardeşin" DEĞİL — kullanıcı değiştirdi), "Modlu/Eklentili/Saf Minecraft"; teknik adlar ikinci planda (`LOADER_LABELS`, `describeInstance`).
 - Tarayıcı panelinde (Claude Browser) koordinatlı tıklamalar ölçek yüzünden kayabiliyor; testte `javascript_tool` ile `button[aria-label=...]`.click() daha güvenilir.
+- Gelişmiş › Tüm ayarlar: `screens/advanced/propertySchema.ts` (grup, tür, sınır); adlar/açıklamalar i18n `props.keys`, seçenek adları `props.options`. Şemada olmayan ayar "Diğer"de düz metin.
