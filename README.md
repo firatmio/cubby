@@ -73,3 +73,7 @@ By default, servers are kept in the app data folder:
 A different folder can be chosen in the setup wizard; which server lives where is recorded in `instances.json`.
 
 Asset licenses: [ASSETS.md](ASSETS.md).
+
+## License
+
+Cubby is **not open source**. The code is public for viewing only; copying, modifying, redistributing or reusing it in other projects is not allowed without written permission. Using the official releases for yourself is fine. Details: [LICENSE](LICENSE).

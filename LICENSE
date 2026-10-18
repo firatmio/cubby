@@ -1,0 +1,49 @@
+Cubby — Proprietary Source-Available License
+
+Copyright (c) 2026 Fırat Tuna Arslan. All rights reserved.
+
+The source code in this repository is made public for viewing and reference
+only. It is NOT open source, and no license to use it is granted except as
+written below.
+
+1. Permitted
+   You may view the source code and, to the extent required by the GitHub
+   Terms of Service, fork it on GitHub. You may download and use the official
+   Cubby releases published by the copyright holder for your own personal,
+   non-commercial use.
+
+2. Not permitted without prior written permission from the copyright holder
+   a. copying, reproducing or reusing the source code, in whole or in part,
+      in any other project or product;
+   b. modifying the source code or creating derivative works based on it;
+   c. distributing, publishing, sublicensing, selling or otherwise making
+      the source code, modified versions or builds of it available to others;
+   d. using the source code, the "Cubby" name or its logo for any commercial
+      purpose, or to offer a similar product or service;
+   e. removing or altering this notice or any copyright notices.
+
+3. Contributions
+   Issues and suggestions are welcome. By submitting a pull request or other
+   contribution, you agree that the copyright holder may use, modify and
+   distribute it as part of Cubby under any license, without compensation.
+
+4. Third-party components
+   Third-party libraries and assets keep their own licenses (see ASSETS.md and
+   the respective package manifests). This license covers only the original
+   work of the copyright holder.
+
+5. Termination
+   Any use that breaks these terms ends your permission to view or use the
+   project and its releases.
+
+6. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+Minecraft is a trademark of Mojang AB. Cubby is not affiliated with or
+endorsed by Mojang or Microsoft.
+
+For permission requests: firattunaarslan@gmail.com

@@ -69,3 +69,7 @@ Varsayılan olarak sunucular uygulama veri dizininde tutulur:
 Sihirbazda başka bir klasör seçilebilir; hangi sunucunun nerede olduğu `instances.json` kaydında durur.
 
 Asset lisansları: [ASSETS.md](ASSETS.md).
+
+## Lisans
+
+Cubby **açık kaynak değildir**. Kod yalnız incelenmek için herkese açık; yazılı izin olmadan kopyalanamaz, değiştirilemez, dağıtılamaz ve başka projelerde kullanılamaz. Resmi sürümleri kendin için kullanmak serbest. Ayrıntılar: [LICENSE](LICENSE).
