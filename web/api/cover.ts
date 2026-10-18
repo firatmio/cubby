@@ -1,7 +1,8 @@
 /**
  * GET /api/cover?code=…&v=… : davetin kapağı (JPEG). Link önizlemesi ve davet sayfası kullanır.
- * `v` kapağın sürümü: değişince adres değişir, bu yüzden uzun süre önbelleklenebilir. Kod tahmini
- * için kullanılmasın diye davet sayfasıyla aynı sınır.
+ * `v` kapağın sürümü: değişince adres değişir, bu yüzden tarayıcıda uzun süre önbelleklenebilir. Ortak
+ * önbelleğe (Vercel'in kenarı) girmez: davet silinince ya da kod yenilenince kapak da hemen gider. Kod
+ * tahmini için kullanılmasın diye davet sayfasıyla aynı sınır.
  */
 
 import { coverKey } from "../lib/meta.js";
@@ -18,7 +19,7 @@ export async function GET(req: Request): Promise<Response> {
   return new Response(Buffer.from(b64, "base64"), {
     headers: {
       "content-type": "image/jpeg",
-      "cache-control": versioned ? "public, max-age=31536000, immutable" : "public, max-age=300",
+      "cache-control": versioned ? "private, max-age=31536000, immutable" : "private, max-age=300",
       "x-content-type-options": "nosniff",
     },
   });

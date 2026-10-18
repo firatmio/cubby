@@ -380,7 +380,56 @@ mod tests {
             ..s.clone()
         };
         assert!(!refresh(&http, &wrong, &long).await.unwrap());
+
+        // Davet sayfası 2.0: ad, mod sayısı, kapak ve canlı durum sayfaya yansır.
+        let src =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/public/site/kapak.webp");
+        let cover = crate::covers::share_jpeg(&src).unwrap();
+        publish_meta(&http, &s, Some("CanliTest"), 3, Some(Some((&cover, 7))))
+            .await
+            .unwrap();
+        assert!(
+            publish_meta(&http, &wrong, Some("x"), 0, None)
+                .await
+                .is_err()
+        );
+        publish_status(&http, &s, true, 2, 10).await.unwrap();
+        let page = |http: reqwest::Client, code: String| async move {
+            http.get(format!("{}/join/{code}", web()))
+                .header("accept-language", "tr")
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap()
+        };
+        let html = page(http.clone(), code.clone()).await;
+        assert!(html.contains("CanliTest seni çağırıyor"), "{html}");
+        assert!(html.contains("2 oyuncu oyunda"));
+        assert!(html.contains("Bu dünyada 3 mod var"));
+        assert!(html.contains(&format!("/api/cover?code={code}&amp;v=7")));
+        let img = http
+            .get(format!("{}/api/cover?code={code}&v=7", web()))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(img.headers()["content-type"], "image/jpeg");
+        assert_eq!(img.bytes().await.unwrap().as_ref(), cover.as_slice());
+        publish_status(&http, &s, false, 0, 10).await.unwrap();
+        assert!(
+            page(http.clone(), code.clone())
+                .await
+                .contains("Şu an kapalı")
+        );
+
         delete(&http, &s).await.unwrap();
+        let gone = http
+            .get(format!("{}/api/cover?code={code}&v=7", web()))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(gone.status(), 404);
         assert!(resolve(&http, &code).await.is_err());
     }
 }
