@@ -5,6 +5,7 @@ export const REPO = "firatmio/cubby";
 export interface GhAsset {
   name: string;
   browser_download_url: string;
+  size?: number;
 }
 
 export interface GhRelease {

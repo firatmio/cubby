@@ -16,6 +16,12 @@ export interface InviteRecord {
   mc: string;
   loaderVersion: string | null;
   createdAt: number;
+  /** Davet edenin oyundaki adı (uygulama `meta` ile gönderir). */
+  host?: string | null;
+  /** Kapak sürümü; kapak `cover:<code>`'da. */
+  coverVersion?: number | null;
+  /** Oyuncuda gereken mod sayısı. */
+  mods?: number;
 }
 
 let client: Redis | null = null;

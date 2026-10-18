@@ -10,3 +10,8 @@
   white-space: nowrap;
   user-select: text;
 }
+
+/* Kartın içinde kutu görünsün: kartla aynı zemin olmasın. */
+.nameInput {
+  background: var(--surface-2);
+}

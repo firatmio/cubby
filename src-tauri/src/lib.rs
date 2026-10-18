@@ -18,6 +18,7 @@ mod game_cmds;
 mod hash;
 mod instance;
 mod invite;
+mod invite_live;
 mod java;
 mod join;
 mod join_cmds;
@@ -217,6 +218,7 @@ pub fn run() {
                 app.manage(perf::Perf::default());
                 perf::install(app.handle());
                 boost::install(app.handle());
+                invite_live::install(app.handle());
                 join_cmds::install_refresh(app.handle());
                 app.manage(net);
                 sessions::install(app.handle());

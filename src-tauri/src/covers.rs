@@ -159,6 +159,30 @@ pub fn render_cover(src: &Path, meta_dir: &Path) -> AppResult<String> {
     Ok(accent_color(&thumb))
 }
 
+/// Link önizlemesi ve davet sayfası için kapak: 1200×630'a kırpılmış JPEG (sohbet uygulamalarının
+/// beklediği oran). Davet sunucusunun sınırı (~350 KB) aşılırsa kalite düşürülür.
+pub fn share_jpeg(src: &Path) -> AppResult<Vec<u8>> {
+    let img = image::open(src)
+        .map_err(|e| AppError::msg(tx!("Resim açılamadı: {e}", "Couldn't open the image: {e}")))?;
+    let rgb = DynamicImage::ImageRgb8(
+        img.resize_to_fill(1200, 630, FilterType::Triangle)
+            .to_rgb8(),
+    );
+    let mut out = Vec::new();
+    for quality in [82u8, 70, 58] {
+        out.clear();
+        JpegEncoder::new_with_quality(&mut out, quality)
+            .encode_image(&rgb)
+            .map_err(|e| AppError::msg(e.to_string()))?;
+        if out.len() <= SHARE_MAX {
+            break;
+        }
+    }
+    Ok(out)
+}
+
+const SHARE_MAX: usize = 340 * 1024;
+
 /// Uzak bir görselin (Modrinth galeri resmi) küçük önizlemesi: `max` pikseli aşmayacak JPEG.
 pub fn render_preview(bytes: &[u8], dest: &Path, max: u32) -> AppResult<()> {
     let img = image::load_from_memory(bytes)
@@ -244,7 +268,7 @@ async fn apply(
             None
         }
     };
-    instance::modify(&dir, |inst| {
+    let inst = instance::modify(&dir, |inst| {
         let version = inst.cover.as_ref().map_or(0, |c| c.version) + 1;
         inst.cover = color.map(|color| Cover {
             kind,
@@ -252,7 +276,10 @@ async fn apply(
             version,
         });
         Ok(())
-    })
+    })?;
+    // Davet sayfasındaki kapak da değişsin.
+    crate::invite_live::spawn_meta(app, id);
+    Ok(inst)
 }
 
 pub async fn set_cover(app: &AppHandle, id: &str, source: CoverSource) -> AppResult<Instance> {
@@ -384,6 +411,14 @@ mod tests {
         let g = u8::from_str_radix(&color[3..5], 16).unwrap();
         let r = u8::from_str_radix(&color[1..3], 16).unwrap();
         assert!(g > r, "yeşil baskın olmalı: {color}");
+
+        // Davet sayfası için 1200×630, sınırın altında.
+        let share = share_jpeg(&meta.join(COVER_FILE)).unwrap();
+        assert!(share.len() <= SHARE_MAX);
+        assert_eq!(
+            image::load_from_memory(&share).unwrap().dimensions(),
+            (1200, 630)
+        );
 
         let server = dir.join("server");
         write_server_icon(&meta.join(COVER_FILE), &server).unwrap();

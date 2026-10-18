@@ -4,17 +4,12 @@
  * JSON'u, değilse 204 döner. CDN'de 5 dk önbelleklenir (GitHub hız sınırına takılmasın).
  */
 
+import { github } from "../lib/release.js";
 import { REPO, compareVersions, installerAssets, pickRelease, updateBody, type Channel, type GhRelease } from "../lib/update.js";
 
 const CACHE = "public, s-maxage=300, stale-while-revalidate=600";
 
 const noUpdate = () => new Response(null, { status: 204, headers: { "cache-control": CACHE } });
-
-function github(url: string): Promise<Response> {
-  const headers: Record<string, string> = { "user-agent": "cubby-update", accept: "application/vnd.github+json" };
-  if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  return fetch(url, { headers });
-}
 
 export async function GET(req: Request): Promise<Response> {
   const q = new URL(req.url).searchParams;

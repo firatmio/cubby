@@ -21,7 +21,8 @@ export async function readJson(req: Request, max = 4096): Promise<Record<string,
   }
 }
 
-export function html(body: string, status = 200): Response {
+/** `nonce` verilirse yalnız o nonce'lu satır içi betik çalışır (davet sayfasının kopyala/aç betiği). */
+export function html(body: string, status = 200, nonce?: string): Response {
   return new Response(body, {
     status,
     headers: {
@@ -31,9 +32,14 @@ export function html(body: string, status = 200): Response {
       vary: "accept-language",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
-      "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+      "content-security-policy": `default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; ${
+        nonce ? `script-src 'nonce-${nonce}'; ` : ""
+      }base-uri 'none'; form-action 'none'`,
     },
   });
 }
 
 export const originOf = (req: Request) => new URL(req.url).origin;
+
+/** Betik için tek kullanımlık nonce. */
+export const newNonce = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));

@@ -939,6 +939,9 @@ const tr = {
     clientSyncText:
       "Modlu dünyalarda oyuncuda gereken ve önerilen modlar, mod altyapısıyla (Fabric, NeoForge, Forge, Quilt) birlikte senin Minecraft'ına da kurulur. Resmi Launcher'da her dünyanın kendi profili olur, böylece modlar karışmaz.",
     mcFolder: "Minecraft klasörü",
+    playerName: "Oyundaki adın",
+    playerNameText: "Davet linkini açan arkadaşın \"… seni çağırıyor\" diye görür. Boş bırakırsan Minecraft Launcher'daki adın kullanılır.",
+    playerNamePlaceholder: (detected: string | null) => detected ?? "Örn. Steve",
     mcFolderText: "Ekran görüntüleri buradan okunur. TLauncher başka bir klasör kullanıyorsa değiştir.",
     mcFolderPick: "Minecraft oyun klasörü (.minecraft)",
     notFound: "Bulunamadı",

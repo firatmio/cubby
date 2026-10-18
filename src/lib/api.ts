@@ -77,6 +77,8 @@ export interface AppSettings {
   autoUpdate: boolean;
   /** Deneme sürümleri de gelsin */
   betaUpdates: boolean;
+  /** Oyundaki adın (davet sayfasında "… seni çağırıyor"); null = Launcher'dan */
+  playerName: string | null;
 }
 
 /** Güncellemenin durumu (Rust `updates::Status`). */
@@ -387,6 +389,8 @@ export interface SettingsView {
   /** Kullanılan Minecraft klasörü (ayar ya da varsayılan) */
   minecraftDir: string | null;
   screenshotsFound: boolean;
+  /** Launcher'dan bulunan oyuncu adı */
+  detectedPlayerName: string | null;
 }
 
 export interface PlayStats {

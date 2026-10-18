@@ -21,6 +21,9 @@ pub struct ShortInvite {
     pub code: String,
     pub owner: String,
     pub token: String,
+    /// Davet sunucusuna en son yüklenen kapağın sürümü (değişmedikçe yeniden yüklenmez).
+    #[serde(default)]
+    pub cover_sent: Option<u64>,
 }
 
 fn host_of(url: &str) -> Option<String> {
@@ -148,7 +151,7 @@ pub async fn create(http: &reqwest::Client, long: &str) -> AppResult<(String, St
         owner: String,
     }
     let c: Created = send(
-        http.post(format!("{JOIN_WEB}/api/invites"))
+        http.post(format!("{}/api/invites", web()))
             .json(&json!({ "invite": long })),
     )
     .await?
@@ -163,7 +166,7 @@ pub async fn create(http: &reqwest::Client, long: &str) -> AppResult<(String, St
 /// Tazeleme sonucu: `false` → kod sunucuda yok (süresi dolmuş), yenisi alınmalı.
 pub async fn refresh(http: &reqwest::Client, s: &ShortInvite, long: &str) -> AppResult<bool> {
     let resp = http
-        .put(format!("{JOIN_WEB}/api/invites/{}", s.code))
+        .put(format!("{}/api/invites/{}", web(), s.code))
         .json(&json!({ "owner": s.owner, "invite": long }))
         .timeout(TIMEOUT)
         .send()
@@ -179,8 +182,68 @@ pub async fn refresh(http: &reqwest::Client, s: &ShortInvite, long: &str) -> App
 
 pub async fn delete(http: &reqwest::Client, s: &ShortInvite) -> AppResult<()> {
     send(
-        http.delete(format!("{JOIN_WEB}/api/invites/{}", s.code))
+        http.delete(format!("{}/api/invites/{}", web(), s.code))
             .json(&json!({ "owner": s.owner })),
+    )
+    .await?;
+    Ok(())
+}
+
+/// Davet sunucusunun adresi; testlerde `CUBBY_JOIN_WEB` ile (ör. önizleme dağıtımı) değiştirilebilir.
+fn web() -> String {
+    if cfg!(test)
+        && let Ok(v) = std::env::var("CUBBY_JOIN_WEB")
+    {
+        return v;
+    }
+    JOIN_WEB.to_string()
+}
+
+/// Davet sayfasının bilgileri: davet edenin adı, oyuncuda gereken mod sayısı ve (varsa) kapak.
+/// `cover`: `Some(None)` kapağı kaldırır, `None` dokunmaz.
+pub async fn publish_meta(
+    http: &reqwest::Client,
+    s: &ShortInvite,
+    host: Option<&str>,
+    mods: usize,
+    cover: Option<Option<(&[u8], u64)>>,
+) -> AppResult<()> {
+    use base64::Engine;
+    let mut body = json!({ "owner": s.owner, "host": host, "mods": mods });
+    match cover {
+        Some(Some((jpeg, version))) => {
+            body["cover"] = base64::engine::general_purpose::STANDARD
+                .encode(jpeg)
+                .into();
+            body["coverVersion"] = version.into();
+        }
+        Some(None) => body["cover"] = serde_json::Value::Null,
+        None => {}
+    }
+    send(
+        http.put(format!("{}/api/invites/{}/meta", web(), s.code))
+            .json(&body),
+    )
+    .await?;
+    Ok(())
+}
+
+/// Dünyanın canlı durumu (davet sayfasında "Açık · 2 oyuncu oyunda").
+pub async fn publish_status(
+    http: &reqwest::Client,
+    s: &ShortInvite,
+    running: bool,
+    players: usize,
+    max_players: usize,
+) -> AppResult<()> {
+    send(
+        http.put(format!("{}/api/invites/{}/status", web(), s.code))
+            .json(&json!({
+                "owner": s.owner,
+                "running": running,
+                "players": players,
+                "maxPlayers": max_players,
+            })),
     )
     .await?;
     Ok(())
@@ -192,7 +255,7 @@ pub async fn resolve(http: &reqwest::Client, code: &str) -> AppResult<String> {
     struct Found {
         invite: String,
     }
-    let f: Found = send(http.get(format!("{JOIN_WEB}/api/invites/{code}")))
+    let f: Found = send(http.get(format!("{}/api/invites/{code}", web())))
         .await?
         .json()
         .await
@@ -203,6 +266,13 @@ pub async fn resolve(http: &reqwest::Client, code: &str) -> AppResult<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn old_records_have_no_cover_sent() {
+        let s: ShortInvite =
+            serde_json::from_str(r#"{"code":"K7M2QX","owner":"o","token":"t"}"#).unwrap();
+        assert_eq!(s.cover_sent, None);
+    }
 
     #[test]
     fn normalizes_codes_and_links() {
@@ -302,6 +372,7 @@ mod tests {
             code: code.clone(),
             owner,
             token: String::new(),
+            cover_sent: None,
         };
         assert!(refresh(&http, &s, &long).await.unwrap());
         let wrong = ShortInvite {

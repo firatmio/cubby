@@ -1,11 +1,40 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["fra1"],
+  "regions": [
+    "fra1"
+  ],
   "rewrites": [
-    { "source": "/api/invites/:code", "destination": "/api/invite?code=:code" },
-    { "source": "/join/:code", "destination": "/api/join?code=:code" },
-    { "source": "/join", "destination": "/api/join" },
-    { "source": "/", "destination": "/api/page" },
-    { "source": "/((?!api/).*)", "destination": "/api/page?notfound=1" }
+    {
+      "source": "/api/invites/:code/meta",
+      "destination": "/api/invite-meta?code=:code"
+    },
+    {
+      "source": "/api/invites/:code/status",
+      "destination": "/api/invite-status?code=:code"
+    },
+    {
+      "source": "/api/invites/:code",
+      "destination": "/api/invite?code=:code"
+    },
+    {
+      "source": "/join/:code",
+      "destination": "/api/join?code=:code"
+    },
+    {
+      "source": "/download",
+      "destination": "/api/download"
+    },
+    {
+      "source": "/join",
+      "destination": "/api/join"
+    },
+    {
+      "source": "/",
+      "destination": "/api/page"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/api/page?notfound=1"
+    }
   ]
 }

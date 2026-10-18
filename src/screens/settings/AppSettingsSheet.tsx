@@ -6,6 +6,7 @@ import { api, errorMessage, pickFolder, type AppSettings, type SettingsView } fr
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
+import { Input } from "../../ui/Input";
 import { PillTabs } from "../../ui/PillTabs";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
@@ -15,6 +16,32 @@ import styles from "../instance/sections.module.css";
 import own from "./AppSettingsSheet.module.css";
 
 type LangChoice = "auto" | "tr" | "en";
+
+/** Davet sayfasındaki "… seni çağırıyor" adı; yazarken değil, çıkınca (ya da Enter'da) kaydedilir. */
+function PlayerNameCard({ view, save }: { view: SettingsView; save: (s: AppSettings) => Promise<void> }) {
+  const t = useT().settings;
+  const [value, setValue] = useState(view.settings.playerName ?? "");
+  useEffect(() => setValue(view.settings.playerName ?? ""), [view.settings.playerName]);
+  const commit = () => {
+    const name = value.trim() || null;
+    if (name !== view.settings.playerName) void save({ ...view.settings, playerName: name });
+  };
+  return (
+    <Card title={t.playerName} description={t.playerNameText}>
+      <Input
+        className={own.nameInput}
+        value={value}
+        maxLength={24}
+        spellCheck={false}
+        placeholder={t.playerNamePlaceholder(view.detectedPlayerName)}
+        aria-label={t.playerName}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+      />
+    </Card>
+  );
+}
 
 /** Uygulama geneli: dil, hesap, Minecraft klasörü ve ekran görüntülerinin kapak olarak kullanılması. */
 export function AppSettingsSheet() {
@@ -78,6 +105,7 @@ export function AppSettingsSheet() {
             />
           </Card>
           <AccountCard />
+          <PlayerNameCard view={view} save={save} />
           <Card>
             <Toggle
               checked={view.settings.useScreenshots}

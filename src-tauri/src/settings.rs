@@ -28,6 +28,8 @@ pub struct AppSettings {
     pub auto_update: bool,
     /// Deneme sürümleri (GitHub'da pre-release) de gelsin.
     pub beta_updates: bool,
+    /// Oyundaki adın (davet sayfasında "… seni çağırıyor"); `None` = Launcher'dan okunur.
+    pub player_name: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -41,6 +43,7 @@ impl Default for AppSettings {
             animations: None,
             auto_update: true,
             beta_updates: false,
+            player_name: None,
         }
     }
 }

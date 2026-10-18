@@ -162,9 +162,12 @@ async fn new_short(app: &AppHandle, id: &str, invite: &Invite) -> AppResult<Stri
             code: saved,
             owner,
             token,
+            cover_sent: None,
         });
         Ok(())
     })?;
+    // Davet sayfasının adı, kapağı ve mod sayısı.
+    crate::invite_live::spawn_meta(app, id);
     Ok(code)
 }
 
@@ -182,6 +185,7 @@ async fn refresh_short(app: &AppHandle, id: &str) -> AppResult<Option<String>> {
     let invite = invite_of(app, &inst);
     let http = app.state::<AppState>().http.clone();
     if short_invite::refresh(&http, &s, &invite.encode()).await? {
+        crate::invite_live::spawn_meta(app, id);
         return Ok(None);
     }
     Ok(Some(new_short(app, id, &invite).await?))

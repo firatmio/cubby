@@ -700,6 +700,8 @@ pub struct SettingsView {
     /// Ayarda klasör yoksa kullanılan varsayılan.
     minecraft_dir: Option<String>,
     screenshots_found: bool,
+    /// Launcher'dan bulunan oyuncu adı (ayar boşsa bu kullanılır).
+    detected_player_name: Option<String>,
 }
 
 #[tauri::command]
@@ -712,6 +714,9 @@ pub fn get_settings(store: State<'_, SettingsStore>) -> SettingsView {
             .minecraft_dir()
             .map(|d| d.to_string_lossy().into_owned()),
         screenshots_found: shots.is_some_and(|d| d.is_dir()),
+        detected_player_name: store
+            .minecraft_dir()
+            .and_then(|d| crate::invite_live::detect_player_name(&d)),
     }
 }
 
@@ -724,7 +729,12 @@ pub fn update_settings(
     let turned_on = settings.client_sync && !store.get().client_sync;
     let lang_changed = settings.language != store.get().language;
     let channel_changed = settings.beta_updates != store.get().beta_updates;
+    let name_changed = settings.player_name != store.get().player_name;
     store.set(settings)?;
+    // Davet sayfalarındaki "… seni çağırıyor".
+    if name_changed {
+        crate::invite_live::spawn_meta_all(&app);
+    }
     if lang_changed {
         crate::refresh_tray(&app);
     }

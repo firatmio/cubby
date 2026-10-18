@@ -934,6 +934,9 @@ const en: Dict = {
     clientSyncText:
       "For modded worlds, the mods players need or are recommended are installed into your Minecraft along with the mod loader (Fabric, NeoForge, Forge, Quilt). Each world gets its own profile in the official Launcher, so mods never mix.",
     mcFolder: "Minecraft folder",
+    playerName: "Your in-game name",
+    playerNameText: "Friends who open your invite link see \"… is inviting you\". Leave it empty to use the name from the Minecraft Launcher.",
+    playerNamePlaceholder: (detected: string | null) => detected ?? "E.g. Steve",
     mcFolderText: "Screenshots are read from here. Change it if TLauncher uses a different folder.",
     mcFolderPick: "Minecraft game folder (.minecraft)",
     notFound: "Not found",
