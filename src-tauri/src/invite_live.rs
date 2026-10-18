@@ -265,11 +265,17 @@ struct PlayersPayload {
 pub fn install(app: &AppHandle) {
     app.manage(LiveStatus::default());
     // Açılışta bir kez: güncellemeden önce alınmış kodların sayfası da ad ve kapağa kavuşsun (kapak
-    // yalnız değiştiyse yüklenir). Açılışın işine karışmasın diye biraz sonra.
+    // yalnız değiştiyse yüklenir), durumu da bilinsin ("Şu an kapalı"; o sırada açılan dünya
+    // gerçek durumunu gönderir). Açılışın işine karışmasın diye biraz sonra.
     let boot = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(8)).await;
         spawn_meta_all(&boot);
+        for inst in instance::list(&boot) {
+            if current_short(&inst).is_some() {
+                schedule(&boot, &inst.id);
+            }
+        }
     });
     let handle = app.clone();
     app.listen_any(crate::server::EVENT_STATUS, move |event| {
