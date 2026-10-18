@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardCheck, House, Loader2, RotateCcw } from "lucide-react";
 import { api, errorMessage, type InvitePreview, type JoinStatus, type ModItem } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { LOADER_LABELS, formatBytesMb, isModded, kindLabel } from "../../lib/format";
@@ -51,6 +51,7 @@ export function JoinDialog() {
   const openJoin = useAppStore((s) => s.openJoin);
   const upsertJoined = useAppStore((s) => s.upsertJoined);
   const openSheet = useAppStore((s) => s.openSheet);
+  const instances = useAppStore((s) => s.instances);
 
   const [code, setCode] = useState("");
   /** Eski uzun davet linkiyle (`cubby://join?d=…`) açıldıysa: kutular yerine bu kullanılır. */
@@ -135,6 +136,15 @@ export function JoinDialog() {
     }
   };
 
+  // Kendi kodunu girdi: dünyasını Oyna'da seçip açar.
+  const goToOwn = (id: string) => {
+    const s = useAppStore.getState();
+    s.select(id);
+    s.setPage("play");
+    close();
+  };
+  const ownWorld = preview?.own && preview.ownWorld && instances.some((i) => i.id === preview.ownWorld) ? preview.ownWorld : null;
+
   const denied = !!preview?.status.error;
   const canJoin = !!preview && !preview.own && !denied && !preview.minecraftRunning && !!preview.minecraftDir;
 
@@ -144,9 +154,15 @@ export function JoinDialog() {
       actions={
         <>
           <Button variant="ghost" onClick={close}>
-            {t.cancel}
+            {preview?.own ? t.close : t.cancel}
           </Button>
-          {preview ? (
+          {preview?.own ? (
+            ownWorld && (
+              <Button variant="primary" icon={ArrowRight} onClick={() => goToOwn(ownWorld)}>
+                {t.goToWorld}
+              </Button>
+            )
+          ) : preview ? (
             preview.minecraftRunning ? (
               <Button icon={RotateCcw} loading={busy} onClick={() => check(legacy ?? code)}>
                 {t.recheck}
@@ -198,9 +214,15 @@ export function JoinDialog() {
             {tt.kind.caption(kindLabel(preview.loader), preview.mcVersion)}
           </p>
           {preview.own ? (
-            <ul className={styles.list}>
-              <Item ok={false}>{t.own}</Item>
-            </ul>
+            <div className={styles.own}>
+              <span className={styles.ownIcon}>
+                <House size={20} aria-hidden />
+              </span>
+              <div>
+                <b>{t.ownTitle}</b>
+                <p>{t.ownText}</p>
+              </div>
+            </div>
           ) : (
             <ul className={styles.list}>
               <Item ok={hostLine(preview.status).ok}>{hostLine(preview.status).text}</Item>
@@ -273,7 +295,7 @@ export function JoinDialog() {
               </span>
             </div>
           )}
-          <p className={styles.note}>{t.keepOpen}</p>
+          {!preview.own && <p className={styles.note}>{t.keepOpen}</p>}
         </>
       )}
       {error && <p className={styles.error}>{error}</p>}

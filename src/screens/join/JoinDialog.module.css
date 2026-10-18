@@ -162,3 +162,40 @@
   gap: var(--sp-2);
   font-size: var(--fs-sm);
 }
+
+/* Kendi dünyasının kodunu girdi: uyarı değil, sıcak bir hatırlatma. */
+.own {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.ownIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #12200c;
+}
+
+.own b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+
+.own p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}

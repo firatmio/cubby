@@ -305,6 +305,8 @@ pub struct InvitePreview {
     status: JoinStatus,
     /// Bu bilgisayarın kendi dünyası.
     own: bool,
+    /// Kendi dünyasıysa kimliği ("Dünyana git").
+    own_world: Option<String>,
     /// Daha önce katılınmış (güncellenecek).
     already_joined: bool,
     minecraft_dir: Option<String>,
@@ -451,6 +453,7 @@ pub async fn preview_invite(
         mc_version: invite.mc_version,
         loader_version: invite.loader_version,
         status,
+        own_world: own.then(|| invite.world.clone()),
         own,
         mods,
         mods_error,
@@ -690,8 +693,8 @@ pub async fn join_world(
     let invite = invite_from(&app, &code).await?;
     if invite.host == app.state::<Arc<P2p>>().id() {
         return Err(AppError::msg(tx!(
-            "Bu senin kendi dünyan; davet arkadaşın için.",
-            "This is your own world; the invite is for your friend."
+            "Bu kod senin kendi dünyanın. Arkadaşlarına gönder; sen dünyana Oyna'dan girebilirsin.",
+            "This code is for your own world. Send it to your friends; you can jump in from Play."
         )));
     }
     if !force && client::minecraft_running() {

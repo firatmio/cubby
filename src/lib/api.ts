@@ -350,6 +350,8 @@ export interface InvitePreview {
   status: JoinStatus;
   /** Bu bilgisayarın kendi dünyası */
   own: boolean;
+  /** Kendi dünyasıysa kimliği ("Dünyana git") */
+  ownWorld: string | null;
   alreadyJoined: boolean;
   minecraftDir: string | null;
   minecraftRunning: boolean;

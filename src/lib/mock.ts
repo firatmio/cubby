@@ -822,6 +822,27 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       // localStorage.mockClipboard = "K7M2QX": panoda kod varmış gibi.
       return (typeof localStorage !== "undefined" && localStorage.getItem("mockClipboard")) || null;
     case "preview_invite":
+      // Kendi dünyanın kodu (SEN-SEN): "Bu senin dünyan".
+      if (/^sen-?sen$/i.test(String(args.code).trim())) {
+        await sleep(500);
+        const own = instances[0];
+        return {
+          name: own.name,
+          loader: own.loader,
+          mcVersion: own.mcVersion,
+          loaderVersion: own.loaderVersion,
+          status: { reachable: true, running: false, path: "unknown", error: null },
+          own: true,
+          ownWorld: own.id,
+          alreadyJoined: false,
+          minecraftDir: "C:\Users\sen\AppData\Roaming\.minecraft",
+          minecraftRunning: false,
+          requiredVersion: own.mcVersion,
+          versionInstalled: true,
+          mods: null,
+          modsError: null,
+        };
+      }
       if (/^[a-z0-9]{3}-?[a-z0-9]{3}$/i.test(String(args.code).trim()) && !/^k7m-?2qx$/i.test(String(args.code).trim()))
         throw "Bu davet kodu bulunamadı ya da yenilenmiş. Arkadaşından yeni bir davet iste.";
       if (!String(args.code).trim().startsWith("cubby") && String(args.code).trim().length < 6)
@@ -834,6 +855,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         loaderVersion: "0.19.5",
         status: { reachable: true, running: true, path: "relay", error: null },
         own: false,
+        ownWorld: null,
         alreadyJoined: false,
         minecraftDir: "C:\\Users\\sen\\AppData\\Roaming\\.minecraft",
         minecraftRunning: false,
