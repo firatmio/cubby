@@ -34,7 +34,7 @@ const TEXT = {
     rows: [
       {
         img: "kesfet",
-        size: [1200, 720],
+        size: [1142, 548],
         eyebrow: "Keşfet",
         title: "Mod, shader, kaynak paketi. Tek tık.",
         text: "Modrinth'in tamamı uygulamanın içinde. Dünyanın sürümüne uyanı, gerektirdikleriyle birlikte kurar.",
@@ -113,7 +113,7 @@ const TEXT = {
     rows: [
       {
         img: "kesfet",
-        size: [1200, 720],
+        size: [1142, 548],
         eyebrow: "Discover",
         title: "Mods, shaders, resource packs. One click.",
         text: "All of Modrinth inside the app. It installs what fits your world's version, along with everything it needs.",
