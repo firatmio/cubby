@@ -190,7 +190,7 @@ pub fn spawn_meta(app: &AppHandle, id: &str) {
     });
 }
 
-/// Ad değişti: kısa kodu olan bütün dünyaların sayfası güncellensin.
+/// Ad değişti (ya da uygulama açıldı): kısa kodu olan bütün dünyaların sayfası güncellensin.
 pub fn spawn_meta_all(app: &AppHandle) {
     for inst in instance::list(app) {
         if current_short(&inst).is_some() {
@@ -264,6 +264,13 @@ struct PlayersPayload {
 /// Sunucu durumu ve oyuncu olaylarını dinler; açık dünyalar için düzenli kalp atışı.
 pub fn install(app: &AppHandle) {
     app.manage(LiveStatus::default());
+    // Açılışta bir kez: güncellemeden önce alınmış kodların sayfası da ad ve kapağa kavuşsun (kapak
+    // yalnız değiştiyse yüklenir). Açılışın işine karışmasın diye biraz sonra.
+    let boot = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+        spawn_meta_all(&boot);
+    });
     let handle = app.clone();
     app.listen_any(crate::server::EVENT_STATUS, move |event| {
         let Ok(p) = serde_json::from_str::<StatusPayload>(event.payload()) else {
