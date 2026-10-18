@@ -336,6 +336,7 @@ h1.title{margin:10px 0 12px;font-size:clamp(40px,5vw,60px);font-weight:650;line-
 .ask:hover .arrow{transform:translateX(4px);color:var(--text)}
 .chips{position:relative;display:inline-flex;gap:4px;max-width:100%;margin-bottom:22px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
 .chipind{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:#fff}
+.chips.rise{padding-bottom:4px}
 .chips.ready .chipind{transition:transform .5s var(--ease),width .5s var(--ease)}
 .chips button{position:relative;display:inline-flex;align-items:center;padding:8px 16px;border:0;border-radius:999px;background:none;color:var(--text-2);font:inherit;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .25s}
 .chips button:hover{color:var(--text)}
