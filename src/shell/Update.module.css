@@ -22,12 +22,51 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+/* Hazır: kurulmayı bekleyen yükseltme, vurgu renginde. */
+.pillReady {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.pillIcon {
+  flex: none;
+  color: var(--text-2);
+}
+
+.pillReady .pillIcon {
+  color: var(--accent);
+}
+
+.ring {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.ringTrack,
+.ringValue {
+  fill: none;
+  stroke-width: 2;
+}
+
+.ringTrack {
+  stroke: var(--line-strong);
+}
+
+.ringValue {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease;
+}
+
+/* Boyut bilinmiyorsa yay döner. */
+.spin {
+  animation: ring-spin 0.9s linear infinite;
+}
+
+@keyframes ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .current {

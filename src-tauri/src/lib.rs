@@ -280,6 +280,10 @@ pub fn run() {
             servers: Arc::new(ServerManager::default()),
         })
         .on_window_event(|window, event| {
+            // Pencere öne gelince güncellemeye (eskiyse) hemen bakılır.
+            if let WindowEvent::Focused(true) = event {
+                updates::nudge(window.app_handle());
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
                 if SHUTTING_DOWN.load(Ordering::SeqCst) {

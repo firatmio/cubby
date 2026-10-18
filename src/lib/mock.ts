@@ -741,14 +741,19 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
         web: noShort ? null : `https://cubby.quacomes.com/join/${short.replace("-", "")}`,
       };
     }
-    // localStorage.mockUpdate = "ready" | "available": güncelleme varmış gibi.
+    // localStorage.mockUpdate = "ready" | "available" | "downloading": güncelleme varmış gibi.
     case "update_status":
     case "update_check": {
       const mode = typeof localStorage !== "undefined" ? localStorage.getItem("mockUpdate") : null;
       const notes = "- Davet artık 6 karakterlik kodla\n- Oyna sayfasında yeni kartlar\n- Panodan kod doldurma";
       return {
         current: "0.2.0-beta.1",
-        status: mode === "ready" || mode === "available" ? { state: mode, version: "0.2.0-beta.2", notes } : { state: "upToDate" },
+        status:
+          mode === "ready" || mode === "available"
+            ? { state: mode, version: "0.2.0-beta.2", notes }
+            : mode === "downloading"
+              ? { state: "downloading", version: "0.2.0-beta.2", downloaded: 4_200_000, total: 10_000_000 }
+              : { state: "upToDate" },
         minecraftRunning: false,
       };
     }

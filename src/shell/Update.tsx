@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Download, RotateCcw, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDownToLine, CircleArrowUp, Download, RotateCcw, Sparkles, X } from "lucide-react";
 import { api, errorMessage, type UpdateView, type WhatsNew } from "../lib/api";
 import { useT } from "../i18n";
 import { spring } from "../lib/motion";
@@ -11,27 +11,66 @@ import { Markdown } from "../ui/Markdown";
 import { Progress } from "../ui/Progress";
 import styles from "./Update.module.css";
 
-/** Başlık çubuğunda: güncelleme hazırsa (ya da indirmeyi bekliyorsa) küçük bir hap. */
+/** İnen güncellemenin halkası; boyut bilinmiyorsa dönen yay. */
+function Ring({ value }: { value: number | null }) {
+  const r = 5.5;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg className={[styles.ring, value === null && styles.spin].filter(Boolean).join(" ")} viewBox="0 0 14 14" aria-hidden>
+      <circle cx="7" cy="7" r={r} className={styles.ringTrack} />
+      <circle
+        cx="7"
+        cy="7"
+        r={r}
+        className={styles.ringValue}
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - (value ?? 0.3))}
+        transform="rotate(-90 7 7)"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Başlık çubuğunda güncellemenin durumu: iniyor (dolan halka), hazır (yukarı ok, yeniden başlatınca
+ * kurulur) ya da kendiliğinden indirme kapalıysa "güncelleme var". Tıklayınca ayrıntı açılır;
+ * kullanıcının Ayarlar'a girmesi gerekmez.
+ */
 export function UpdatePill() {
   const update = useAppStore((s) => s.update);
   const openUpdate = useAppStore((s) => s.openUpdate);
   const t = useT().update;
-  const state = update?.status.state;
-  const shown = state === "ready" || state === "available";
+  const s = update?.status;
+  const state = s?.state;
+  const shown = state === "ready" || state === "available" || state === "downloading";
+  const progress = s?.state === "downloading" && s.total ? s.downloaded / s.total : null;
+  const label =
+    state === "ready"
+      ? t.ready
+      : state === "downloading"
+        ? t.pillDownloading(progress === null ? null : Math.round(progress * 100))
+        : t.available;
   return (
     <AnimatePresence>
       {shown && (
         <motion.button
           type="button"
-          className={styles.pill}
+          className={[styles.pill, state === "ready" && styles.pillReady].filter(Boolean).join(" ")}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={spring}
+          title={state === "ready" ? t.readyHint : undefined}
           onClick={() => openUpdate(true)}
         >
-          <span className={styles.dot} aria-hidden />
-          {state === "ready" ? t.ready : t.available}
+          {state === "ready" ? (
+            <CircleArrowUp size={15} className={styles.pillIcon} aria-hidden />
+          ) : state === "downloading" ? (
+            <Ring value={progress} />
+          ) : (
+            <ArrowDownToLine size={14} className={styles.pillIcon} aria-hidden />
+          )}
+          {label}
         </motion.button>
       )}
     </AnimatePresence>

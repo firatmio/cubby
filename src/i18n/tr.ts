@@ -608,6 +608,8 @@ const tr = {
   },
   update: {
     ready: "Güncelleme hazır",
+    readyHint: "İndi; yeniden başlatınca ya da kapatınca kurulur.",
+    pillDownloading: (pct: number | null) => (pct === null ? "Güncelleme iniyor" : `Güncelleme iniyor · %${pct}`),
     available: "Güncelleme var",
     title: (v: string) => `Cubby ${v} hazır`,
     titleShort: "Cubby güncellemesi",

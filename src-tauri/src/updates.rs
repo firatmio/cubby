@@ -16,7 +16,12 @@ use crate::settings::SettingsStore;
 
 pub const EVENT_STATE: &str = "update://state";
 const FIRST_CHECK: Duration = Duration::from_secs(20);
-const INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+/// Uygulama günlerce görev çubuğunda açık kalabiliyor: saatte bir bakılır (uç CDN'de önbellekli, ucuz).
+const INTERVAL: Duration = Duration::from_secs(60 * 60);
+/// Denetim başarısızsa (ör. bilgisayar yeni açıldı, ağ hazır değil) kısa süre sonra yeniden.
+const RETRY: Duration = Duration::from_secs(5 * 60);
+/// Pencere öne gelince, son denetimden bu kadar geçtiyse hemen bakılır.
+const ON_FOCUS: Duration = Duration::from_secs(15 * 60);
 const META_FILE: &str = "update.json";
 
 /// Arayüzün gördüğü durum.
@@ -61,6 +66,8 @@ pub struct Updates {
     bytes: Mutex<Option<Vec<u8>>>,
     /// Aynı anda tek denetim/indirme.
     busy: tokio::sync::Mutex<()>,
+    /// Son denetimin başladığı an (pencere öne gelince yeniden bakmak için).
+    last_check: Mutex<Option<Instant>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -106,6 +113,7 @@ async fn check(app: &AppHandle, download: bool) -> AppResult<()> {
     ) {
         return Ok(());
     }
+    *lock(&state.last_check) = Some(Instant::now());
     set(app, Status::Checking);
     let beta = wants_beta(
         app.state::<SettingsStore>().get().beta_updates,
@@ -224,10 +232,38 @@ pub fn spawn(app: &AppHandle) {
         tokio::time::sleep(FIRST_CHECK).await;
         loop {
             let auto = app.state::<SettingsStore>().get().auto_update;
-            if let Err(e) = check(&app, auto).await {
-                eprintln!("{e}");
-            }
-            tokio::time::sleep(INTERVAL).await;
+            let wait = match check(&app, auto).await {
+                Ok(()) => INTERVAL,
+                Err(e) => {
+                    eprintln!("{e}");
+                    RETRY
+                }
+            };
+            tokio::time::sleep(wait).await;
+        }
+    });
+}
+
+/// Pencere öne geldi: son denetim eskiyse hemen bakılır. Uyku modundan
+/// dönen bilgisayarda bekleyen zamanlayıcıyı beklemeye gerek kalmaz.
+pub fn nudge(app: &AppHandle) {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    // Kurulumdan önce pencere odak alabilir; durum henüz yoksa bakılmaz (ilk denetim zaten gelecek).
+    let Some(state) = app.try_state::<Updates>() else {
+        return;
+    };
+    // Hiç bakılmadıysa açılıştaki ilk denetim (20 sn sonra) zaten gelecek.
+    let stale = lock(&state.last_check).is_some_and(|t| t.elapsed() >= ON_FOCUS);
+    if !stale {
+        return;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let auto = app.state::<SettingsStore>().get().auto_update;
+        if let Err(e) = check(&app, auto).await {
+            eprintln!("{e}");
         }
     });
 }

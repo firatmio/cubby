@@ -603,6 +603,8 @@ const en: Dict = {
   },
   update: {
     ready: "Update ready",
+    readyHint: "Downloaded; installs when you restart or close Cubby.",
+    pillDownloading: (pct: number | null) => (pct === null ? "Downloading update" : `Downloading update · ${pct}%`),
     available: "Update available",
     title: (v: string) => `Cubby ${v} is ready`,
     titleShort: "Cubby update",
