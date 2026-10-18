@@ -310,7 +310,8 @@ export const UI_STYLE = `
 .shelf-head b{font-size:17px}
 .shelf-head span{display:flex;align-items:center;gap:2px;color:var(--u-2);font-size:13px}
 .shelf-head svg{width:14px;height:14px}
-.shelf{display:flex;gap:16px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+/* Kesilmesin diye pay: seçili kartın çerçevesi ve üzerine gelince kalkması rafın dışına taşabilir. */
+.shelf{display:flex;gap:16px;margin:-8px -8px -8px;padding:8px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
 .tile{flex:0 0 200px;width:200px;min-width:0;padding:0;border:0;background:none;text-align:left}
 .tile-img{position:relative;display:block;height:125px;border-radius:16px;background:#222 center/cover no-repeat;transition:transform .3s var(--ease),box-shadow .3s}
 .tile:hover .tile-img{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.45)}
