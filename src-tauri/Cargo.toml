@@ -1,6 +1,6 @@
 [package]
 name = "cubby"
-version = "0.2.0-beta.6"
+version = "0.2.0-beta.7"
 description = "Cubby: arkadaşlarınla kendi Minecraft dünyan"
 authors = ["firatmio"]
 edition = "2024"
