@@ -520,17 +520,19 @@ font:700 26px var(--mono);letter-spacing:.2em;text-transform:uppercase}
 .ways .foot a{display:inline-flex;align-items:center;gap:6px;color:var(--text);font-weight:600}
 .ways .foot a svg{width:16px;height:16px;transition:transform .3s var(--ease)}
 .ways .foot a:hover svg{transform:translateX(3px)}
-.found{overflow:hidden;align-self:center}
-.fcover{position:relative;height:190px;background:radial-gradient(70% 90% at 70% 0%,rgba(108,192,74,.35),transparent 70%),linear-gradient(135deg,#25301f,#1b1b1b);background-size:cover;background-position:center}
+/* Kart: buzlu cam (arkadaki kapak bulanık görünür); kapak üstte, alta doğru maskeyle camın içinde erir, keskin kenar yok. */
+.found{position:relative;overflow:hidden;align-self:center;background:rgba(24,24,24,.8);backdrop-filter:blur(28px) saturate(1.3);-webkit-backdrop-filter:blur(28px) saturate(1.3)}
+.fcover{position:relative;height:200px}
+.fimg{position:absolute;inset:0 0 -40px;background:radial-gradient(70% 90% at 70% 0%,rgba(108,192,74,.35),transparent 70%),linear-gradient(135deg,#25301f,transparent);background-size:cover;background-position:center 40%;
+-webkit-mask-image:linear-gradient(#000 35%,rgba(0,0,0,.32) 70%,transparent 94%);mask-image:linear-gradient(#000 35%,rgba(0,0,0,.32) 70%,transparent 94%)}
 .fcover>svg{position:absolute;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-56%);opacity:.9;filter:drop-shadow(0 10px 24px rgba(0,0,0,.4))}
 .fcover.img>svg{display:none}
-.fcover::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(30,30,30,.92),rgba(30,30,30,0) 60%)}
 .fbadge{position:absolute;z-index:1;top:14px;left:14px;display:flex;align-items:center;gap:6px;padding:5px 11px 5px 9px;border-radius:999px;background:rgba(20,20,20,.6);color:var(--text);font-size:12px;font-weight:600;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .fbadge svg{width:13px;height:13px;color:var(--accent)}
 .fx{position:absolute;z-index:1;top:12px;right:12px;padding:6px 12px;border:0;border-radius:999px;background:rgba(20,20,20,.6);color:var(--text-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .fx:hover{color:var(--text)}
 .fx:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.fbody{position:relative;margin-top:-34px;padding:0 24px 24px}
+.fbody{position:relative;margin-top:-30px;padding:0 24px 24px;text-shadow:0 1px 12px rgba(0,0,0,.45)}
 .fhost{margin:0;color:var(--text-2);font-size:14px;font-weight:500}
 .fname{margin:2px 0 4px;font-size:30px;font-weight:650;line-height:1.1;letter-spacing:-.03em;overflow-wrap:anywhere}
 .ftech{margin:0;color:var(--text-2);font-size:14px}
@@ -728,7 +730,7 @@ const T=JSON.parse(document.getElementById("jtext").textContent);
 const A="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const q=(s)=>root.querySelector(s);
 const box=q(".codebox"),form=q("form"),input=q(".field input"),cells=[...root.querySelectorAll(".cellrow span")],msg=q(".jmsg");
-const ways=q(".ways"),found=q(".found"),bg=q(".jcover"),fcover=q(".fcover");
+const ways=q(".ways"),found=q(".found"),bg=q(".jcover"),fcover=q(".fcover"),fimg=q(".fimg");
 box.classList.add("js");input.removeAttribute("maxlength");
 let code="",seq=0,shown="";
 const fmt=(c)=>c.slice(0,3)+"-"+c.slice(3);
@@ -785,10 +787,10 @@ function fill(c,v){
   q("#jopen").href="cubby://join?c="+c;
   q("#jpage").href="/join/"+c;
   found.classList.remove("missing");
-  fcover.classList.remove("img");fcover.style.backgroundImage="";bg.classList.remove("on");
+  fcover.classList.remove("img");fimg.style.backgroundImage="";bg.classList.remove("on");
   if(v.cover){
     const img=new Image();
-    img.onload=()=>{if(shown!==c)return;const u='url("'+v.cover+'")';fcover.style.backgroundImage=u;fcover.classList.add("img");bg.style.backgroundImage=u;bg.classList.add("on");};
+    img.onload=()=>{if(shown!==c)return;const u='url("'+v.cover+'")';fimg.style.backgroundImage=u;fcover.classList.add("img");bg.style.backgroundImage=u;bg.classList.add("on");};
     img.src=v.cover;
   }
   show(found);
@@ -966,7 +968,7 @@ ${footer}
 <div class="foot"><span>${e(t.noCubby)}</span><a ${go("download")}>${e(t.download)}${ICONS.arrow}</a></div>
 </div>
 <div class="found glass" inert>
-<div class="fcover">${LOGO}<span class="fbadge">${ICONS.check}${e(t.join.found)}</span><button class="fx" type="button">${e(t.join.another)}</button></div>
+<div class="fcover"><div class="fimg"></div>${LOGO}<span class="fbadge">${ICONS.check}${e(t.join.found)}</span><button class="fx" type="button">${e(t.join.another)}</button></div>
 <div class="fbody">
 <p class="fhost"></p>
 <h2 class="fname"></h2>
