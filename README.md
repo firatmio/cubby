@@ -10,7 +10,6 @@ No port forwarding, no rented server, no terminal.
 
 [![Latest release](https://img.shields.io/github/v/release/firatmio/cubby?include_prereleases&label=release&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
 [![Downloads](https://img.shields.io/github/downloads/firatmio/cubby/total?color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
-[![Checks](https://img.shields.io/github/actions/workflow/status/firatmio/cubby/ci.yml?branch=main&label=checks&style=flat-square)](https://github.com/firatmio/cubby/actions/workflows/ci.yml)
 ![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
 [![License](https://img.shields.io/badge/license-source--available-2b2b2b?style=flat-square)](LICENSE)
 

@@ -10,7 +10,6 @@ Modem ayarı yok, kiralık sunucu yok, terminal yok.
 
 [![Son sürüm](https://img.shields.io/github/v/release/firatmio/cubby?include_prereleases&label=s%C3%BCr%C3%BCm&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
 [![İndirme](https://img.shields.io/github/downloads/firatmio/cubby/total?label=indirme&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
-[![Denetimler](https://img.shields.io/github/actions/workflow/status/firatmio/cubby/ci.yml?branch=main&label=denetimler&style=flat-square)](https://github.com/firatmio/cubby/actions/workflows/ci.yml)
 ![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
 [![Lisans](https://img.shields.io/badge/lisans-kaynak%20g%C3%B6r%C3%BCn%C3%BCr-2b2b2b?style=flat-square)](LICENSE)
 
