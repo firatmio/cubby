@@ -159,7 +159,8 @@ pub async fn create_instance(
     let name = validate_name(&req.name)?;
     validate_ram(req.ram_min_mb, req.ram_max_mb)?;
     // İsimler indirmelerden önce çözülür: premium hesap yoksa kurulum hiç başlamasın.
-    let whitelist_on = req.offline_mode || req.whitelist.is_some();
+    // Premium olmayan dünyada da beyaz liste isteğe bağlı: davetle gelenlerin adlarını Cubby korur.
+    let whitelist_on = req.whitelist.is_some();
     let mut profiles = Vec::new();
     for n in req.whitelist.iter().flatten() {
         players::upsert(

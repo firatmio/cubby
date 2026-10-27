@@ -167,7 +167,7 @@ export function SetupFlow() {
   const defaultName = useMemo(() => tt.kind.defaultName(kindLabel(kind)), [kind, tt]);
   const noLoaderForVersion = kind !== "vanilla" && loaderVersions !== null && loaderVersions.versions.length === 0;
   // Premium olmayanlar girebiliyorsa beyaz liste zorunlu: yoksa herkes herkesin adıyla girebilir.
-  const useWhitelist = whitelistOn || offline;
+  const useWhitelist = whitelistOn;
   const questionSteps = useMemo<Step[]>(
     () => [
       ...(preset ? [] : (["kind", "version"] as Step[])),
@@ -483,9 +483,8 @@ export function SetupFlow() {
           <Toggle
             checked={useWhitelist}
             onChange={setWhitelistOn}
-            disabled={offline}
             label={t.whitelist}
-            description={offline ? t.whitelistForced : t.whitelistText}
+            description={t.whitelistText}
           />
           <Toggle
             checked={offline}

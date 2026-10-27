@@ -2,8 +2,11 @@
 //! bağlanılır; olmazsa trafik iroh'un aracı sunucusundan geçer (şimdilik n0'ın ücretsiz aracıları).
 //!
 //! - Host: gelen her akış `StreamHeader` ile başlar; `decide` kabul ederse `127.0.0.1:<port>`'a aktarılır.
+//!   Minecraft bağlantısında `guard` varsa oyuncunun adı girişte okunur (`mc_login`) ve gerekirse
+//!   oyuncu bir mesajla geri çevrilir (ad başka cihaza bağlı, cihaz yasaklı).
 //! - Katılımcı: `ping` ile dünyanın durumunu sorar, `open_tcp` ile Minecraft bağlantısını taşır.
 
+pub mod mc_login;
 pub mod protocol;
 
 use std::collections::HashMap;
@@ -24,6 +27,8 @@ use protocol::{ALPN, MAX_BODY, Reply, StreamHeader, StreamKind, read_body, read_
 const KEY_FILE: &str = "iroh.key";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const HEADER_TIMEOUT: Duration = Duration::from_secs(10);
+/// Minecraft girişinin ilk iki paketi en çok bu kadar beklenir.
+const LOGIN_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Bağlantının hangi yoldan gittiği (arayüzde "Doğrudan" / "Aracı sunucu üzerinden").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -38,15 +43,19 @@ pub enum PathKind {
 pub enum Decision {
     /// Yalnız yanıt.
     Reply(Reply),
-    /// Yanıt, sonra `127.0.0.1:<port>`'a iki yönlü aktarım.
-    Tcp(Reply, u16),
+    /// Yanıt, sonra `127.0.0.1:<port>`'a iki yönlü aktarım. `Guard` varsa önce oyuncunun adına bakar.
+    Tcp(Reply, u16, Option<Guard>),
     /// Yanıt, sonra gövde (mod listesi).
     Body(Reply, Vec<u8>),
     /// Yanıt, sonra dosyanın içeriği.
     File(Reply, std::path::PathBuf),
 }
 
-pub type Decide = Arc<dyn Fn(&StreamHeader) -> Decision + Send + Sync>;
+/// Akışın başlığı ve bağlanan cihazın kimliği → karar.
+pub type Decide = Arc<dyn Fn(&StreamHeader, &str) -> Decision + Send + Sync>;
+
+/// Girişteki oyuncu adı → `Some(mesaj)` ise oyuncu bu mesajla geri çevrilir.
+pub type Guard = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
 pub struct P2p {
     endpoint: Endpoint,
@@ -113,10 +122,11 @@ impl P2p {
                 let decide = decide.clone();
                 tauri::async_runtime::spawn(async move {
                     let Ok(conn) = incoming.await else { return };
+                    let peer = conn.remote_id().to_string();
                     while let Ok((send, recv)) = conn.accept_bi().await {
-                        let decide = decide.clone();
+                        let (decide, peer) = (decide.clone(), peer.clone());
                         tauri::async_runtime::spawn(async move {
-                            let _ = handle_stream(send, recv, decide).await;
+                            let _ = handle_stream(send, recv, decide, &peer).await;
                         });
                     }
                 });
@@ -332,21 +342,46 @@ async fn handle_stream(
     mut send: SendStream,
     mut recv: RecvStream,
     decide: Decide,
+    peer: &str,
 ) -> std::io::Result<()> {
     let header: StreamHeader = tokio::time::timeout(HEADER_TIMEOUT, read_line(&mut recv))
         .await
         .map_err(|_| std::io::Error::other(tx!("başlık gelmedi", "no header received")))??;
-    match decide(&header) {
+    match decide(&header, peer) {
         Decision::Reply(reply) => {
             write_line(&mut send, &reply).await?;
             let _ = send.finish();
         }
-        Decision::Tcp(reply, port) => {
+        Decision::Tcp(reply, port, guard) => {
             write_line(&mut send, &reply).await?;
+            let mut stream = tokio::io::join(recv, send);
+            // Girişteki ad sunucuya gitmeden okunur; okunan baytlar sonra aynen iletilir.
+            let first = match guard {
+                Some(guard) => {
+                    let login =
+                        tokio::time::timeout(LOGIN_TIMEOUT, mc_login::read_login(&mut stream))
+                            .await
+                            .map_err(|_| {
+                                std::io::Error::other(tx!("giriş gelmedi", "no login received"))
+                            })??;
+                    if let Some(message) = login.name.as_deref().and_then(|n| guard(n)) {
+                        use tokio::io::AsyncWriteExt;
+                        stream
+                            .write_all(&mc_login::disconnect_packet(&message))
+                            .await?;
+                        let _ = stream.shutdown().await;
+                        return Ok(());
+                    }
+                    login.consumed
+                }
+                None => Vec::new(),
+            };
             let mut tcp =
                 tokio::net::TcpStream::connect(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
                     .await?;
-            let mut stream = tokio::io::join(recv, send);
+            if !first.is_empty() {
+                tokio::io::AsyncWriteExt::write_all(&mut tcp, &first).await?;
+            }
             tokio::io::copy_bidirectional(&mut stream, &mut tcp).await?;
         }
         Decision::Body(reply, body) => {
@@ -392,7 +427,7 @@ mod tests {
             }
         });
 
-        host.serve(Arc::new(move |h: &StreamHeader| {
+        host.serve(Arc::new(move |h: &StreamHeader, _peer: &str| {
             let ok = Reply::Ok {
                 running: true,
                 name: "Deneme".into(),
@@ -402,7 +437,7 @@ mod tests {
             };
             match (h.world == "w" && h.token == "t", h.kind) {
                 (false, _) => Decision::Reply(Reply::Denied),
-                (true, StreamKind::Tcp) => Decision::Tcp(ok, port),
+                (true, StreamKind::Tcp) => Decision::Tcp(ok, port, None),
                 (true, StreamKind::Manifest) => Decision::Body(ok, br#"[{"file":"a.jar","title":"A","sha1":"x","sha512":"y","size":3,"projectId":null,"versionId":null,"need":"required"}]"#.to_vec()),
                 (true, StreamKind::File) => Decision::File(ok, file_path.clone()),
                 (true, StreamKind::Ping | StreamKind::Cover) => Decision::Reply(ok),
@@ -449,6 +484,141 @@ mod tests {
         );
 
         guest.close().await;
+        host.close().await;
+    }
+
+    fn packet(body: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        mc_login::write_varint(&mut out, body.len() as i32);
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn mc_string(s: &str) -> Vec<u8> {
+        let mut out = Vec::new();
+        mc_login::write_varint(&mut out, s.len() as i32);
+        out.extend_from_slice(s.as_bytes());
+        out
+    }
+
+    /// Minecraft'ın ilk iki paketi: el sıkışma (`next` 1 liste, 2 giriş) ve (girişse) Login Start.
+    fn mc_hello(name: &str, next: i32) -> Vec<u8> {
+        let mut hs = vec![0x00];
+        mc_login::write_varint(&mut hs, 772);
+        hs.extend(mc_string("localhost"));
+        hs.extend_from_slice(&25565u16.to_be_bytes());
+        mc_login::write_varint(&mut hs, next);
+        let mut out = packet(&hs);
+        if next != 1 {
+            let mut ls = vec![0x00];
+            ls.extend(mc_string(name));
+            ls.extend_from_slice(&[0x22; 16]);
+            out.extend(packet(&ls));
+        }
+        out
+    }
+
+    /// Canlı: kimlik koruması gerçek iroh bağlantısı üzerinden. İki farklı cihaz (iki katılımcı),
+    /// arkada gelen her şeyi geri gönderen sahte bir Minecraft sunucusu.
+    #[tokio::test(flavor = "multi_thread")]
+    #[ignore]
+    async fn live_login_guard() {
+        use crate::players_guard::{self, Check};
+        let base = std::env::temp_dir().join(format!("mcsm-guard-{}", uuid::Uuid::new_v4()));
+        let host = P2p::bind(&base.join("host")).await.unwrap();
+        let a = P2p::bind(&base.join("a")).await.unwrap();
+        let b = P2p::bind(&base.join("b")).await.unwrap();
+        let meta = base.join("meta");
+
+        let echo = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = echo.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            while let Ok((mut s, _)) = echo.accept().await {
+                tokio::spawn(async move {
+                    let (mut r, mut w) = s.split();
+                    let _ = tokio::io::copy(&mut r, &mut w).await;
+                });
+            }
+        });
+
+        let m = meta.clone();
+        host.serve(Arc::new(move |_h: &StreamHeader, peer: &str| {
+            let (m, device) = (m.clone(), peer.to_string());
+            let guard: Guard = Arc::new(move |name: &str| {
+                match players_guard::update(&m, |ids| {
+                    ids.check(name, &device, true, Some("Sahip"), 1)
+                })
+                .unwrap()
+                {
+                    Check::Pass => None,
+                    Check::NameTaken => Some("ad baskasinin".into()),
+                    Check::Banned => Some("yasakli".into()),
+                }
+            });
+            let ok = Reply::Ok {
+                running: true,
+                name: "Deneme".into(),
+                mods_rev: None,
+                cover: None,
+                code: None,
+            };
+            Decision::Tcp(ok, port, Some(guard))
+        }));
+        let host_id: EndpointId = host.id().parse().unwrap();
+
+        // Katılımcının yerel portuna bağlanıp ilk paketleri yollar; dönen ilk baytları okur.
+        async fn attempt(guest: Arc<P2p>, host_id: EndpointId, hello: Vec<u8>) -> Vec<u8> {
+            let local = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let local_port = local.local_addr().unwrap().port();
+            tokio::spawn(async move {
+                let (tcp, _) = local.accept().await.unwrap();
+                let _ = guest.pipe_tcp(host_id, "w", "t", tcp).await;
+            });
+            let mut client = tokio::net::TcpStream::connect(("127.0.0.1", local_port))
+                .await
+                .unwrap();
+            client.write_all(&hello).await.unwrap();
+            let mut buf = vec![0u8; hello.len().max(64)];
+            let n = tokio::time::timeout(Duration::from_secs(20), client.read(&mut buf))
+                .await
+                .unwrap()
+                .unwrap();
+            buf.truncate(n);
+            buf
+        }
+        fn rejected_with(reply: &[u8], text: &str) -> bool {
+            mc_login::read_varint(reply).is_some_and(|(_, n)| reply.get(n) == Some(&0x00))
+                && String::from_utf8_lossy(reply).contains(text)
+        }
+
+        // 1. Cihaz A "Ali" ile girer: paketler sunucuya aynen gider (yankı geri gelir).
+        let hello = mc_hello("Ali", 2);
+        assert_eq!(attempt(a.clone(), host_id, hello.clone()).await, hello);
+        // 2. Cihaz B aynı adla reddedilir; sahibin adıyla da.
+        assert!(rejected_with(
+            &attempt(b.clone(), host_id, mc_hello("ali", 2)).await,
+            "ad baskasinin"
+        ));
+        assert!(rejected_with(
+            &attempt(b.clone(), host_id, mc_hello("Sahip", 2)).await,
+            "ad baskasinin"
+        ));
+        // 3. Sunucu listesi pingi kontrolsüz geçer.
+        let ping = mc_hello("", 1);
+        assert_eq!(attempt(b.clone(), host_id, ping.clone()).await, ping);
+        // 4. B kendi adıyla girer.
+        let veli = mc_hello("Veli", 2);
+        assert_eq!(attempt(b.clone(), host_id, veli.clone()).await, veli);
+        // 5. Ali'nin cihazı yasaklanınca başka adla da giremez.
+        players_guard::update(&meta, |ids| ids.ban("Ali", 2)).unwrap();
+        assert!(rejected_with(
+            &attempt(a.clone(), host_id, mc_hello("Baska", 2)).await,
+            "yasakli"
+        ));
+        assert_eq!(attempt(b.clone(), host_id, veli.clone()).await, veli);
+
+        a.close().await;
+        b.close().await;
         host.close().await;
     }
 }

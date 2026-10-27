@@ -141,3 +141,35 @@
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* Katlanan bölümün başlığı (ad koruması): başlık gibi görünür, tıklanınca açılır. */
+.disclosure {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.disclosure::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 2px solid var(--text-2);
+  border-bottom: 2px solid var(--text-2);
+  transform: rotate(45deg);
+  transition: transform 0.25s ease;
+}
+
+.disclosure[aria-expanded="true"]::after {
+  transform: rotate(-135deg);
+}

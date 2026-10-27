@@ -36,6 +36,7 @@ mod p2p;
 mod paths;
 mod perf;
 mod players;
+mod players_guard;
 mod properties;
 mod registry;
 mod server;
@@ -332,6 +333,9 @@ pub fn run() {
             world_cmds::whitelist_remove,
             world_cmds::set_whitelist_enabled,
             world_cmds::set_offline_mode,
+            world_cmds::ban_player,
+            world_cmds::unban_player,
+            world_cmds::unbind_name,
             world_cmds::set_op,
             world_cmds::kick_player,
             net_cmds::connection_status,

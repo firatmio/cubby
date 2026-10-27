@@ -10,6 +10,7 @@ use crate::error::{AppError, AppResult};
 
 pub const WHITELIST: &str = "whitelist.json";
 pub const OPS: &str = "ops.json";
+pub const BANNED: &str = "banned-players.json";
 const USERCACHE: &str = "usercache.json";
 
 /// Mojang profil araması (yeni uç nokta önce, eskisi yedek).
@@ -31,6 +32,32 @@ pub struct OpEntry {
     pub name: String,
     pub level: u8,
     pub bypasses_player_limit: bool,
+}
+
+/// Sunucunun yasak listesindeki bir kayıt (`banned-players.json`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BanEntry {
+    pub uuid: String,
+    pub name: String,
+    pub created: String,
+    pub source: String,
+    pub expires: String,
+    pub reason: String,
+}
+
+impl BanEntry {
+    /// Süresiz yasak; tarih Minecraft'ın beklediği biçimde (`2026-10-27 12:00:00 +0000`).
+    pub fn new(p: Profile, now_ms: u64, reason: &str) -> Self {
+        let iso = crate::util::iso_utc(now_ms);
+        Self {
+            uuid: p.uuid,
+            name: p.name,
+            created: format!("{} +0000", iso.get(..19).unwrap_or(&iso).replace('T', " ")),
+            source: "Cubby".into(),
+            expires: "forever".into(),
+            reason: reason.into(),
+        }
+    }
 }
 
 /// Minecraft kullanıcı adı: 3–16 harf, rakam veya `_`.
@@ -158,6 +185,15 @@ pub fn write_ops(server_dir: &Path, list: &[OpEntry]) -> AppResult<()> {
     write_json(&server_dir.join(OPS), list)
 }
 
+pub fn read_bans(server_dir: &Path) -> Vec<BanEntry> {
+    read_json(&server_dir.join(BANNED))
+}
+
+pub fn write_bans(server_dir: &Path, list: &[BanEntry]) -> AppResult<()> {
+    std::fs::create_dir_all(server_dir)?;
+    write_json(&server_dir.join(BANNED), list)
+}
+
 #[derive(Deserialize)]
 struct CacheEntry {
     name: String,
@@ -222,6 +258,25 @@ mod tests {
             "b50ad385-829d-3141-a216-7e7d7539ba7f"
         );
         assert_eq!(&offline_uuid("firatmio")[14..15], "3");
+    }
+
+    #[test]
+    fn ban_entries_in_minecraft_format() {
+        let dir = std::env::temp_dir().join(format!("mcsm-bans-{}", uuid::Uuid::new_v4()));
+        let p = Profile {
+            uuid: offline_uuid("Ali"),
+            name: "Ali".into(),
+        };
+        let e = BanEntry::new(p, 1_793_000_000_000, "Cubby");
+        assert_eq!(e.expires, "forever");
+        assert!(
+            e.created.ends_with(" +0000") && e.created.len() == 25,
+            "{}",
+            e.created
+        );
+        assert_eq!(&e.created[10..11], " ");
+        write_bans(&dir, std::slice::from_ref(&e)).unwrap();
+        assert_eq!(read_bans(&dir), vec![e]);
     }
 
     #[test]

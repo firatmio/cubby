@@ -197,6 +197,12 @@ export interface AccessView {
   known: string[];
   /** Değişiklik yeniden başlatınca geçerliyse açıklama */
   notice: string | null;
+  /** Dünya internete açık mı (premium olmayan modda beyaz liste o zaman zorunlu) */
+  internet: boolean;
+  /** Yasaklılar; davetle girdiyse cihazı da yasaklı */
+  banned: { name: string; deviceBanned: boolean }[];
+  /** Ad koruması: davetle giren cihazlara bağlı adlar */
+  bound: { name: string; firstSeen: number }[];
 }
 
 /**
@@ -629,6 +635,9 @@ export const api = {
   setOfflineMode: (id: string, offline: boolean) => invoke<AccessView>("set_offline_mode", { id, offline }),
   setOp: (id: string, name: string, op: boolean) => invoke<AccessView>("set_op", { id, name, op }),
   kickPlayer: (id: string, name: string) => invoke<void>("kick_player", { id, name }),
+  banPlayer: (id: string, name: string) => invoke<AccessView>("ban_player", { id, name }),
+  unbanPlayer: (id: string, name: string) => invoke<AccessView>("unban_player", { id, name }),
+  unbindName: (id: string, name: string) => invoke<AccessView>("unbind_name", { id, name }),
   connectionStatus: (id: string) => invoke<ConnectionView>("connection_status", { id }),
   setInternet: (id: string, on: boolean) => invoke<ConnectionView>("set_internet", { id, on }),
   createInvite: (id: string) => invoke<InviteLinks>("create_invite", { id }),

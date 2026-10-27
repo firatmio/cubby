@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Crown, LogOut, Plus, UserPlus, X } from "lucide-react";
+import { Ban, Crown, LogOut, Plus, Unlink, UserPlus, X } from "lucide-react";
 import { api, errorMessage, type AccessView } from "../../lib/api";
-import { useT } from "../../i18n";
+import { locale, useT } from "../../i18n";
 import { rise } from "../../lib/motion";
 import { useAppStore, useSelected, useServer } from "../../store/appStore";
 import { Badge } from "../../ui/Badge";
@@ -32,6 +32,9 @@ export function PlayersSheet() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
+  /** Yasak onayı bekleyen oyuncu (satırda ikinci adım). */
+  const [banAsk, setBanAsk] = useState<string | null>(null);
+  const [showBound, setShowBound] = useState(false);
 
   const id = instance?.id;
 
@@ -69,6 +72,40 @@ export function PlayersSheet() {
     await run("add-input", () => api.whitelistAdd(id, n));
     setName("");
   };
+
+  const ban = (n: string) => id && run(`ban:${n}`, () => api.banPlayer(id, n)).then(() => setBanAsk(null));
+
+  /** Yasakla düğmesi: ilk tık sorar, ikincisi yasaklar. `where`: aynı ad iki listede olabilir. */
+  const banControls = (n: string, where: string) =>
+    banAsk === `${where}:${n}` ? (
+      <>
+        <Button size="sm" variant="danger" icon={Ban} loading={busy === `ban:${n}`} onClick={() => ban(n)}>
+          {t.ban}
+        </Button>
+        <IconButton icon={X} size="sm" variant="ghost" label={t.cancel} onClick={() => setBanAsk(null)} />
+      </>
+    ) : (
+      <IconButton
+        icon={Ban}
+        size="sm"
+        variant="ghost"
+        label={t.ban}
+        disabled={busy !== null}
+        onClick={() => setBanAsk(`${where}:${n}`)}
+      />
+    );
+
+  const whitelistLocked = !!view && view.offlineMode && view.internet;
+  const whitelistText = !view
+    ? ""
+    : whitelistLocked
+      ? t.whitelistForced
+      : view.whitelistEnabled
+        ? t.whitelistOn
+        : view.offlineMode
+          ? t.whitelistOffGuarded
+          : t.whitelistOff;
+  const day = (ms: number) => new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "long" });
 
   const isOp = (n: string) => view?.ops.some((o) => o.toLowerCase() === n.toLowerCase()) ?? false;
   const inWhitelist = (n: string) => view?.whitelist.some((p) => p.name.toLowerCase() === n.toLowerCase()) ?? false;
@@ -133,6 +170,7 @@ export function PlayersSheet() {
                   disabled={busy !== null}
                   onClick={() => id && run(`kick:${n}`, () => api.kickPlayer(id, n))}
                 />
+                {banControls(n, "online")}
               </div>
             ))
           )}
@@ -143,10 +181,10 @@ export function PlayersSheet() {
             <h3>{t.whoCanJoin}</h3>
             <Toggle
               checked={view.whitelistEnabled}
-              disabled={busy !== null || (view.offlineMode && view.whitelistEnabled)}
+              disabled={busy !== null || (whitelistLocked && view.whitelistEnabled)}
               onChange={(on) => id && run("toggle", () => api.setWhitelistEnabled(id, on))}
               label={t.whitelistOnly}
-              description={view.offlineMode ? t.whitelistForced : view.whitelistEnabled ? t.whitelistOn : t.whitelistOff}
+              description={whitelistText}
             />
 
             {view.whitelistEnabled && (
@@ -207,9 +245,61 @@ export function PlayersSheet() {
                         disabled={busy !== null}
                         onClick={() => id && run(`rm:${p.name}`, () => api.whitelistRemove(id, p.name))}
                       />
+                      {banControls(p.name, "list")}
                     </div>
                   ))
                 )}
+              </>
+            )}
+          </section>
+        )}
+
+        {view && view.banned.length > 0 && (
+          <section className={styles.section}>
+            <h3>{t.bannedTitle}</h3>
+            <p className={styles.hint}>{t.bannedHint}</p>
+            {view.banned.map((b) => (
+              <div key={b.name} className={styles.row}>
+                <Avatar name={b.name} />
+                <span className={styles.name}>{b.name}</span>
+                {b.deviceBanned && <Badge>{t.deviceBanned}</Badge>}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={busy === `unban:${b.name}`}
+                  disabled={busy !== null}
+                  onClick={() => id && run(`unban:${b.name}`, () => api.unbanPlayer(id, b.name))}
+                >
+                  {t.unban}
+                </Button>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {view && view.offlineMode && view.bound.length > 0 && (
+          <section className={styles.section}>
+            <button type="button" className={styles.disclosure} onClick={() => setShowBound((v) => !v)} aria-expanded={showBound}>
+              {t.boundTitle(view.bound.length)}
+            </button>
+            {showBound && (
+              <>
+                <p className={styles.hint}>{t.boundHint}</p>
+                {view.bound.map((b) => (
+                  <div key={b.name} className={styles.row}>
+                    <Avatar name={b.name} />
+                    <span className={styles.name}>{b.name}</span>
+                    <span className={styles.hint}>{t.firstSeen(day(b.firstSeen))}</span>
+                    <IconButton
+                      icon={Unlink}
+                      size="sm"
+                      variant="ghost"
+                      label={t.unbind}
+                      disabled={busy !== null}
+                      onClick={() => id && run(`unbind:${b.name}`, () => api.unbindName(id, b.name))}
+                    />
+                  </div>
+                ))}
               </>
             )}
           </section>

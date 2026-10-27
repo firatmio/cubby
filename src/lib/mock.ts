@@ -102,7 +102,7 @@ const rejected: Record<string, string[]> = { "mock-1": ["Mehmet"] };
 const fakeUuid = (name: string) =>
   `${[...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(16).padStart(8, "0")}-0000-3000-8000-000000000000`;
 
-type Access = Omit<AccessView, "notice">;
+type Access = Omit<AccessView, "notice" | "internet">;
 const access: Record<string, Access> = {
   "mock-1": {
     offlineMode: true,
@@ -110,12 +110,17 @@ const access: Record<string, Access> = {
     whitelist: ["Sen", "Ali"].map((name) => ({ name, uuid: fakeUuid(name) })),
     ops: ["Sen"],
     known: ["Sen", "Ali", "Mehmet", "Zeynep"],
+    banned: [{ name: "Griefer", deviceBanned: true }],
+    bound: [
+      { name: "Ali", firstSeen: Date.now() - 6 * 86_400_000 },
+      { name: "Zeynep", firstSeen: Date.now() - 2 * 86_400_000 },
+    ],
   },
-  "mock-2": { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [] },
-  "mock-3": { offlineMode: false, whitelistEnabled: true, whitelist: [], ops: [], known: ["firatmio"] },
+  "mock-2": { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [], banned: [], bound: [] },
+  "mock-3": { offlineMode: false, whitelistEnabled: true, whitelist: [], ops: [], known: ["firatmio"], banned: [], bound: [] },
 };
 const accessOf = (id: string) =>
-  (access[id] ??= { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [] });
+  (access[id] ??= { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [], banned: [], bound: [] });
 
 // Minecraft 26.3'ün ürettiği tam liste.
 const BASE_PROPS: Record<string, string> = {
@@ -208,7 +213,7 @@ const propsOf = (id: string) => {
 };
 
 function accessView(id: string, notice: string | null = null): AccessView {
-  return { ...structuredClone(accessOf(id)), notice };
+  return { ...structuredClone(accessOf(id)), notice, internet: !!instances.find((i) => i.id === id)?.internet };
 }
 
 const status: Record<string, ServerStatus> = { "mock-1": "running", "mock-2": "stopped", "mock-3": "stopped" };
@@ -671,10 +676,12 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       status[id] = "stopped";
       access[id] = {
         offlineMode: req.offlineMode,
-        whitelistEnabled: req.offlineMode || req.whitelist !== null,
+        whitelistEnabled: req.whitelist !== null,
         whitelist: (req.whitelist ?? []).map((name: string) => ({ name, uuid: fakeUuid(name) })),
         ops: [],
         known: [],
+        banned: [],
+        bound: [],
       };
       emit("install://progress", { id, stage: "done", file: null, downloaded: 0, total: null });
       return inst;
@@ -756,7 +763,8 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     }
     case "set_whitelist_enabled": {
       const a = accessOf(args.id);
-      if (!args.on && a.offlineMode) throw "Premium olmayanlar girebilirken beyaz liste kapatılamaz.";
+      if (!args.on && a.offlineMode && byId(args.id).internet)
+        throw "Dünya internete açıkken premium olmayanlar için beyaz liste kapatılamaz.";
       a.whitelistEnabled = args.on;
       return accessView(args.id);
     }
@@ -764,7 +772,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       if (status[args.id] !== "stopped") throw "Bu ayarı değiştirmek için önce dünyayı durdur.";
       const a = accessOf(args.id);
       a.offlineMode = args.offline;
-      if (args.offline) a.whitelistEnabled = true;
+      if (args.offline && byId(args.id).internet) a.whitelistEnabled = true;
       propsOf(args.id)["online-mode"] = String(!args.offline);
       return accessView(args.id);
     }
@@ -778,6 +786,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       return connectionView(args.id);
     case "set_internet": {
       byId(args.id).internet = args.on;
+      if (args.on && accessOf(args.id).offlineMode) accessOf(args.id).whitelistEnabled = true;
       if (args.on && status[args.id] === "running") void netUp(args.id);
       return connectionView(args.id);
     }
@@ -1203,6 +1212,27 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
       emit("server://players", { id: args.id, players: players[args.id] });
       return null;
+    case "ban_player": {
+      if (args.name === "Sen") throw "Kendini yasaklayamazsın.";
+      const a = accessOf(args.id);
+      const device = a.bound.some((b) => b.name.toLowerCase() === args.name.toLowerCase());
+      a.banned = [...a.banned.filter((b) => b.name !== args.name), { name: args.name, deviceBanned: device }];
+      a.whitelist = a.whitelist.filter((p) => p.name !== args.name);
+      a.ops = a.ops.filter((n) => n !== args.name);
+      players[args.id] = (players[args.id] ?? []).filter((n) => n !== args.name);
+      emit("server://players", { id: args.id, players: players[args.id] });
+      return accessView(args.id);
+    }
+    case "unban_player": {
+      const a = accessOf(args.id);
+      a.banned = a.banned.filter((b) => b.name !== args.name);
+      return accessView(args.id);
+    }
+    case "unbind_name": {
+      const a = accessOf(args.id);
+      a.bound = a.bound.filter((b) => b.name !== args.name);
+      return accessView(args.id);
+    }
     case "list_java":
       return JAVAS;
     case "instance_java": {

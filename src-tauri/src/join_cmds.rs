@@ -13,7 +13,8 @@ use crate::join::{JoinManager, JoinStatus, JoinedWorld, client, servers_dat};
 use crate::loaders::LoaderKind;
 use crate::mods;
 use crate::p2p::protocol::{Reply, StreamHeader, StreamKind};
-use crate::p2p::{Decide, Decision, P2p};
+use crate::p2p::{Decide, Decision, Guard, P2p};
+use crate::players_guard::{self, Check};
 use crate::server::ServerStatus;
 use crate::sessions::META_DIR;
 use crate::settings::SettingsStore;
@@ -26,9 +27,66 @@ type Joins<'a> = State<'a, Arc<JoinManager>>;
 #[derive(Default)]
 pub struct PendingInvite(pub Mutex<Option<String>>);
 
+/// Davetle gelen oyuncunun girişi: cihaz yasaklıysa ya da (premium olmayan dünyada) ad başka bir
+/// cihaza ya da dünyanın sahibine aitse oyuncu bir mesajla geri çevrilir (`players_guard`).
+fn login_guard(
+    app: &AppHandle,
+    server_dir: &std::path::Path,
+    meta: &std::path::Path,
+    peer: &str,
+) -> Guard {
+    let offline = crate::properties::Properties::load(server_dir)
+        .ok()
+        .and_then(|p| p.get_bool("online-mode"))
+        == Some(false);
+    let host = crate::invite_live::player_name(app);
+    let (meta, device) = (meta.to_path_buf(), peer.to_string());
+    Arc::new(move |name: &str| {
+        let check = players_guard::update(&meta, |ids| {
+            ids.check(
+                name,
+                &device,
+                offline,
+                host.as_deref(),
+                crate::util::now_ms(),
+            )
+        })
+        .unwrap_or_else(|e| {
+            // Kayıt yazılamazsa arkadaşlar dışarıda kalmasın; yasak yine okunur.
+            eprintln!("Kimlik kaydı yazılamadı: {e}");
+            if players_guard::load(&meta)
+                .banned
+                .iter()
+                .any(|b| b.device == device)
+            {
+                Check::Banned
+            } else {
+                Check::Pass
+            }
+        });
+        match check {
+            Check::Pass => None,
+            Check::NameTaken => Some(
+                tx!(
+                    "Bu ad başka bir arkadaşının cihazına bağlı. Dünyanın sahibinden bağı kaldırmasını iste ya da başka bir adla gir.",
+                    "This name belongs to another friend's device. Ask the world's owner to remove the link, or join with a different name."
+                )
+                .to_string(),
+            ),
+            Check::Banned => Some(
+                tx!(
+                    "Bu dünyaya girmen engellendi.",
+                    "You've been banned from this world."
+                )
+                .to_string(),
+            ),
+        }
+    })
+}
+
 /// Host: gelen bir akışı kabul eder mi; neye (Minecraft portu, mod listesi, mod dosyası) yönlendirilir?
 pub fn host_decider(app: AppHandle) -> Decide {
-    Arc::new(move |h: &StreamHeader| {
+    Arc::new(move |h: &StreamHeader, peer: &str| {
         let Ok(inst) = instance::get(&app, &h.world) else {
             return Decision::Reply(Reply::Denied);
         };
@@ -84,9 +142,11 @@ pub fn host_decider(app: AppHandle) -> Decide {
         };
         match h.kind {
             StreamKind::Ping => Decision::Reply(ok(modded.then(|| manifest::rev(&light())))),
-            StreamKind::Tcp if running => {
-                Decision::Tcp(ok(None), server_port(&server_dir, inst.port))
-            }
+            StreamKind::Tcp if running => Decision::Tcp(
+                ok(None),
+                server_port(&server_dir, inst.port),
+                Some(login_guard(&app, &server_dir, &meta, peer)),
+            ),
             StreamKind::Tcp => Decision::Reply(Reply::Offline),
             StreamKind::Manifest => Decision::Body(
                 ok(None),

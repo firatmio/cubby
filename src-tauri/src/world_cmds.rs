@@ -13,7 +13,9 @@ use crate::error::{AppError, AppResult};
 use crate::instance;
 use crate::paths;
 use crate::players::{self, OpEntry, Profile};
+use crate::players_guard;
 use crate::properties::Properties;
+use crate::sessions::META_DIR;
 
 /// Komut gönderildikten sonra sunucunun dosyayı yazması için kısa bekleme.
 const COMMAND_SETTLE: Duration = Duration::from_millis(600);
@@ -135,13 +137,76 @@ pub struct AccessView {
     known: Vec<String>,
     /// Değişiklik ancak yeniden başlatınca geçerli olacaksa açıklama.
     notice: Option<String>,
+    /// Dünya internete açık mı (premium olmayan modda beyaz liste o zaman zorunlu).
+    internet: bool,
+    /// Yasaklılar: sunucunun listesi ve (davetle girdiyse) cihazı da yasaklı mı.
+    banned: Vec<BannedView>,
+    /// Ad koruması: davetle giren cihazlara bağlı adlar.
+    bound: Vec<BoundView>,
 }
 
-fn access_view(server_dir: &std::path::Path) -> AppResult<AccessView> {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BannedView {
+    name: String,
+    device_banned: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoundView {
+    name: String,
+    first_seen: u64,
+}
+
+fn access_view(app: &AppHandle, id: &str) -> AppResult<AccessView> {
+    let inst = instance::get(app, id)?;
+    access_view_at(
+        &paths::server_dir(app, id)?,
+        &paths::instance_dir(app, id)?.join(META_DIR),
+        inst.internet,
+    )
+}
+
+fn access_view_at(
+    server_dir: &std::path::Path,
+    meta: &std::path::Path,
+    internet: bool,
+) -> AppResult<AccessView> {
     let props = Properties::load(server_dir)?;
     let mut whitelist = players::read_whitelist(server_dir);
     whitelist.sort_by_key(|p| p.name.to_lowercase());
+    let ids = players_guard::load(meta);
+    let mut banned: Vec<BannedView> = players::read_bans(server_dir)
+        .into_iter()
+        .map(|b| BannedView {
+            device_banned: ids.is_device_banned(&b.name),
+            name: b.name,
+        })
+        .collect();
+    // Yalnız cihazı yasaklı olanlar (sunucu listesine henüz yazılmadıysa) da görünsün.
+    for d in &ids.banned {
+        if !banned.iter().any(|b| b.name.eq_ignore_ascii_case(&d.name)) {
+            banned.push(BannedView {
+                name: d.name.clone(),
+                device_banned: true,
+            });
+        }
+    }
+    banned.sort_by_key(|b| b.name.to_lowercase());
+    let mut bound: Vec<BoundView> = ids
+        .names
+        .values()
+        .map(|b| BoundView {
+            name: b.name.clone(),
+            first_seen: b.first_seen,
+        })
+        .collect();
+    bound.sort_by_key(|b| b.name.to_lowercase());
     Ok(AccessView {
+        internet,
+        banned,
+        bound,
         offline_mode: props.get_bool("online-mode") == Some(false),
         whitelist_enabled: props.get_bool("white-list").unwrap_or(false),
         whitelist,
@@ -156,7 +221,7 @@ fn access_view(server_dir: &std::path::Path) -> AppResult<AccessView> {
 
 #[tauri::command]
 pub fn world_access(app: AppHandle, id: String) -> AppResult<AccessView> {
-    access_view(&paths::server_dir(&app, &id)?)
+    access_view(&app, &id)
 }
 
 fn is_offline(server_dir: &std::path::Path) -> AppResult<bool> {
@@ -209,7 +274,7 @@ pub async fn whitelist_add(
         }
     }
     state.servers.forget_rejected(&app, &id, &profile.name);
-    let mut view = access_view(&server_dir)?;
+    let mut view = access_view(&app, &id)?;
     // Sunucu dosyayı henüz yazmadıysa bile listede görünsün.
     if !view
         .whitelist
@@ -241,7 +306,7 @@ pub async fn whitelist_remove(
             run_command(&app, &state, &id, "whitelist reload").await?;
         }
     }
-    let mut view = access_view(&server_dir)?;
+    let mut view = access_view(&app, &id)?;
     view.whitelist
         .retain(|p| !p.name.eq_ignore_ascii_case(&name));
     Ok(view)
@@ -255,10 +320,10 @@ pub async fn set_whitelist_enabled(
     on: bool,
 ) -> AppResult<AccessView> {
     let server_dir = paths::server_dir(&app, &id)?;
-    if !on && is_offline(&server_dir)? {
+    if !on && is_offline(&server_dir)? && instance::get(&app, &id)?.internet {
         return Err(AppError::msg(tx!(
-            "Premium olmayanlar girebilirken beyaz liste kapatılamaz: adresi bilen biri adını taklit edebilir",
-            "The whitelist can't be turned off while non-premium players are allowed: anyone with the address could impersonate a name"
+            "Dünya internete açıkken premium olmayanlar için beyaz liste kapatılamaz: adresi bulan biri herhangi bir adla girebilir",
+            "The whitelist can't be turned off for non-premium players while the world is open to the internet: anyone who finds the address could join with any name"
         )));
     }
     let mut props = Properties::load(&server_dir)?;
@@ -274,11 +339,33 @@ pub async fn set_whitelist_enabled(
         )
         .await?;
     }
-    access_view(&server_dir)
+    access_view(&app, &id)
 }
 
-/// TLauncher desteği: premium olmayan hesaplar (`online-mode=false`). Açılınca beyaz liste
-/// zorunlu açılır; mevcut liste ve yetkililer yeni moda göre yeniden UUID'lenir.
+/// Premium olmayan dünya internete açılırken beyaz liste açılır: o yoldan gelenler Cubby'den
+/// geçmez, adları korunamaz. Dönen: açıldı mı.
+pub async fn whitelist_for_internet(
+    app: &AppHandle,
+    state: &AppState,
+    id: &str,
+) -> AppResult<bool> {
+    let server_dir = paths::server_dir(app, id)?;
+    let mut props = Properties::load(&server_dir)?;
+    if props.get_bool("online-mode") != Some(false) || props.get_bool("white-list") == Some(true) {
+        return Ok(false);
+    }
+    props.set("white-list", "true");
+    props.set("enforce-whitelist", "true");
+    props.save(&server_dir)?;
+    if state.servers.is_active(id) {
+        run_command(app, state, id, "whitelist on").await?;
+    }
+    Ok(true)
+}
+
+/// TLauncher desteği: premium olmayan hesaplar (`online-mode=false`). Davetle gelenlerin adlarını
+/// Cubby korur (`players_guard`), beyaz liste isteğe bağlıdır; yalnız dünya internete açıksa açılır.
+/// Mevcut liste ve yetkililer yeni moda göre yeniden UUID'lenir.
 #[tauri::command]
 pub async fn set_offline_mode(
     app: AppHandle,
@@ -295,7 +382,7 @@ pub async fn set_offline_mode(
     let server_dir = paths::server_dir(&app, &id)?;
     let mut props = Properties::load(&server_dir)?;
     props.set("online-mode", (!offline).to_string());
-    if offline {
+    if offline && instance::get(&app, &id)?.internet {
         props.set("white-list", "true");
         props.set("enforce-whitelist", "true");
     }
@@ -308,7 +395,7 @@ pub async fn set_offline_mode(
             dropped.join(", ")
         )));
     }
-    access_view(&server_dir)
+    access_view(&app, &id)
 }
 
 #[tauri::command]
@@ -361,7 +448,7 @@ pub async fn set_op(
             );
         }
     }
-    let mut view = access_view(&server_dir)?;
+    let mut view = access_view(&app, &id)?;
     view.ops.retain(|n| !n.eq_ignore_ascii_case(&name));
     if op {
         view.ops.push(name);
@@ -382,6 +469,116 @@ pub async fn kick_player(
         .servers
         .send_command(&app, &id, &format!("kick {name}"))
         .await
+}
+
+/// Yasaklar: sunucunun yasak listesi (premium olmayan oyuncu adını değiştirebilir) ve davetle
+/// girdiyse cihazı. Beyaz listeden ve yetkililerden çıkarılır, oyundaysa atılır.
+#[tauri::command]
+pub async fn ban_player(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+) -> AppResult<AccessView> {
+    let name = players::validate_name(&name)?;
+    if crate::invite_live::player_name(&app).is_some_and(|h| h.eq_ignore_ascii_case(&name)) {
+        return Err(AppError::msg(tx!(
+            "Kendini yasaklayamazsın.",
+            "You can't ban yourself."
+        )));
+    }
+    let server_dir = paths::server_dir(&app, &id)?;
+    let meta = paths::instance_dir(&app, &id)?.join(META_DIR);
+    let offline = is_offline(&server_dir)?;
+    let now = crate::util::now_ms();
+    players_guard::update(&meta, |ids| ids.ban(&name, now))?;
+
+    let active = state.servers.is_active(&id);
+    let connected = state
+        .servers
+        .snapshot(&id)
+        .players
+        .iter()
+        .any(|p| p.eq_ignore_ascii_case(&name));
+    // Beyaz liste ve yetki önce: sunucunun `ban` komutu oyuncuyu da atar.
+    let mut list = players::read_whitelist(&server_dir);
+    if list.iter().any(|p| p.name.eq_ignore_ascii_case(&name)) {
+        list.retain(|p| !p.name.eq_ignore_ascii_case(&name));
+        players::write_whitelist(&server_dir, &list)?;
+        if active {
+            run_command(&app, &state, &id, "whitelist reload").await?;
+        }
+    }
+    let mut notice = None;
+    if active && (!offline || connected) {
+        run_command(&app, &state, &id, &format!("deop {name}")).await?;
+        run_command(&app, &state, &id, &format!("ban {name} Cubby")).await?;
+    } else {
+        let mut ops = players::read_ops(&server_dir);
+        if ops.iter().any(|o| o.name.eq_ignore_ascii_case(&name)) {
+            ops.retain(|o| !o.name.eq_ignore_ascii_case(&name));
+            players::write_ops(&server_dir, &ops)?;
+        }
+        let profile = players::resolve(&state.http, &name, offline).await?;
+        let mut bans = players::read_bans(&server_dir);
+        bans.retain(|b| !b.name.eq_ignore_ascii_case(&name));
+        bans.push(players::BanEntry::new(profile, now, "Cubby"));
+        players::write_bans(&server_dir, &bans)?;
+        if active {
+            // Sunucu yasak listesini yalnız açılırken okur; davetle gelen cihaz zaten engelli.
+            notice = Some(
+                tx!(
+                    "Yasak dünya yeniden açılınca tam geçerli olur; davetle girmesi şimdiden engellendi",
+                    "The ban fully applies when the world restarts; joining by invite is already blocked"
+                )
+                .to_string(),
+            );
+        }
+    }
+    let mut view = access_view(&app, &id)?;
+    if !view
+        .banned
+        .iter()
+        .any(|b| b.name.eq_ignore_ascii_case(&name))
+    {
+        view.banned.push(BannedView {
+            name: name.clone(),
+            device_banned: false,
+        });
+    }
+    view.notice = notice;
+    Ok(view)
+}
+
+#[tauri::command]
+pub async fn unban_player(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+) -> AppResult<AccessView> {
+    let name = players::validate_name(&name)?;
+    let server_dir = paths::server_dir(&app, &id)?;
+    let meta = paths::instance_dir(&app, &id)?.join(META_DIR);
+    players_guard::update(&meta, |ids| ids.unban(&name))?;
+    if state.servers.is_active(&id) {
+        run_command(&app, &state, &id, &format!("pardon {name}")).await?;
+    } else {
+        let mut bans = players::read_bans(&server_dir);
+        bans.retain(|b| !b.name.eq_ignore_ascii_case(&name));
+        players::write_bans(&server_dir, &bans)?;
+    }
+    let mut view = access_view(&app, &id)?;
+    view.banned.retain(|b| !b.name.eq_ignore_ascii_case(&name));
+    Ok(view)
+}
+
+/// Adın cihaz bağını kaldırır: arkadaş yeni bilgisayara geçtiyse o adla yeniden girebilsin.
+#[tauri::command]
+pub fn unbind_name(app: AppHandle, id: String, name: String) -> AppResult<AccessView> {
+    let meta = paths::instance_dir(&app, &id)?.join(META_DIR);
+    players_guard::update(&meta, |ids| ids.unbind(&name))?;
+    access_view(&app, &id)
 }
 
 #[cfg(test)]
@@ -405,15 +602,32 @@ mod tests {
     fn access_view_defaults() {
         let dir = std::env::temp_dir().join(format!("mcsm-access-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
-        let v = access_view(&dir).unwrap();
+        let v = access_view_at(&dir, &dir.join("meta"), false).unwrap();
         assert!(!v.offline_mode && !v.whitelist_enabled && v.whitelist.is_empty());
+        assert!(v.banned.is_empty() && v.bound.is_empty());
 
         let mut p = Properties::default();
         p.set("online-mode", "false");
         p.set("white-list", "true");
         p.save(&dir).unwrap();
-        let v = access_view(&dir).unwrap();
-        assert!(v.offline_mode && v.whitelist_enabled);
+        let v = access_view_at(&dir, &dir.join("meta"), true).unwrap();
+        assert!(v.offline_mode && v.whitelist_enabled && v.internet);
+
+        // Yalnız cihazı yasaklı olan da listede görünür; bağlı adlar sıralı gelir.
+        let meta = dir.join("meta");
+        crate::players_guard::update(&meta, |ids| {
+            ids.check("Zeynep", "b", true, None, 2);
+            ids.check("Ali", "a", true, None, 1);
+            ids.ban("Ali", 3);
+        })
+        .unwrap();
+        let v = access_view_at(&dir, &meta, false).unwrap();
+        assert_eq!(v.banned.len(), 1);
+        assert!(v.banned[0].device_banned && v.banned[0].name == "Ali");
+        assert_eq!(
+            v.bound.iter().map(|b| b.name.as_str()).collect::<Vec<_>>(),
+            ["Ali", "Zeynep"]
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 }
