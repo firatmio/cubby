@@ -12,6 +12,7 @@ Modem ayarı yok, kiralık sunucu yok, terminal yok.
 [![İndirme](https://img.shields.io/github/downloads/firatmio/cubby/total?label=indirme&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
 ![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
 [![Lisans](https://img.shields.io/badge/lisans-kaynak%20g%C3%B6r%C3%BCn%C3%BCr-2b2b2b?style=flat-square)](LICENSE)
+[![Destek ol](https://img.shields.io/badge/destek%20ol-%E2%99%A5-db61a2?style=flat-square)](https://github.com/sponsors/firatmio)
 
 **[Windows için indir](https://cubby.quacomes.com/download)** · [Site](https://cubby.quacomes.com) · [Kodla katıl](https://cubby.quacomes.com/#join) · [English](README.md)
 
@@ -192,6 +193,11 @@ Kurulum sihirbazında başka bir klasör seçilebilir; hangi dünyanın nerede o
 - Daha fazla launcher köprüsü
 
 Bir hata buldun ya da aklına bir fikir mi geldi? [Issue aç](https://github.com/firatmio/cubby/issues/new/choose).
+
+## Destek ol
+
+Cubby ücretsiz ve reklamsız. Arkadaşlarınla geçirdiğin akşamları güzelleştiriyorsa geliştirilmesine
+[GitHub Sponsors](https://github.com/sponsors/firatmio) üzerinden destek olabilirsin. Bir arkadaşına anlatmak da en az o kadar değerli.
 
 ## Lisans
 

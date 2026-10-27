@@ -12,6 +12,7 @@ No port forwarding, no rented server, no terminal.
 [![Downloads](https://img.shields.io/github/downloads/firatmio/cubby/total?color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
 ![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
 [![License](https://img.shields.io/badge/license-source--available-2b2b2b?style=flat-square)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%99%A5-db61a2?style=flat-square)](https://github.com/sponsors/firatmio)
 
 **[Download for Windows](https://cubby.quacomes.com/download)** · [Website](https://cubby.quacomes.com) · [Join with a code](https://cubby.quacomes.com/#join) · [Türkçe](README.tr.md)
 
@@ -193,6 +194,11 @@ Everything built so far is in [docs/MILESTONES.md](docs/MILESTONES.md). Next up:
 - More launcher bridges
 
 Found a bug or have an idea? [Open an issue](https://github.com/firatmio/cubby/issues/new/choose).
+
+## Support Cubby
+
+Cubby is free and has no ads. If it makes your evenings with friends better, you can support its
+development on [GitHub Sponsors](https://github.com/sponsors/firatmio). Telling a friend helps just as much.
 
 ## License
 
