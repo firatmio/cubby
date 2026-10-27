@@ -1,5 +1,5 @@
 [package]
-name = "mc-server-launcher"
+name = "cubby"
 version = "0.2.0-beta.6"
 description = "Cubby: arkadaşlarınla kendi Minecraft dünyan"
 authors = ["firatmio"]
@@ -13,7 +13,7 @@ publish = false
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "mc_server_launcher_lib"
+name = "cubby_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

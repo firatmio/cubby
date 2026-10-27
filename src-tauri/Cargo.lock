@@ -977,6 +977,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "cubby"
+version = "0.2.0-beta.6"
+dependencies = [
+ "arboard",
+ "base64 0.22.1",
+ "fastnbt",
+ "flate2",
+ "futures-util",
+ "hex",
+ "igd-next 0.18.0",
+ "image",
+ "iroh",
+ "keyring",
+ "local-ip-address",
+ "md-5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha1 0.11.0",
+ "sha2 0.11.0",
+ "sys-locale",
+ "sysinfo",
+ "tar",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "trash",
+ "uuid",
+ "winreg",
+ "zip 9.0.1",
+]
+
+[[package]]
 name = "curve25519-dalek"
 version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3210,46 +3250,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
 dependencies = [
  "regex-automata",
-]
-
-[[package]]
-name = "mc-server-launcher"
-version = "0.2.0-beta.6"
-dependencies = [
- "arboard",
- "base64 0.22.1",
- "fastnbt",
- "flate2",
- "futures-util",
- "hex",
- "igd-next 0.18.0",
- "image",
- "iroh",
- "keyring",
- "local-ip-address",
- "md-5",
- "reqwest",
- "serde",
- "serde_json",
- "sha1 0.11.0",
- "sha2 0.11.0",
- "sys-locale",
- "sysinfo",
- "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "trash",
- "uuid",
- "winreg",
- "zip 9.0.1",
 ]
 
 [[package]]
