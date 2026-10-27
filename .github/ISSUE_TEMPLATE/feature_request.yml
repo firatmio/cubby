@@ -1,0 +1,21 @@
+name: Idea · Fikir
+description: Suggest something that would make playing with friends better. · Arkadaşlarla oynamayı daha iyi yapacak bir şey öner.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do? · Ne yapmak istiyorsun?
+      description: Tell us the situation, not only the solution. · Yalnız çözümü değil, durumu anlat.
+      placeholder: My friends and I… · Arkadaşlarımla…
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Cubby help? · Cubby nasıl yardım edebilir?
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else · Eklemek istediğin
+      description: Screenshots, examples from other apps. · Ekran görüntüsü, başka uygulamalardan örnekler.

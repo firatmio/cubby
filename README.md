@@ -1,81 +1,204 @@
+<div align="center">
+
+<img src=".github/assets/logo.svg" width="88" alt="">
+
 # Cubby
 
-**English** · [Türkçe](README.tr.md)
+**Your own Minecraft world, with your friends.**<br>
+Cubby sets up the server, keeps it running and brings your friends in with a 6-character code.<br>
+No port forwarding, no rented server, no terminal.
 
-Your own Minecraft world with your friends: Cubby sets up and runs a Java server without any terminal work, invites your friends, and opens the game straight into the world.
-Tauri 2 (Rust) + React + TypeScript + Vite. Detailed goals (Turkish): [SPEC.md](SPEC.md).
+[![Latest release](https://img.shields.io/github/v/release/firatmio/cubby?include_prereleases&label=release&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
+[![Downloads](https://img.shields.io/github/downloads/firatmio/cubby/total?color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
+[![Checks](https://img.shields.io/github/actions/workflow/status/firatmio/cubby/ci.yml?branch=main&label=checks&style=flat-square)](https://github.com/firatmio/cubby/actions/workflows/ci.yml)
+![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
+[![License](https://img.shields.io/badge/license-source--available-2b2b2b?style=flat-square)](LICENSE)
 
-## Status
+**[Download for Windows](https://cubby.quacomes.com/download)** · [Website](https://cubby.quacomes.com) · [Join with a code](https://cubby.quacomes.com/#join) · [Türkçe](README.tr.md)
 
-- [x] **M1** — Pixel UI foundation, vanilla server download (sha1-verified), start/stop, live console, CPU/RAM
-- [x] **M2** — Loader architecture, Fabric + Paper (Fill v3), loader version picker, rename / RAM / delete (Recycle Bin), per-server location
-- [x] **M3** — Java detection (PATH, JAVA_HOME, registry, common folders, Minecraft Launcher runtimes) + portable JRE from Adoptium, per-server Java choice
-- [x] **Console-style UI** — custom title bar, fixed 1200×720 window, dark theme, world tiles; each world's background is an in-game screenshot (F2) taken in that world, player list, LAN invite address
-- [x] **M4** — World settings (key fields + the full `server.properties` table), one-time EULA, TLauncher (non-premium) mode, whitelist (also during setup), operators, kicking players, one-click allow for players who couldn't join, cover = server icon, MOTD = world name
-- [x] **M5** — Joining over the internet: per-world "Open to internet", automatic port opening on the router (UPnP) and CGNAT detection; if the router won't allow it, the reason and the fix are explained in plain words
-- [x] **M6** — NeoForge, Forge (1.17+) and Quilt: official installers run with Java (hash-verified), version lists and recommended versions, a mod store for every loader; "Mods in the player's Minecraft too" also installs the NeoForge/Forge client
-- [x] **M7a** — Join mode: invite link/code (`cubby://join?d=…`), direct app-to-app connection (iroh, with a relay fallback), confirmation dialog, automatic entry in Minecraft's server list, version warning, running in the background (tray)
-- [x] **M8** — Mod/plugin store (Modrinth): search, categories, version-matched installs, dependencies handled automatically, updates, installed-mods list (manually added mods are recognized by hash)
-- [x] **M7b** — Mods in the player's Minecraft too: for modded worlds, mods that players need or are recommended are installed into your own Minecraft with a per-world Launcher profile (can be turned off in Settings; TLauncher uses the shared `mods` folder). When joining, missing mods are checked: required ones are installed, recommended ones are optional; from Modrinth or from your friend's app (hash-verified). "Update" when your friend changes their mods
-- [x] **Start and join** — from the menu next to Start: once the server is up, the Minecraft Launcher opens with the world's profile selected and Play connects straight to the world (Quick Play, 1.20+); "Play" on your friend's side does the same
-- [~] **M9** — Launching without the Launcher: Microsoft sign-in (PKCE in the browser; the refresh token lives in Windows Credential Manager), game files are downloaded hash-verified while sharing `.minecraft`, and the game opens straight into the world with Quick Play (verified live with vanilla and NeoForge 26.3). **Parked:** Mojang didn't approve the app ID (2026-10), and Cubby currently supports non-premium (TLauncher) players, which their allow list doesn't accept. Release builds ship without an app ID, so the Microsoft card stays hidden and the Launcher flow is used. Details and the way back: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md) (Turkish)
-- [x] **English** — UI and error messages in Turkish and English; follows the computer's language on first launch, changeable in Settings > Language
-- [x] **M10** — Play / Discover pages: centred pills in the title bar with a goo (slime) transition, pages slide with a stretch. Animation level (Full / Simple / Off) detected automatically (Windows animation setting, software rendering, dropped frames) and adjustable in Settings
-  - [x] **M10a** — pages, animation level, resizable/maximizable window (minimum 1200×720), Discover with its own backdrop and mods: world picker, a showcase with a featured band and category shelves, a side preview with gallery and properly rendered Markdown descriptions (Modrinth images resized and cached on disk), prefetching and an in-memory cache so lists appear instantly
-  - [x] **M10b** — resource packs (installed into your Minecraft and turned on; optionally required for friends via the server), shaders (Iris/Sodium — Oculus/Embeddium on Forge — installed automatically and synced per world, shader turned on), data packs (installed into the world, `reload` sent if running); on a friend's world only the tabs you can change are shown
-  - [x] **M10c** — modpacks → new world: a Modpacks tab in Discover on every world (and with no worlds yet); the preview shows the pack's Minecraft/loader version, mod counts and size, with a version picker; "Install as a new world" opens the setup wizard with the name and access steps. The pack (`.mrpack`) is read, its loader installed, files downloaded hash-verified and only from allowed hosts; server mods and configs go to the server, player-only mods and settings to your Minecraft and to friends as "recommended"; the cover becomes the pack's image
-- [x] **Web join page** — invites are shared as a 6-character code (`K7M-2QX`, no look-alike characters) or its link `cubby.quacomes.com/join/K7M2QX` (also `/join?code=`), with a link preview in chats, "Open in Cubby" and "Download Cubby". Join has two 3-character boxes that move on by themselves; pasting a link fills them. Our own small server ([web/](web/), Vercel + Redis) stores only the invite; a code works until the invite is renewed and is deleted after 60 days unused. The site's root is kept for a future landing page; unknown addresses show a 404 page. Details (Turkish): [docs/DAVET_SUNUCUSU.md](docs/DAVET_SUNUCUSU.md)
-  - [x] **Invite page 2.0** — the page opens on the world's own cover with "<name> is inviting you", the world's name, version and a live status ("Open · 2 players online" / "Closed right now"); link previews in WhatsApp/Discord show the cover. For modded worlds it says how many mods are needed (installed automatically). If Cubby isn't installed, a three-step guide appears ("Download" fetches the latest installer directly and copies the code, so Join fills itself in after installing). The app sends only the host's name (Settings › Your in-game name, read from the Minecraft Launcher by default), the cover, the player count and the mod count; never player names
-- [x] **Website** — `cubby.quacomes.com` opens like Cubby's own Play screen (a real world cover, the big "Cubby", an info strip and a Download button with the latest version and size), followed by side-by-side sections with real screenshots (Discover, invites, Booster, players) and an FAQ; Turkish and English. Screenshots come from the real app; invite codes and friends' names in them are replaced with examples
-- [x] **Auto-update** — new versions download in the background; the title bar shows "Update ready" with what's new, and restarting is up to the user (open worlds shut down cleanly first; "Later" installs on quit). Preview channel (GitHub pre-releases) in Settings › Updates. Releasing is one command: `bun run release <version> [--beta]` ([docs/YAYIN.md](docs/YAYIN.md), Turkish)
-- [x] **Performance** — so the host's computer copes when friends spread out: new worlds start at view 8 / simulation 6 chunks, World settings › Performance has Light / Balanced / Far view presets. "Prepare the world in advance" (modded and Paper worlds) installs Chunky and generates 1,000–4,000 blocks around spawn with live progress, pauses on its own while someone plays and resumes when everyone leaves, and picks up after a restart. When Minecraft reports "Can't keep up!" repeatedly, a "Server is struggling" chip appears on the home screen and opens the suggestions
-- [x] **Booster** — one switch in World settings › Performance, on by default for new worlds: tuned Java garbage-collector settings for every world, plus server-only speed-up mods that keep vanilla behaviour (Lithium, C2ME with parallel chunk generation on half the cores, ScalableLux, FerriteCore, ModernFix where released). Vanilla worlds run on Fabric in the background for this and still look and play as vanilla, so friends install nothing (pre-generation works there too). Mods are installed right before the server starts, checked for updates daily, and parked (not deleted) when turned off; if the first start after turning it on crashes, the home screen offers to turn it off and retry
+<br>
 
-Next up: the rest of release preparation.
+<img src=".github/assets/app-en.jpg" width="880" alt="Cubby's Play screen: the world's cover, its name and the Start and join button">
 
-**Next:**
-- Release preparation: code signing (no SmartScreen warning), landing site
-- Our own relay server (iroh-relay on a VDS) once more players use it
+</div>
 
-**Ideas:**
-- World backups: connect a Google account and back up to Google Drive automatically
-- Backups on our own server (VDS) with a premium account
+## Why Cubby
+
+Playing on your own world with friends usually means renting a server or fighting with router settings,
+Java versions and mod lists. Cubby does all of that for you: pick a loader, press **Start and join**, send
+the code. Your friend types it in (or just clicks the link) and lands in your world with the right
+version and the right mods, whatever launcher they use.
+
+## Features
+
+<table>
+<tr>
+<td width="50%"><img src=".github/assets/invite-en.jpg" alt="Invite sheet with the code K7M-2QX"></td>
+<td>
+
+### Send a code, they're in
+A 6-character code (`K7M-2QX`) or its link. Cubby connects your friend's computer straight to yours,
+even across cities and different internet providers. No port forwarding, nothing to configure.
+
+- Link previews with your world's cover in WhatsApp and Discord
+- Your world is added to their Minecraft server list automatically
+- Renew the code and the old invite stops working
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Any launcher your friend uses
+Cubby opens the game with the launcher your friend already has, and never touches their account.
+
+- **Prism Launcher:** one click, straight into the world
+- **TLauncher:** opens with the world's version selected
+- **Minecraft Launcher:** a per-world profile, ready to play
+
+</td>
+<td width="50%"><img src=".github/assets/launcher-en.jpg" alt="Launcher setting with the Prism steps lit up"></td>
+</tr>
+<tr>
+<td width="50%"><img src=".github/assets/players-en.jpg" alt="Players sheet with a banned player"></td>
+<td>
+
+### You choose who gets in
+Whitelist, operators, kicking and banning on one screen. Non-premium (TLauncher) friends can join safely.
+
+- **Name protection:** each name is tied to the computer that first joined with it
+- **Bans stick:** a banned friend can't come back under a new name
+- Allow someone who couldn't join with one click
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Smooth on a modest PC
+The **Booster** speeds up the server without changing how the game plays, on vanilla worlds too.
+Your friends install nothing.
+
+- World pre-generation about 1.5× faster (measured)
+- Lithium, C2ME, ScalableLux, FerriteCore, ModernFix, kept up to date
+- Tells you when the server struggles, with a fix
+
+</td>
+<td width="50%"><img src=".github/assets/booster-en.jpg" alt="Booster switch with the speed-up mods"></td>
+</tr>
+</table>
+
+### All of Modrinth, inside the app
+Mods, modpacks, shaders, resource packs and data packs, matched to your world's version and installed
+together with everything they need. A modpack becomes a new world in one click, and friends get the mods
+they need on their own.
+
+<img src=".github/assets/discover-en.jpg" alt="Discover: featured shaders and a shelf of popular ones">
+
+### An invite page your friends will actually open
+The link opens on your world's cover and shows who's inviting, the version and whether the world is open
+right now. Friends without Cubby get a three-step guide; the code is copied so Join fills itself in.
+
+<img src=".github/assets/invite-page-en.jpg" alt="Invite page: Alex is inviting you to Northwood, open with 2 players online">
+
+## How it works
+
+```mermaid
+flowchart LR
+    host["Your PC<br/>Cubby + the server"] -- "code K7M-2QX" --> friend(["Your friend"])
+    friend -- "types the code<br/>or clicks the link" --> app["Friend's Cubby"]
+    app <-. "direct encrypted connection<br/>(iroh, relay as fallback)" .-> host
+    app -- "right version and mods,<br/>their own launcher" --> game["Minecraft,<br/>straight in your world"]
+```
+
+- **The server runs on your computer.** Your world never leaves it; when your PC is off, the invite page
+  says *Closed right now*.
+- **Friends connect app to app** with [iroh](https://www.iroh.computer): a direct, encrypted connection that
+  punches through NAT, with a relay only when that fails. You can also open a world to the internet (UPnP)
+  or play on the same network without Cubby on the other side.
+- **Everything else is automatic:** the right Java is downloaded when needed, loaders (Fabric, NeoForge,
+  Forge, Quilt, Paper) are installed with verified hashes, and mods are synced to each friend.
+
+## Install
+
+1. [Download Cubby](https://cubby.quacomes.com/download) for Windows 10 or 11 (about 6 MB).
+2. Windows may say "unknown publisher" because Cubby isn't code-signed yet: **More info › Run anyway**.
+3. That's it. Cubby updates itself in the background; Settings › Updates has a preview channel.
+
+You need Minecraft: Java Edition. Non-premium players (TLauncher) are supported.
+
+## Privacy
+
+Cubby has no accounts. To make invite codes work, the app sends our small invite server
+([web/](web/)) only: the world's name, loader and version, your in-game name, the cover image, the
+player count and the mod count. Never player names, never your world. A code works until you renew it
+and is deleted after 60 days without use. Screenshots used as world covers stay on your computer.
 
 ## Development
 
-Requirements: [bun](https://bun.sh), Rust (stable), WebView2 on Windows. Java isn't needed to run
-servers: if no suitable version is found, the app downloads an Eclipse Temurin JRE into its own folder.
+Requirements: [bun](https://bun.sh), Rust (stable) and WebView2 on Windows. Java isn't needed: Cubby
+downloads an Eclipse Temurin JRE when no suitable one is found.
 
 ```bash
 bun install
 bun run tauri dev
 ```
 
-To see the UI without Tauri, using mock data, run `bun run dev` and open
-`http://localhost:1420` in a browser (development mode only; `src/lib/mock.ts`).
-
-Tests and checks:
+The UI also runs in a browser with mock data: `bun run dev` and open `http://localhost:1420`
+(development only, see `src/lib/mock.ts`).
 
 ```bash
-cd src-tauri && cargo test && cargo clippy --all-targets
-bun run build
+cd src-tauri && cargo test && cargo clippy --all-targets   # backend
+bun run build                                              # UI type check and build
+cd web && bun test && bun run typecheck                    # website and invite API
 ```
 
-Live tests (Mojang, Fabric, Paper, NeoForge, Forge, Quilt, Adoptium JRE): `cargo test -- --ignored live_install`; to list the Java installs on this machine: `cargo test -- --ignored live_scan --nocapture`
+Live tests that reach Mojang, Fabric, Paper, NeoForge, Forge, Quilt and Adoptium:
+`cargo test -- --ignored live_install`.
 
-### Translations
+<details>
+<summary><b>Project layout</b></summary>
 
-UI text lives in `src/i18n/tr.ts` (the source dictionary) and `src/i18n/en.ts`; a missing key in `en.ts` fails `tsc`.
-Rust messages use `tx!("Türkçe", "English")` side by side (`src-tauri/src/i18n.rs`).
+```
+src/          React UI: screens, app shell, translations (src/i18n)
+src-tauri/    Rust backend: servers, Java, loaders, Modrinth, P2P (iroh), launcher bridges
+web/          cubby.quacomes.com: the website, invite pages and the invite API (Vercel + Redis)
+scripts/      release script (bun run release <version> [--beta])
+docs/         milestones, design notes and the release guide
+```
 
-## Data location
+</details>
 
-By default, servers are kept in the app data folder:
-`%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}`. (The old `com.firatmio.mc-server-launcher` folder is moved here on first launch.)
-A different folder can be chosen in the setup wizard; which server lives where is recorded in `instances.json`.
+<details>
+<summary><b>Translations</b></summary>
 
-Asset licenses: [ASSETS.md](ASSETS.md).
+UI text lives in `src/i18n/tr.ts` (the source dictionary) and `src/i18n/en.ts`; a missing key in
+`en.ts` fails `tsc`. Rust messages use `tx!("Türkçe", "English")` side by side (`src-tauri/src/i18n.rs`).
+
+</details>
+
+<details>
+<summary><b>Where data is stored</b></summary>
+
+Worlds live in `%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}` by default. A
+different folder can be chosen in the setup wizard; `instances.json` records which world lives where.
+
+</details>
+
+## Roadmap
+
+Everything built so far is in [docs/MILESTONES.md](docs/MILESTONES.md). Next up:
+
+- Code signing, so Windows stops warning about an unknown publisher
+- *Whoever is online keeps the world open*: a shared world for the whole friend group
+- More launcher bridges
+
+Found a bug or have an idea? [Open an issue](https://github.com/firatmio/cubby/issues/new/choose).
 
 ## License
 
-Cubby is **not open source**. The code is public for viewing only; copying, modifying, redistributing or reusing it in other projects is not allowed without written permission. Using the official releases for yourself is fine. Details: [LICENSE](LICENSE).
+Cubby is **source-available, not open source**. The code is public for reading; copying, modifying,
+redistributing or reusing it elsewhere needs written permission. Using the official releases is free.
+See [LICENSE](LICENSE) and, for third-party assets, [docs/ASSETS.md](docs/ASSETS.md).
+
+<sub>NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</sub>

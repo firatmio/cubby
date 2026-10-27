@@ -28,7 +28,7 @@ written below.
    distribute it as part of Cubby under any license, without compensation.
 
 4. Third-party components
-   Third-party libraries and assets keep their own licenses (see ASSETS.md and
+   Third-party libraries and assets keep their own licenses (see docs/ASSETS.md and
    the respective package manifests). This license covers only the original
    work of the copyright holder.
 

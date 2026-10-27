@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: FAQ · Sık sorulanlar
+    url: https://cubby.quacomes.com/#faq
+    about: Quick answers about invites, launchers and Windows warnings. · Davetler, launcher'lar ve Windows uyarısı hakkında kısa cevaplar.
+  - name: Security issue · Güvenlik açığı
+    url: https://github.com/firatmio/cubby/security/advisories/new
+    about: Please report privately, not in a public issue. · Lütfen herkese açık issue yerine gizli bildir.

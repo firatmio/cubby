@@ -11,7 +11,7 @@ import quiltPatchwork from "../assets/loaders/quilt_patchwork.svg";
 import vanillaBlock from "../assets/loaders/vanilla_block.svg";
 import vanillaLandscape from "../assets/loaders/vanilla_landscape.svg";
 
-/** Her türün kendi logosu; `pixel`: piksel çizim, büyütülürken bulanıklaşmasın. Kaynak ve lisanslar ASSETS.md'de. */
+/** Her türün kendi logosu; `pixel`: piksel çizim, büyütülürken bulanıklaşmasın. Kaynak ve lisanslar docs/ASSETS.md'de. */
 const LOGOS: Record<LoaderKind, { src: string; pixel: boolean }> = {
   // 52x56 piksel çizim; küçültülürken yumuşak ölçeklensin.
   fabric: { src: fabricLogo, pixel: false },

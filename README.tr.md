@@ -1,77 +1,203 @@
+<div align="center">
+
+<img src=".github/assets/logo.svg" width="88" alt="">
+
 # Cubby
 
-[English](README.md) · **Türkçe**
+**Arkadaşlarınla kendi Minecraft dünyan.**<br>
+Cubby sunucuyu kurar, açık tutar ve arkadaşlarını 6 karakterlik bir kodla içeri alır.<br>
+Modem ayarı yok, kiralık sunucu yok, terminal yok.
 
-Arkadaşlarınla kendi Minecraft dünyan: terminalle uğraşmadan Java sunucusu kurar, yönetir, arkadaşlarını davet eder ve oyunu doğrudan dünyada açar.
-Tauri 2 (Rust) + React + TypeScript + Vite. Ayrıntılı hedefler: [SPEC.md](SPEC.md).
+[![Son sürüm](https://img.shields.io/github/v/release/firatmio/cubby?include_prereleases&label=s%C3%BCr%C3%BCm&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
+[![İndirme](https://img.shields.io/github/downloads/firatmio/cubby/total?label=indirme&color=6cc04a&style=flat-square)](https://github.com/firatmio/cubby/releases)
+[![Denetimler](https://img.shields.io/github/actions/workflow/status/firatmio/cubby/ci.yml?branch=main&label=denetimler&style=flat-square)](https://github.com/firatmio/cubby/actions/workflows/ci.yml)
+![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-2b2b2b?style=flat-square)
+[![Lisans](https://img.shields.io/badge/lisans-kaynak%20g%C3%B6r%C3%BCn%C3%BCr-2b2b2b?style=flat-square)](LICENSE)
 
-## Durum
+**[Windows için indir](https://cubby.quacomes.com/download)** · [Site](https://cubby.quacomes.com) · [Kodla katıl](https://cubby.quacomes.com/#join) · [English](README.md)
 
-- [x] **M1** — Pixel UI temeli, Vanilla sunucu indirme (sha1 doğrulamalı), başlat/durdur, canlı konsol, CPU/RAM
-- [x] **M2** — Loader mimarisi, Fabric + Paper (Fill v3), loader sürümü seçimi, yeniden adlandırma / RAM / silme (Geri Dönüşüm Kutusu), sunucu başına konum
-- [x] **M3** — Java tespiti (PATH, JAVA_HOME, kayıt defteri, yaygın dizinler, Minecraft Launcher runtime'ları) + Adoptium'dan taşınabilir JRE, sunucu başına Java seçimi
-- [x] **Konsol tarzı arayüz** — özel başlık çubuğu, sabit 1200×720 pencere, koyu tema, dünya kutucukları; her dünyanın arka planı o dünyada çekilen oyun içi ekran görüntüsü (F2), oyuncu listesi, LAN davet adresi
-- [x] **M4** — Dünya ayarları (önemli alanlar + tüm `server.properties` tablosu), tek seferlik EULA, TLauncher (premium olmayan) modu, beyaz liste (kurulumda da), yetkililer, oyuncu atma, giremeyenlere tek tıkla izin, kapak = sunucu simgesi, MOTD = dünya adı
-- [x] **M5** — İnternetten katılım: dünya başına "İnternete aç", modemde otomatik port açma (UPnP) ve CGNAT tespiti; modem izin vermiyorsa neden ve çözüm sade dille gösterilir
-- [x] **M6** — NeoForge, Forge (1.17+) ve Quilt: resmi installer'lar Java ile çalıştırılır (hash doğrulamalı), sürüm listeleri ve önerilen sürümler, mod mağazası her altyapı için; "Modlar oyuncunun Minecraft'ına da" akışı NeoForge/Forge istemcisini de kurar
-- [x] **M7a** — Katıl modu: davet linki/kodu (`cubby://join?d=…`), uygulamalar arası doğrudan bağlantı (iroh; olmazsa aracı sunucu), onay penceresi, Minecraft sunucu listesine otomatik ekleme, sürüm uyarısı, arka planda (tray) çalışma
-- [x] **M8** — Mod/eklenti mağazası (Modrinth): arama, kategoriler, sürüme uygun kurulum, bağımlılıklar kendiliğinden, güncelleme, kurulu modlar listesi (elle eklenenler hash ile tanınır)
-- [x] **M7b** — Modlar oyuncunun Minecraft'ına da: modlu dünyalarda sunucuya kurulan, oyuncuda gereken/önerilen modlar kendi Minecraft'ına dünyaya özel Launcher profiliyle kendiliğinden kurulur (Ayarlar'dan kapatılabilir; TLauncher'da ortak `mods` klasörü). Katılırken eksik modlar kontrol edilir: zorunlular kurulur, önerilenler isteğe bağlı; Modrinth'ten ya da arkadaşın uygulamasından (hash doğrulamalı). Arkadaşın modları değiştirince "Güncelle"
-- [x] **Başlat ve katıl** — Başlat'ın yanındaki menüden: sunucu açılınca Minecraft Launcher dünyanın profili seçili açılır, Oyna'ya basınca oyun doğrudan dünyaya bağlanır (Quick Play, 1.20+); arkadaşın tarafındaki "Oyna" da aynı
-- [~] **M9** — Oyunu Launcher'sız açma: Microsoft girişi (PKCE, tarayıcıda; yenileme anahtarı Windows Kimlik Bilgisi Yöneticisi'nde), oyunun dosyaları `.minecraft`'la paylaşılarak hash doğrulamalı indirilir, oyun Quick Play ile doğrudan dünyada açılır (vanilla ve NeoForge 26.3'te canlı doğrulandı). **Beklemede:** Mojang uygulama kimliğini onaylamadı (2026-10); Cubby şu an premium olmayan (TLauncher) oyuncuları da destekliyor ve onay listesi bunu kabul etmiyor. Yayın derlemeleri uygulama kimliği olmadan çıkar: Microsoft kartı görünmez, Launcher'lı akış çalışır. Ayrıntılar ve geri dönüş yolu: [docs/MICROSOFT_GIRIS.md](docs/MICROSOFT_GIRIS.md)
+<br>
 
-- [x] **İngilizce** — arayüz ve hata mesajları Türkçe ve İngilizce; ilk açılışta bilgisayarın diline göre, Ayarlar > Dil'den değiştirilebilir
-- [x] **M10** — Oyna / Keşfet sayfaları: başlık çubuğunun ortasında goo (slime) geçişli haplar, sayfalar esneyerek kayar. Animasyon seviyesi (Tam / Sade / Kapalı) kendiliğinden belirlenir (Windows animasyon ayarı, yazılımla çizim, düşen kareler) ve Ayarlar'dan değiştirilebilir
-  - [x] **M10a** — sayfalar, animasyon seviyesi, büyütülebilir/yeniden boyutlanabilir pencere (en küçük 1200×720), kendi zemini olan ve modlarla Keşfet: dünya seçici, öne çıkan bandı ve kategori raflarıyla vitrin, galerili ve açıklaması gerçek Markdown olarak görünen yan önizleme (Modrinth görselleri küçültülüp diskte önbelleklenir), önden yükleme ve bellek önbelleği sayesinde listeler anında gelir
-  - [x] **M10b** — kaynak paketleri (kendi Minecraft'ına kurulur ve açılır; istenirse sunucu üzerinden arkadaşlara zorunlu), shader'lar (Iris/Sodium — Forge'da Oculus/Embeddium — kendiliğinden kurulur ve dünyaya göre eşitlenir, shader açılır), veri paketleri (dünyaya kurulur, sunucu açıksa `reload` gider); arkadaşının dünyasında yalnız değiştirebileceğin sekmeler görünür
-  - [x] **M10c** — mod paketleri → yeni dünya: Keşfet'te her dünyada (dünya yokken de) Mod paketleri sekmesi; önizlemede paketin Minecraft/altyapı sürümü, mod sayıları ve boyutu, sürüm seçimi; "Yeni dünya olarak kur" sihirbazı ad ve erişim adımlarıyla açar. Paket (`.mrpack`) okunur, altyapı paketten kurulur, dosyalar hash doğrulamalı ve yalnız izinli adreslerden iner; sunucu modları ve ayarları sunucuya, yalnız oyuncuda çalışan modlar ve ayarlar senin Minecraft'ına, arkadaşlara "önerilen" olarak gider; kapak paketin görseli olur
-- [x] **Web katılım sayfası** — davet 6 karakterlik kodla (`K7M-2QX`, karışan karakterler yok) ya da linkiyle paylaşılır: `cubby.quacomes.com/join/K7M2QX` (ya da `/join?code=`); sohbette önizleme, "Cubby'de aç" ve "Cubby'yi indir". Katıl'da kendiliğinden geçen iki üçlü kutu var; link yapıştırılırsa kod ayıklanır. Kendi küçük sunucumuz ([web/](web/), Vercel + Redis) yalnız daveti tutar; kod davet yenilenene kadar geçerli, 60 gün kullanılmazsa silinir. Sitenin kökü ileride gelecek tanıtım sitesine ayrıldı; bilinmeyen adresler 404 sayfası gösterir. Ayrıntılar: [docs/DAVET_SUNUCUSU.md](docs/DAVET_SUNUCUSU.md)
-  - [x] **Davet sayfası 2.0** — sayfa dünyanın kendi kapağıyla açılır: "<ad> seni çağırıyor", dünyanın adı, sürümü ve canlı durum ("Açık · 2 oyuncu oyunda" / "Şu an kapalı"); WhatsApp/Discord önizlemesinde kapak görünür. Modlu dünyada kaç mod gerektiği yazar (kendiliğinden kurulur). Cubby kurulu değilse üç adımlı rehber çıkar ("İndir" son kurulum dosyasını doğrudan indirir ve kodu kopyalar; kurduktan sonra Katıl kendiliğinden dolar). Uygulama yalnız host'un adını (Ayarlar › Oyundaki adın, varsayılan Launcher'daki ad), kapağı, oyuncu sayısını ve mod sayısını gönderir; oyuncu isimlerini asla
-- [x] **Tanıtım sitesi** — `cubby.quacomes.com` Cubby'nin Oyna ekranı gibi açılır (gerçek bir dünya kapağı, büyük "Cubby", bilgi şeridi ve son sürümün sürüm/boyutuyla İndir); ardından gerçek ekran görüntüleriyle yan yana anlatım (Keşfet, davet, Hızlandırıcı, oyuncular) ve SSS; Türkçe ve İngilizce. Görüntüler gerçek uygulamadan; içlerindeki davet kodu ve arkadaş adları örnekleriyle değiştirildi
-- [x] **Otomatik güncelleme** — yeni sürüm arkada iner; başlık çubuğunda "Güncelleme hazır", "Neler yeni" ve yeniden başlatma kullanıcının elinde (açık dünyalar önce düzgünce kapanır, "Sonra" denirse kapatırken kurulur). Deneme kanalı (GitHub pre-release'leri), Ayarlar › Güncellemeler. Yayın tek komutla: `bun run release <sürüm> [--beta]` ([docs/YAYIN.md](docs/YAYIN.md))
-- [x] **Performans** — arkadaşlar dağılınca host'un bilgisayarı yorulmasın diye: yeni dünyalar görüş 8 / simülasyon 6 chunk ile başlar, Dünya ayarları › Performans'ta Hafif / Dengeli / Uzak görüş seçimi. "Dünyayı önceden hazırla" (modlu ve Paper dünyalar) Chunky'yi kurar, doğuş noktasının çevresinde 1.000–4.000 bloğu canlı ilerlemeyle oluşturur; biri oyundayken kendiliğinden duraklar, herkes çıkınca devam eder, yeniden açılışta kaldığı yerden sürer. Minecraft art arda "Can't keep up!" derse ana ekranda "Sunucu zorlanıyor" hapı çıkar, tıklayınca öneriler açılır
-- [x] **Hızlandırıcı** — Dünya ayarları › Performans'ta tek anahtar, yeni dünyalarda varsayılan açık: her dünyada ayarlı Java çöp toplayıcısı ve oyunun davranışını değiştirmeyen, yalnız sunucuda çalışan hızlandırma modları (Lithium, çekirdeklerin yarısında paralel chunk üretimiyle C2ME, ScalableLux, FerriteCore, yayınlanmışsa ModernFix). Saf dünyalar bunun için arka planda Fabric ile açılır, yine saf görünür ve oynanır; arkadaşlar bir şey kurmaz (önceden hazırlama da orada çalışır). Modlar sunucu açılmadan hemen önce kurulur, günde bir güncellenir, kapatılınca silinmez kenara alınır; açıldıktan sonraki ilk açılış çökerse ana ekran kapatıp yeniden denemeyi önerir
+<img src=".github/assets/app-tr.jpg" width="880" alt="Cubby'nin Oyna ekranı: dünyanın kapağı, adı ve Başlat ve katıl düğmesi">
 
-Sırada yayın hazırlığının kalanı var.
+</div>
 
-**Sonra:**
-- Yayın hazırlığı: kod imzası (SmartScreen uyarısı çıkmasın), tanıtım sitesi
-- Oyuncu sayısı artınca kendi aracı sunucumuz (bir VDS'te iroh-relay)
+## Neden Cubby
 
-**Fikir aşamasında:**
-- Dünya yedekleme: Google hesabı bağlayıp Google Drive'a otomatik yedek
-- Premium hesapla kendi sunucumuzda (VDS) yedekleme
+Arkadaşlarınla kendi dünyanda oynamak çoğu zaman sunucu kiralamak ya da modem ayarları, Java sürümleri ve
+mod listeleriyle boğuşmak demek. Cubby bunların hepsini senin yerine yapar: altyapıyı seç, **Başlat ve
+katıl**'a bas, kodu at. Arkadaşın kodu yazar (ya da linke tıklar) ve hangi launcher'ı kullanırsa kullansın
+doğru sürümle, doğru modlarla dünyana girer.
+
+## Özellikler
+
+<table>
+<tr>
+<td width="50%"><img src=".github/assets/invite-tr.jpg" alt="K7M-2QX koduyla davet penceresi"></td>
+<td>
+
+### Kodu at, gelsinler
+6 karakterlik bir kod (`K7M-2QX`) ya da linki. Cubby arkadaşının bilgisayarını doğrudan seninkine bağlar;
+farklı şehirde, farklı internette olsa da. Port açmak yok, ayar yok.
+
+- WhatsApp ve Discord'da dünyanın kapağıyla önizleme
+- Dünyan Minecraft'taki sunucu listesine kendiliğinden eklenir
+- Kodu yenileyince eski davet geçersiz olur
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Arkadaşın hangi launcher'ı kullanırsa
+Cubby oyunu arkadaşının zaten kullandığı launcher'la açar, hesabına dokunmaz.
+
+- **Prism Launcher:** tek tık, doğrudan dünyada
+- **TLauncher:** dünyanın sürümü seçili açılır
+- **Minecraft Launcher:** her dünyaya özel profil, Oyna'ya hazır
+
+</td>
+<td width="50%"><img src=".github/assets/launcher-tr.jpg" alt="Prism adımları yanmış launcher ayarı"></td>
+</tr>
+<tr>
+<td width="50%"><img src=".github/assets/players-tr.jpg" alt="Yasaklı bir oyuncuyla Oyuncular penceresi"></td>
+<td>
+
+### Kim girer, sen seçersin
+Beyaz liste, yöneticiler, atma ve yasaklama tek ekranda. Premium olmayan (TLauncher) arkadaşlar da güvenle girer.
+
+- **Ad koruması:** her ad, onunla ilk giren bilgisayara bağlanır
+- **Yasak kalıcı:** yasaklanan, adını değiştirse de giremez
+- Giremeyen arkadaşa tek tıkla izin
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Zayıf bilgisayarda da akıcı
+**Hızlandırıcı**, oyunun davranışını değiştirmeden sunucuyu hızlandırır; saf dünyalarda da.
+Arkadaşların hiçbir şey kurmaz.
+
+- Dünya hazırlama yaklaşık 1,5 kat daha hızlı (ölçtük)
+- Lithium, C2ME, ScalableLux, FerriteCore, ModernFix; güncel tutulur
+- Sunucu zorlanırsa söyler ve çözüm önerir
+
+</td>
+<td width="50%"><img src=".github/assets/booster-tr.jpg" alt="Hızlandırma modlarıyla Hızlandırıcı anahtarı"></td>
+</tr>
+</table>
+
+### Modrinth'in tamamı uygulamanın içinde
+Modlar, mod paketleri, shader'lar, kaynak paketleri ve veri paketleri; dünyanın sürümüne uyanı, gerektirdikleriyle
+birlikte kurulur. Bir mod paketi tek tıkla yeni dünya olur, arkadaşların gereken modları kendiliğinden alır.
+
+<img src=".github/assets/discover-tr.jpg" alt="Keşfet: öne çıkan shader'lar ve popüler olanların rafı">
+
+### Arkadaşının gerçekten açacağı bir davet sayfası
+Link dünyanın kapağıyla açılır; kimin çağırdığı, sürüm ve dünyanın şu an açık olup olmadığı görünür.
+Cubby'si olmayan arkadaş üç adımlık bir rehber görür; kod kopyalanır, Katıl kendiliğinden dolar.
+
+<img src=".github/assets/invite-page-tr.jpg" alt="Davet sayfası: Alex seni Kuzey Ormanı'na çağırıyor, açık, 2 oyuncu oyunda">
+
+## Nasıl çalışır
+
+```mermaid
+flowchart LR
+    host["Senin bilgisayarın<br/>Cubby + sunucu"] -- "kod K7M-2QX" --> friend(["Arkadaşın"])
+    friend -- "kodu yazar<br/>ya da linke tıklar" --> app["Arkadaşının Cubby'si"]
+    app <-. "doğrudan şifreli bağlantı<br/>(iroh, gerekirse aracı)" .-> host
+    app -- "doğru sürüm ve modlar,<br/>kendi launcher'ı" --> game["Minecraft,<br/>doğrudan dünyanda"]
+```
+
+- **Sunucu senin bilgisayarında çalışır.** Dünyan oradan çıkmaz; bilgisayarın kapalıyken davet sayfası
+  *Şu an kapalı* der.
+- **Arkadaşlar uygulamadan uygulamaya bağlanır:** [iroh](https://www.iroh.computer) ile doğrudan ve şifreli;
+  NAT'ı aşar, olmazsa aracı sunucudan geçer. İstersen dünyayı internete de açabilirsin (UPnP) ya da aynı
+  evde karşı tarafta Cubby olmadan oynayabilirsin.
+- **Gerisi kendiliğinden:** gerekirse doğru Java indirilir, altyapılar (Fabric, NeoForge, Forge, Quilt,
+  Paper) doğrulanmış özetlerle kurulur, modlar her arkadaşa eşitlenir.
+
+## Kurulum
+
+1. Windows 10 ya da 11 için [Cubby'yi indir](https://cubby.quacomes.com/download) (yaklaşık 6 MB).
+2. Cubby henüz kod imzası almadığı için Windows "bilinmeyen yayımcı" diyebilir: **Ek bilgi › Yine de çalıştır**.
+3. Bu kadar. Cubby kendini arka planda günceller; Ayarlar › Güncellemeler'de deneme kanalı var.
+
+Minecraft: Java Edition gerekir. Premium olmayan oyuncular (TLauncher) desteklenir.
+
+## Gizlilik
+
+Cubby'de hesap yok. Davet kodlarının çalışması için uygulama küçük davet sunucumuza ([web/](web/)) yalnız
+şunları gönderir: dünyanın adı, altyapısı ve sürümü, oyundaki adın, kapak görseli, oyuncu sayısı ve mod
+sayısı. Oyuncu adları ve dünyanın kendisi asla gönderilmez. Kod, sen yenileyene kadar çalışır; 60 gün
+kullanılmazsa silinir. Dünya kapağı olarak kullanılan ekran görüntüleri bilgisayarından çıkmaz.
 
 ## Geliştirme
 
-Gerekenler: [bun](https://bun.sh), Rust (stable), Windows'ta WebView2. Sunucuyu çalıştırmak için
-Java gerekmez: uygun sürüm bulunamazsa uygulama Eclipse Temurin JRE'yi kendi klasörüne indirir.
+Gerekenler: [bun](https://bun.sh), Rust (stable) ve Windows'ta WebView2. Java gerekmez: uygun sürüm
+bulunamazsa Cubby bir Eclipse Temurin JRE indirir.
 
 ```bash
 bun install
 bun run tauri dev
 ```
 
-Arayüzü Tauri olmadan, sahte verilerle görmek için `bun run dev` çalıştırıp tarayıcıda
-`http://localhost:1420` açılabilir (yalnız geliştirme modunda; `src/lib/mock.ts`).
-
-Testler ve kontroller:
+Arayüz sahte verilerle tarayıcıda da açılır: `bun run dev`, sonra `http://localhost:1420`
+(yalnız geliştirmede, bkz. `src/lib/mock.ts`).
 
 ```bash
-cd src-tauri && cargo test && cargo clippy --all-targets
-bun run build
+cd src-tauri && cargo test && cargo clippy --all-targets   # arka uç
+bun run build                                              # arayüz tip denetimi ve derleme
+cd web && bun test && bun run typecheck                    # site ve davet API'si
 ```
 
-Canlı testler (Mojang, Fabric, Paper, NeoForge, Forge, Quilt, Adoptium JRE): `cargo test -- --ignored live_install`; bu makinedeki Java'ları listelemek için `cargo test -- --ignored live_scan --nocapture`
+Mojang, Fabric, Paper, NeoForge, Forge, Quilt ve Adoptium'a giden canlı testler:
+`cargo test -- --ignored live_install`.
 
-## Veri konumu
+<details>
+<summary><b>Proje düzeni</b></summary>
 
-Varsayılan olarak sunucular uygulama veri dizininde tutulur:
-`%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}`. (Eski `com.firatmio.mc-server-launcher` klasörü ilk açılışta buraya taşınır.)
-Sihirbazda başka bir klasör seçilebilir; hangi sunucunun nerede olduğu `instances.json` kaydında durur.
+```
+src/          React arayüzü: ekranlar, uygulama kabuğu, çeviriler (src/i18n)
+src-tauri/    Rust arka ucu: sunucular, Java, altyapılar, Modrinth, P2P (iroh), launcher köprüleri
+web/          cubby.quacomes.com: site, davet sayfaları ve davet API'si (Vercel + Redis)
+scripts/      yayın betiği (bun run release <sürüm> [--beta])
+docs/         kilometre taşları, tasarım notları ve yayın rehberi
+```
 
-Asset lisansları: [ASSETS.md](ASSETS.md).
+</details>
+
+<details>
+<summary><b>Çeviriler</b></summary>
+
+Arayüz metinleri `src/i18n/tr.ts` (kaynak sözlük) ve `src/i18n/en.ts`'te; `en.ts`'te eksik anahtar `tsc`'yi
+kırar. Rust mesajları `tx!("Türkçe", "English")` ile yan yana yazılır (`src-tauri/src/i18n.rs`).
+
+</details>
+
+<details>
+<summary><b>Veriler nerede durur</b></summary>
+
+Dünyalar varsayılan olarak `%APPDATA%\com.quacomes.cubby\instances\<id>\{instance.json, server/}` altında.
+Kurulum sihirbazında başka bir klasör seçilebilir; hangi dünyanın nerede olduğu `instances.json`'da kayıtlı.
+
+</details>
+
+## Yol haritası
+
+Şimdiye kadar yapılanların hepsi [docs/KILOMETRE_TASLARI.md](docs/KILOMETRE_TASLARI.md)'de. Sırada:
+
+- Kod imzası: Windows "bilinmeyen yayımcı" uyarısını göstermesin
+- *Kim açıksa dünya açık*: arkadaş grubunun ortak dünyası
+- Daha fazla launcher köprüsü
+
+Bir hata buldun ya da aklına bir fikir mi geldi? [Issue aç](https://github.com/firatmio/cubby/issues/new/choose).
 
 ## Lisans
 
-Cubby **açık kaynak değildir**. Kod yalnız incelenmek için herkese açık; yazılı izin olmadan kopyalanamaz, değiştirilemez, dağıtılamaz ve başka projelerde kullanılamaz. Resmi sürümleri kendin için kullanmak serbest. Ayrıntılar: [LICENSE](LICENSE).
+Cubby **açık kaynak değil, kaynağı görünür**. Kod okumak için herkese açık; kopyalamak, değiştirmek, dağıtmak
+ya da başka yerde kullanmak yazılı izin ister. Resmi sürümleri kullanmak ücretsiz.
+Ayrıntılar [LICENSE](LICENSE)'ta, üçüncü taraf assetler [docs/ASSETS.md](docs/ASSETS.md)'de.
+
+<sub>RESMİ BİR MINECRAFT ÜRÜNÜ DEĞİLDİR. MOJANG YA DA MICROSOFT TARAFINDAN ONAYLANMAMIŞTIR VE ONLARLA BAĞLANTILI DEĞİLDİR.</sub>

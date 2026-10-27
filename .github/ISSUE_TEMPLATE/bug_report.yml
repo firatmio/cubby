@@ -1,0 +1,63 @@
+name: Bug report · Hata bildirimi
+description: Something in Cubby doesn't work as it should. · Cubby'de bir şey olması gerektiği gibi çalışmıyor.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time! English or Turkish, both are fine.
+        Zaman ayırdığın için teşekkürler! Türkçe ya da İngilizce yazabilirsin.
+
+        **Please don't share invite codes or links here** — anyone could join your world.
+        **Davet kodunu ya da linkini buraya yazma** — herkes dünyana girebilir.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? · Ne oldu?
+      description: What did you do, what did you expect, and what happened instead? · Ne yaptın, ne bekliyordun, ne oldu?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce · Nasıl tekrarlanır
+      placeholder: |
+        1. Create a Fabric world · Fabric dünyası oluştur
+        2. Press Start and join · Başlat ve katıl'a bas
+        3. …
+  - type: input
+    id: version
+    attributes:
+      label: Cubby version · Cubby sürümü
+      description: Settings › Updates · Ayarlar › Güncellemeler
+      placeholder: 0.2.0-beta.7
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Whose world? · Kimin dünyası?
+      options:
+        - My own world (host) · Kendi dünyam (host)
+        - A friend's world (joining) · Arkadaşımın dünyası (katılan)
+        - Not about a world · Dünyayla ilgili değil
+  - type: dropdown
+    id: launcher
+    attributes:
+      label: Launcher
+      options:
+        - Minecraft Launcher
+        - Prism Launcher
+        - TLauncher
+        - Other · Diğer
+        - Not relevant · İlgisi yok
+  - type: input
+    id: world
+    attributes:
+      label: World type · Dünya türü
+      placeholder: Fabric 0.16 · Minecraft 1.21.1
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs · Ekran görüntüsü ya da kayıtlar
+      description: Error messages, the console of the world, screenshots. · Hata mesajı, dünyanın konsolu, ekran görüntüsü.
