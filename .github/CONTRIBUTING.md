@@ -18,6 +18,8 @@ bun run build
 cd web && bun test && bun run typecheck   # if web/ changed
 ```
 
+Or all at once in Docker, exactly like CI: `bun run ci`.
+
 - Every new piece of UI text goes into both `src/i18n/tr.ts` and `src/i18n/en.ts`; Rust messages use
   `tx!("Türkçe", "English")`.
 - Write UI text the way you'd talk to a friend: short, plain, no jargon.

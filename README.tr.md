@@ -152,6 +152,8 @@ bun run build                                              # arayüz tip denetim
 cd web && bun test && bun run typecheck                    # site ve davet API'si
 ```
 
+Hepsi CI'daki gibi Docker'da da çalışır: `bun run ci` (ya da `bun run ci rust|ui|web`).
+
 Mojang, Fabric, Paper, NeoForge, Forge, Quilt ve Adoptium'a giden canlı testler:
 `cargo test -- --ignored live_install`.
 

@@ -1,0 +1,2 @@
+# Konteynerde çalışan betik: Windows satır sonu (CRLF) bash'i bozar.
+ci/run.sh text eol=lf

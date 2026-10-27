@@ -153,6 +153,8 @@ bun run build                                              # UI type check and b
 cd web && bun test && bun run typecheck                    # website and invite API
 ```
 
+All of these also run in Docker, the same way CI does: `bun run ci` (or `bun run ci rust|ui|web`).
+
 Live tests that reach Mojang, Fabric, Paper, NeoForge, Forge, Quilt and Adoptium:
 `cargo test -- --ignored live_install`.
 
