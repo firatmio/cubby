@@ -5,7 +5,7 @@
  * nonce'lu. Görseller `public/site/` altında, uygulamanın gerçek ekranlarından.
  */
 
-import { boosterUI, discoverUI, inviteUI, playersUI, UI_SCRIPT, UI_STYLE } from "./appui.js";
+import { boosterUI, discoverUI, inviteUI, launcherUI, playersUI, UI_SCRIPT, UI_STYLE } from "./appui.js";
 import { DOWNLOAD_PATH, escapeHtml } from "./html.js";
 import { TEXT as INVITE, type Lang } from "./i18n.js";
 import { formatSize, type LatestRelease } from "./release.js";
@@ -49,7 +49,14 @@ const TEXT = {
         eyebrow: "Arkadaşını davet et",
         title: "Kodu at, gelsinler",
         text: "Davet linki dünyanın kapağıyla açılır; arkadaşın dünyanın açık olup olmadığını, kimin çağırdığını görür.",
-        points: ["WhatsApp ve Discord'da kapaklı önizleme", "Cubby'si yoksa üç adımda kurar", "Kodu yenileyince eski davet geçersiz"],
+        points: ["WhatsApp ve Discord'da kapaklı önizleme", "Kodu bu sitede de yazabilir, dünyayı görür", "Kodu yenileyince eski davet geçersiz"],
+      },
+      {
+        ui: "launcher",
+        eyebrow: "Her launcher'la",
+        title: "Arkadaşın hangi launcher'ı kullanırsa",
+        text: "Cubby oyunu arkadaşının zaten kullandığı launcher'la açar: Minecraft Launcher, Prism ya da TLauncher. Hesabına dokunmaz.",
+        points: ["Prism'de tek tık: oyun doğrudan dünyada açılır", "TLauncher'da dünyanın sürümü seçili gelir", "Gereken modlar her birinde kendiliğinden kurulur"],
       },
       {
         ui: "booster",
@@ -122,7 +129,7 @@ const TEXT = {
     trust: ["Kendini günceller", "Reklam yok", "Kaynak kodu GitHub'da"],
     dlNote: "Windows \"bilinmeyen yayımcı\" derse: Ek bilgi › Yine de çalıştır.",
     inviteCard: "Arkadaşını davet et",
-    joined: "Ali katıldı",
+    joined: "Alex katıldı",
     joinedMore: "Modlu dünya · 2/10 oyuncu",
     shotAlt: "Cubby'nin Oyna ekranı",
     langLabel: "Dil",
@@ -185,7 +192,14 @@ const TEXT = {
         eyebrow: "Invite a friend",
         title: "Send the code, they're in",
         text: "The invite link opens on your world's cover; friends see whether it's open and who's inviting them.",
-        points: ["Cover previews in WhatsApp and Discord", "No Cubby yet? Three steps to install", "Renew the code and old invites stop working"],
+        points: ["Cover previews in WhatsApp and Discord", "They can type the code on this site and see the world", "Renew the code and old invites stop working"],
+      },
+      {
+        ui: "launcher",
+        eyebrow: "Any launcher",
+        title: "Whatever launcher your friend uses",
+        text: "Cubby opens the game with the launcher your friend already uses: the Minecraft Launcher, Prism or TLauncher. Their account stays untouched.",
+        points: ["Prism: one click, straight into the world", "TLauncher: the world's version comes preselected", "Needed mods install themselves in each"],
       },
       {
         ui: "booster",
@@ -258,7 +272,7 @@ const TEXT = {
     trust: ["Updates itself", "No ads", "Source on GitHub"],
     dlNote: "If Windows says \"unknown publisher\": More info › Run anyway.",
     inviteCard: "Invite a friend",
-    joined: "Ali joined",
+    joined: "Alex joined",
     joinedMore: "Modded world · 2/10 players",
     shotAlt: "Cubby's Play screen",
     langLabel: "Language",
@@ -327,10 +341,14 @@ h2{margin:10px 0 14px;font-size:clamp(30px,4vw,42px);font-weight:650;line-height
 .end{display:flex;align-items:center;gap:18px;margin-left:auto}
 .gh{color:var(--text-2);font-size:14px}
 .gh:hover{color:var(--text)}
-.lang{display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)}
-.lang a{padding:4px 10px;border-radius:999px;color:var(--text-2);font-size:12px;font-weight:700;letter-spacing:.04em}
+.lang{position:relative;display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)}
+.lind{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:999px;background:rgba(255,255,255,.16);transition:transform .45s var(--ease),width .45s var(--ease)}
+.lang a{position:relative;padding:4px 10px;border-radius:999px;color:var(--text-2);font-size:12px;font-weight:700;letter-spacing:.04em;transition:color .3s}
 .lang a:hover{color:var(--text)}
-.lang a[aria-current]{background:rgba(255,255,255,.16);color:var(--text)}
+.lang a[aria-current]{color:var(--text)}
+/* Dil değişince hap genişlikleri değişir: gösterge yeni yerine kayar. */
+.pills.slide .ind{transition:transform .45s var(--ease),width .45s var(--ease)}
+.pills.slide .ink{transition:clip-path .45s var(--ease)}
 
 /* Şerit: sayfalar yan yana; her biri kendi arka planı ve kendi kaydırmasıyla. */
 .viewport{position:fixed;inset:0;overflow:hidden}
@@ -553,7 +571,7 @@ font:700 26px var(--mono);letter-spacing:.2em;text-transform:uppercase}
 @media (prefers-reduced-motion:reduce){.anim{animation:none!important}.rise,.qa,.ans,.ans p,.plus,.chipind{transition:none!important}}
 
 @media (max-width:960px){
-.bar{padding:0 12px;justify-content:center}.brand span,.gh,.lang a[aria-current]{display:none}.brand{position:absolute;left:10px}.end{position:absolute;right:10px}.lang a{padding:4px 8px}
+.bar{padding:0 12px;justify-content:center}.brand span,.gh,.lang a[aria-current],.lind{display:none}.brand{position:absolute;left:10px}.end{position:absolute;right:10px}.lang a{padding:4px 8px}
 .pills{position:static;transform:none}.pills a,.ink span{padding:7px 11px;font-size:13px}
 .stage{grid-template-columns:1fr;padding:84px 20px 32px}
 .play{align-items:stretch}.play .meta{text-align:center}
@@ -683,8 +701,68 @@ chips.forEach((c)=>c.addEventListener("click",()=>{
     if(out)openQ(el.querySelector(".q"),false);
   });
 }));
-// Dil değişince aynı sayfada kalınsın.
-$$(".lang a").forEach((a)=>a.addEventListener("click",()=>{a.hash=location.hash;}));
+// Dil: sayfa yeniden yüklenmez. Aynı sayfanın öbür dildeki hâli alınır, yalnız değişen yazılar ve
+// birkaç öznitelik yerine konur (sayfa, kaydırma, yazılan kod, denenen arayüzler olduğu gibi kalır).
+// Görünen yazılar söner, değişir, yeniden belirir. Kullanıcının değiştirdiği yerler \`data-live\`:
+// onlara dokunulmaz, kendi betikleri "cubby:lang" olayında yeniler.
+const langs=$$(".lang a"),lind=$(".lind");
+const ATTRS=["alt","aria-label","placeholder","title","data-t","data-p"];
+function lindTo(inst){
+  const a=langs.find((x)=>x.hasAttribute("aria-current"));if(!a||!lind)return;
+  if(inst)lind.style.transition="none";
+  lind.style.width=a.offsetWidth+"px";lind.style.transform="translateX("+a.offsetLeft+"px)";
+  if(inst){void lind.offsetWidth;lind.style.transition="";}
+}
+function diff(a,b,out){
+  if(a.nodeType===3){if(a.nodeValue!==b.nodeValue)out.push([a,b.nodeValue]);return;}
+  if(a.nodeType!==1||b.nodeType!==1||a.tagName!==b.tagName||a.hasAttribute("data-live"))return;
+  for(const n of ATTRS){const v=b.getAttribute(n);if(v!==null&&a.getAttribute(n)!==v)out.push([a,v,n]);}
+  if(a.tagName==="IMG"){const v=b.getAttribute("src");if(v&&a.getAttribute("src")!==v)out.push([a,v,"src"]);}
+  if(a.tagName==="SCRIPT"&&a.type!=="application/json")return;
+  if(a.tagName==="TEMPLATE"){if(a.innerHTML!==b.innerHTML)out.push([a,b.innerHTML,"html"]);return;}
+  const x=a.childNodes,y=b.childNodes;
+  if(x.length!==y.length)return;
+  for(let i=0;i<x.length;i++)diff(x[i],y[i],out);
+}
+let switching=false;
+async function setLang(a){
+  const l=a.getAttribute("hreflang");
+  if(switching||l===document.documentElement.lang)return;
+  switching=true;
+  langs.forEach((x)=>x===a?x.setAttribute("aria-current","true"):x.removeAttribute("aria-current"));lindTo();
+  try{
+    const res=await fetch("/?lang="+l,{credentials:"same-origin"});
+    if(!res.ok)throw new Error(res.status);
+    const doc=new DOMParser().parseFromString(await res.text(),"text/html");
+    const out=[];diff(document.body,doc.body,out);
+    const page=pgs[idx],seen=new Set();
+    for(const [n] of out){
+      const el=n.nodeType===3?n.parentElement:n;
+      if(!el||el.closest("script,template"))continue;
+      const pg=el.closest(".pg");
+      if(!pg||pg===page)seen.add(el);
+    }
+    const els=[...seen],fade=!reduce.matches&&els.length<400;
+    if(fade)await Promise.all(els.map((el)=>el.animate([{opacity:1},{opacity:0}],{duration:140,easing:"ease-in",fill:"forwards"}).finished.catch(()=>{})));
+    for(const [n,v,at] of out){if(at==="html")n.innerHTML=v;else if(at)n.setAttribute(at,v);else n.nodeValue=v;}
+    document.documentElement.lang=l;document.title=doc.title;
+    const md=$('meta[name="description"]'),nd=doc.querySelector('meta[name="description"]');if(md&&nd)md.content=nd.content;
+    const u=new URL(location.href);if(u.searchParams.has("lang")){u.searchParams.set("lang",l);history.replaceState(history.state,"",u);}
+    nav.classList.add("slide");measure();paint();lindTo();setTimeout(()=>nav.classList.remove("slide"),500);
+    dispatchEvent(new CustomEvent("cubby:lang",{detail:l}));
+    for(const el of els){
+      const old=el.getAnimations();
+      if(fade)el.animate([{opacity:0},{opacity:1}],{duration:280,easing:"ease-out"});
+      old.forEach((an)=>an.cancel());
+    }
+  }catch(err){a.hash=location.hash;location.href=a.href;}
+  switching=false;
+}
+langs.forEach((a)=>a.addEventListener("click",(e)=>{
+  if(e.metaKey||e.ctrlKey||e.shiftKey||e.button)return;
+  e.preventDefault();setLang(a);
+}));
+lindTo(true);
 measure();go(fromHash(),{instant:true});
 // Açılan sayfa da esnemiş hâliyle bir kez çizilsin: ilk iki kare neredeyse saydam, sonra belirir.
 {
@@ -716,7 +794,7 @@ async function prepaint(){
 }
 const warm=()=>Promise.all($$("img").map((i)=>i.decode?i.decode().catch(()=>{}):0)).then(()=>setTimeout(prepaint,200));
 if(document.readyState==="complete")warm();else addEventListener("load",warm);
-document.fonts&&document.fonts.ready.then(()=>{measure();paint();});
+document.fonts&&document.fonts.ready.then(()=>{measure();paint();lindTo(true);});
 })();`;
 
 /**
@@ -726,15 +804,15 @@ document.fonts&&document.fonts.ready.then(()=>{measure();paint();});
  */
 const JOIN_SCRIPT = `(()=>{
 const root=document.querySelector(".joinpg");if(!root)return;
-const T=JSON.parse(document.getElementById("jtext").textContent);
+let T=JSON.parse(document.getElementById("jtext").textContent);
 const A="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const q=(s)=>root.querySelector(s);
 const box=q(".codebox"),form=q("form"),input=q(".field input"),cells=[...root.querySelectorAll(".cellrow span")],msg=q(".jmsg");
 const ways=q(".ways"),found=q(".found"),bg=q(".jcover"),fcover=q(".fcover"),fimg=q(".fimg");
 box.classList.add("js");input.removeAttribute("maxlength");
-let code="",seq=0,shown="";
+let code="",seq=0,shown="",last=null,mk="",me=false;
 const fmt=(c)=>c.slice(0,3)+"-"+c.slice(3);
-const say=(t,err)=>{msg.textContent=t||"";msg.classList.toggle("err",!!err);};
+const say=(k,err)=>{mk=k;me=!!err;msg.textContent=k?T[k]:"";msg.classList.toggle("err",me);};
 const state=(s)=>{box.classList.remove("busy","ok","bad");if(s)box.classList.add(s);};
 const shake=()=>{box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake");};
 const show=(el)=>{for(const x of [ways,found]){const on=x===el;x.classList.toggle("show",on);x.inert=!on;}};
@@ -754,7 +832,7 @@ input.addEventListener("input",()=>{
   const dropped=!m&&[...raw].some((c)=>!A.includes(c));
   input.value=clean;
   const same=clean===code;code=clean;render();
-  if(dropped){say(T.badChar,true);shake();}else if(!same)say(code.length?"":T.hint);
+  if(dropped){say("badChar",true);shake();}else if(!same)say(code.length?"":"hint");
   if(code.length===6){if(!same||!shown)look(code);}else{seq++;state(null);hide();}
 });
 input.addEventListener("focus",()=>{box.classList.add("focus");input.setSelectionRange(code.length,code.length);});
@@ -762,18 +840,17 @@ input.addEventListener("blur",()=>box.classList.remove("focus"));
 input.addEventListener("keydown",(e)=>{if(e.key==="Escape"&&code){input.value="";input.dispatchEvent(new Event("input"));}});
 form.addEventListener("submit",(e)=>{e.preventDefault();if(code.length===6)look(code);else{shake();input.focus();}});
 async function look(c){
-  const my=++seq;state("busy");say(T.checking);
+  const my=++seq;state("busy");say("checking");
   let r;
   try{
     const [res]=await Promise.all([fetch("/api/peek?code="+c,{headers:{accept:"application/json"}}),new Promise((ok)=>setTimeout(ok,480))]);
     r=res.ok?await res.json():{err:res.status};
   }catch(e){r={err:0};}
   if(my!==seq)return;
-  if(r.err!==undefined){state("bad");shake();say(r.err===404?T.notFound:r.err===429?T.tooMany:T.offline,true);hide();return;}
-  state("ok");say(T.found);fill(c,r.invite);
+  if(r.err!==undefined){state("bad");shake();say(r.err===404?"notFound":r.err===429?"tooMany":"offline",true);hide();return;}
+  state("ok");say("found");fill(c,r.invite);
 }
-function fill(c,v){
-  shown=c;
+function texts(v){
   q(".fhost").textContent=v.host?T.hostInvites.replace("{host}",v.host):T.eyebrow;
   q(".fname").textContent=v.world;
   q(".ftech").textContent=v.tech;
@@ -784,6 +861,9 @@ function fill(c,v){
     st.lastChild.textContent=v.status.state==="open"?(n>0?(n===1?T.open1:T.openN).replace("{n}",n):T.openEmpty):T.closed;
   }
   const mods=q(".fmods");mods.hidden=!(v.mods>0);mods.textContent=v.mods>0?T.mods.replace("{n}",v.mods):"";
+}
+function fill(c,v){
+  shown=c;last=v;texts(v);
   q("#jopen").href="cubby://join?c="+c;
   q("#jpage").href="/join/"+c;
   found.classList.remove("missing");
@@ -803,7 +883,8 @@ q("#jopen").addEventListener("click",()=>{copy(fmt(code));stop();tm=setTimeout((
 q("#jdl").addEventListener("click",()=>copy(fmt(code)));
 addEventListener("blur",stop);document.addEventListener("visibilitychange",()=>document.hidden&&stop());
 addEventListener("cubby:page",(e)=>{if(e.detail==="join"&&matchMedia("(pointer:fine)").matches)input.focus({preventScroll:true});});
-say(T.hint);render();show(ways);
+addEventListener("cubby:lang",()=>{T=JSON.parse(document.getElementById("jtext").textContent);say(mk,me);if(shown&&last)texts(last);});
+say("hint");render();show(ways);
 })();`;
 
 const ICONS = {
@@ -850,9 +931,11 @@ export function sitePage(lang: Lang, origin: string, release: LatestRelease | nu
           ? discoverUI(lang, r.eyebrow)
           : r.ui === "invite"
             ? inviteUI(lang)
-            : r.ui === "booster"
-              ? boosterUI(lang)
-              : playersUI(lang);
+            : r.ui === "launcher"
+              ? launcherUI(lang)
+              : r.ui === "booster"
+                ? boosterUI(lang)
+                : playersUI(lang);
       return `<section class="row${cls}">${text}
 ${ui}</section>`;
     })
@@ -948,12 +1031,12 @@ ${footer}
 <form action="/join" method="get" autocomplete="off">
 <label for="jcode">${e(it.codeLabel)}</label>
 <div class="field">
-<div class="cellrow" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => (i === 3 ? "<i></i>" : "") + `<span style="--i:${i}"></span>`).join("")}</div>
+<div class="cellrow" aria-hidden="true" data-live>${[0, 1, 2, 3, 4, 5].map((i) => (i === 3 ? "<i></i>" : "") + `<span style="--i:${i}"></span>`).join("")}</div>
 <input id="jcode" name="code" maxlength="7" inputmode="text" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="K7M-2QX" aria-describedby="jmsg">
 </div>
 <button class="btn primary" type="submit">${e(t.joinFind)}</button>
 </form>
-<p class="jmsg" id="jmsg" role="status" aria-live="polite"></p>
+<p class="jmsg" id="jmsg" role="status" aria-live="polite" data-live></p>
 </div>
 </div>
 <div class="jside in" style="--i:4">
@@ -970,11 +1053,11 @@ ${footer}
 <div class="found glass" inert>
 <div class="fcover"><div class="fimg"></div>${LOGO}<span class="fbadge">${ICONS.check}${e(t.join.found)}</span><button class="fx" type="button">${e(t.join.another)}</button></div>
 <div class="fbody">
-<p class="fhost"></p>
-<h2 class="fname"></h2>
-<p class="ftech"></p>
-<p class="fstatus" hidden><span class="dot"></span><span></span></p>
-<p class="fmods" hidden></p>
+<p class="fhost" data-live></p>
+<h2 class="fname" data-live></h2>
+<p class="ftech" data-live></p>
+<p class="fstatus" hidden data-live><span class="dot"></span><span></span></p>
+<p class="fmods" hidden data-live></p>
 <p class="fmobile">${e(it.desktopOnly)}</p>
 <div class="factions"><a class="btn primary" id="jopen" href="#">${e(it.open)}</a><a class="btn" id="jpage" href="#">${e(t.join.invitePage)}</a></div>
 <p class="falert">${e(it.notDetected)}</p>
@@ -1032,7 +1115,7 @@ ${footer}
 <a class="brand" ${go("home")}>${LOGO}<span>Cubby</span></a>
 <nav class="pills"><span class="ind"></span>${PAGES.map((p, i) => `<a ${go(p)}>${e(t.nav[i])}</a>`).join("")}<span class="ink" aria-hidden="true">${t.nav.map((n) => `<span>${e(n)}</span>`).join("")}</span></nav>
 <div class="end">
-<nav class="lang" aria-label="${e(t.langLabel)}">${(["tr", "en"] as const)
+<nav class="lang" aria-label="${e(t.langLabel)}"><span class="lind"></span>${(["tr", "en"] as const)
     .map((l) => `<a href="/?lang=${l}" hreflang="${l}" lang="${l}"${l === lang ? ` aria-current="true"` : ""}>${l.toUpperCase()}</a>`)
     .join("")}</nav>
 <a class="gh" href="${REPO_URL}" rel="noopener">GitHub</a>
