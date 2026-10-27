@@ -7,10 +7,10 @@
 import { error, json } from "../lib/http.js";
 import { OPEN_TTL_SECONDS, parseStatus, statusKey } from "../lib/meta.js";
 import { owned } from "../lib/owned.js";
-import { TTL_SECONDS, redis } from "../lib/store.js";
+import { STATUS_RULES, TTL_SECONDS, redis } from "../lib/store.js";
 
 export async function PUT(req: Request): Promise<Response> {
-  const o = await owned(req);
+  const o = await owned(req, 4096, ["status", STATUS_RULES]);
   if (o instanceof Response) return o;
   const status = parseStatus(o.body);
   if (!status) return error("bad_status", 400);

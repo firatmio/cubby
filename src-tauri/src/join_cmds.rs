@@ -223,6 +223,8 @@ async fn new_short(app: &AppHandle, id: &str, invite: &Invite) -> AppResult<Stri
             owner,
             token,
             cover_sent: None,
+            meta_sent: None,
+            status_sent: None,
         });
         Ok(())
     })?;

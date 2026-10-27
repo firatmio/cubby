@@ -165,18 +165,24 @@ async fn publish_meta(app: &AppHandle, id: &str) -> crate::error::AppResult<()> 
     };
     let host = player_name(app);
     let mods = required_mods(app, &inst);
-    short_invite::publish_meta(&http, &short, host.as_deref(), mods, cover).await?;
-    if cover.is_some() {
-        let sent = jpeg.map(|(_, v)| v);
-        let dir = paths::instance_dir(app, id)?;
-        let code = short.code.clone();
-        instance::modify(&dir, move |i| {
-            if let Some(s) = i.short_invite.as_mut().filter(|s| s.code == code) {
-                s.cover_sent = sent;
-            }
-            Ok(())
-        })?;
+    // Hiçbir şey değişmediyse (ör. her açılışta) davet sunucusuna yeniden gidilmez.
+    let signature = format!("{host:?}|{mods}|{version:?}");
+    if cover.is_none() && short.meta_sent.as_deref() == Some(signature.as_str()) {
+        return Ok(());
     }
+    short_invite::publish_meta(&http, &short, host.as_deref(), mods, cover).await?;
+    let sent_cover = cover.is_some().then(|| jpeg.map(|(_, v)| v));
+    let dir = paths::instance_dir(app, id)?;
+    let code = short.code.clone();
+    instance::modify(&dir, move |i| {
+        if let Some(s) = i.short_invite.as_mut().filter(|s| s.code == code) {
+            if let Some(c) = sent_cover {
+                s.cover_sent = c;
+            }
+            s.meta_sent = Some(signature);
+        }
+        Ok(())
+    })?;
     Ok(())
 }
 
@@ -225,8 +231,22 @@ async fn publish_status(app: &AppHandle, id: &str) -> crate::error::AppResult<()
         .and_then(|d| Properties::load(&d).ok())
         .and_then(|p| p.get("max-players").and_then(|v| v.parse().ok()))
         .unwrap_or(20);
+    // "Kapalı" davetle birlikte kalır: zaten gönderildiyse (ör. her açılışta) tekrar gidilmez.
+    if !running && short.status_sent == Some(false) {
+        return Ok(());
+    }
     let http = app.state::<AppState>().http.clone();
-    short_invite::publish_status(&http, &short, running, snap.players.len(), max).await
+    short_invite::publish_status(&http, &short, running, snap.players.len(), max).await?;
+    if short.status_sent != Some(running) {
+        let code = short.code.clone();
+        instance::modify(&paths::instance_dir(app, id)?, move |i| {
+            if let Some(s) = i.short_invite.as_mut().filter(|s| s.code == code) {
+                s.status_sent = Some(running);
+            }
+            Ok(())
+        })?;
+    }
+    Ok(())
 }
 
 /// Kısa bir beklemeden sonra gönderir; arada yeni bir değişiklik geldiyse yalnız sonuncusu gider.

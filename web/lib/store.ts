@@ -38,7 +38,7 @@ export function redis(): Redis {
 
 export const inviteKey = (code: string) => `inv:${code}`;
 
-type Window = `${number} ${"s" | "m" | "h" | "d"}`;
+export type Window = `${number} ${"s" | "m" | "h" | "d"}`;
 const limiters = new Map<string, Ratelimit>();
 
 function limiter(name: string, tokens: number, window: Window): Ratelimit {
@@ -76,3 +76,5 @@ export const LOOKUP_RULES: [number, Window][] = [
 ];
 export const CREATE_RULES: [number, Window][] = [[20, "1 h"]];
 export const WRITE_RULES: [number, Window][] = [[60, "1 h"]];
+/** Canlı durum: açık her dünya birkaç dakikada bir tazeler; ayrı ve daha geniş kova. */
+export const STATUS_RULES: [number, Window][] = [[600, "1 h"]];

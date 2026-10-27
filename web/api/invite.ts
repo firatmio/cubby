@@ -4,7 +4,7 @@
  */
 
 import { error, json } from "../lib/http.js";
-import { coverKey, statusKey } from "../lib/meta.js";
+import { coverKey, statusKey, type StatusUpdate } from "../lib/meta.js";
 import { codeOf, owned } from "../lib/owned.js";
 import { parseInvite } from "../lib/invite.js";
 import {
@@ -39,8 +39,10 @@ export async function PUT(req: Request): Promise<Response> {
     loaderVersion: parsed.invite.loaderVersion,
   };
   await redis().set(inviteKey(o.code), record, { ex: TTL_SECONDS });
-  // Kapak davetle birlikte yaşar.
+  // Kapak ve "kapalı" durumu davetle birlikte yaşar; "açık" kısa ömürlü kalır (uygulama çökerse düşsün).
   await redis().expire(coverKey(o.code), TTL_SECONDS);
+  const status = await redis().get<StatusUpdate>(statusKey(o.code));
+  if (status && !status.running) await redis().expire(statusKey(o.code), TTL_SECONDS);
   return json({ code: o.code });
 }
 

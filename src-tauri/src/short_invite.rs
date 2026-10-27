@@ -24,6 +24,12 @@ pub struct ShortInvite {
     /// Davet sunucusuna en son yüklenen kapağın sürümü (değişmedikçe yeniden yüklenmez).
     #[serde(default)]
     pub cover_sent: Option<u64>,
+    /// En son gönderilen sayfa bilgilerinin özeti (ad, mod sayısı, kapak): aynıysa yeniden gönderilmez.
+    #[serde(default)]
+    pub meta_sent: Option<String>,
+    /// En son gönderilen durum açık mıydı: "kapalı" davetle birlikte kaldığı için tekrar gönderilmez.
+    #[serde(default)]
+    pub status_sent: Option<bool>,
 }
 
 fn host_of(url: &str) -> Option<String> {
@@ -373,6 +379,8 @@ mod tests {
             owner,
             token: String::new(),
             cover_sent: None,
+            meta_sent: None,
+            status_sent: None,
         };
         assert!(refresh(&http, &s, &long).await.unwrap());
         let wrong = ShortInvite {
