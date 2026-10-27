@@ -21,7 +21,10 @@ export async function readJson(req: Request, max = 4096): Promise<Record<string,
   }
 }
 
-/** `nonce` verilirse yalnız o nonce'lu satır içi betik çalışır (davet sayfasının kopyala/aç betiği). */
+/**
+ * `nonce` verilirse yalnız o nonce'lu satır içi betik çalışır. İstek yalnız kendi uçlarımıza (Katıl'ın
+ * kod önizlemesi); form da yalnız kendimize (betiksiz Katıl `/join?code=`'a gider).
+ */
 export function html(body: string, status = 200, nonce?: string): Response {
   return new Response(body, {
     status,
@@ -34,7 +37,7 @@ export function html(body: string, status = 200, nonce?: string): Response {
       "referrer-policy": "no-referrer",
       "content-security-policy": `default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; ${
         nonce ? `script-src 'nonce-${nonce}'; ` : ""
-      }base-uri 'none'; form-action 'none'`,
+      }connect-src 'self'; base-uri 'none'; form-action 'self'`,
     },
   });
 }

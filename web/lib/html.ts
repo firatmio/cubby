@@ -237,8 +237,8 @@ ${cells(v.code)}
   );
 }
 
-/** Tek mesajlı sayfa (davet bulunamadı, çok deneme). */
-export function messagePage(lang: Lang, origin: string, title: string, text: string): string {
+/** Tek mesajlı sayfa (davet bulunamadı, çok deneme). `retry`: sitedeki Katıl'a dönüp başka kod yazılabilir. */
+export function messagePage(lang: Lang, origin: string, title: string, text: string, retry = false): string {
   const t = TEXT[lang];
   const e = escapeHtml;
   return layout(
@@ -249,7 +249,11 @@ export function messagePage(lang: Lang, origin: string, title: string, text: str
 <section class="hero">
 <h1>${e(title)}</h1>
 <p class="lede">${e(text)}</p>
-<div class="actions"><a class="btn primary" href="${DOWNLOAD_PATH}">${e(t.download)}</a><a class="btn" href="/">${e(t.backHome)}</a></div>
+<div class="actions">${
+      retry
+        ? `<a class="btn primary" href="/#join">${e(t.tryAnother)}</a><a class="btn" href="${DOWNLOAD_PATH}">${e(t.download)}</a>`
+        : `<a class="btn primary" href="${DOWNLOAD_PATH}">${e(t.download)}</a><a class="btn" href="/">${e(t.backHome)}</a>`
+    }</div>
 </section>
 </main>`,
   );

@@ -1,24 +1,24 @@
 /**
- * Ana site (`/`): uygulamadaki gibi üstteki haplarla yan yana dört sayfa (Ana sayfa, Özellikler,
- * SSS, İndir). Geçişte şerit yay gibi kayar ve hızına göre esner; yerine aşmadan oturur. Her
+ * Ana site (`/`): uygulamadaki gibi üstteki haplarla yan yana beş sayfa (Ana sayfa, Özellikler,
+ * SSS, Katıl, İndir). Geçişte şerit yay gibi kayar ve hızına göre esner; yerine aşmadan oturur. Her
  * sayfanın kendi arka planı vardır, onunla birlikte kayar. Sunucuda iki dilde üretilir; betik
  * nonce'lu. Görseller `public/site/` altında, uygulamanın gerçek ekranlarından.
  */
 
 import { boosterUI, discoverUI, inviteUI, playersUI, UI_SCRIPT, UI_STYLE } from "./appui.js";
 import { DOWNLOAD_PATH, escapeHtml } from "./html.js";
-import type { Lang } from "./i18n.js";
+import { TEXT as INVITE, type Lang } from "./i18n.js";
 import { formatSize, type LatestRelease } from "./release.js";
 
 const REPO_URL = "https://github.com/firatmio/cubby";
 /** Sayfaların adres çubuğundaki adları (`#features`); sıra şeritteki sıra. */
-const PAGES = ["home", "features", "faq", "download"] as const;
+const PAGES = ["home", "features", "faq", "join", "download"] as const;
 
 const TEXT = {
   tr: {
     title: "Cubby — Arkadaşlarınla kendi Minecraft dünyan",
     desc: "Cubby, Minecraft sunucunu kurar, açar ve arkadaşlarını 6 karakterlik bir kodla bağlar. Modem ayarı yok, kiralık sunucu yok.",
-    nav: ["Ana sayfa", "Özellikler", "SSS", "İndir"],
+    nav: ["Ana sayfa", "Özellikler", "SSS", "Katıl", "İndir"],
     caption: "Minecraft sunucu yöneticisi · Windows",
     ready: "Arkadaşlarınla oynamaya hazır",
     readyMore: "modem ayarı yok, kiralık sunucu yok",
@@ -29,12 +29,13 @@ const TEXT = {
     ],
     download: "İndir",
     downloadLong: "Windows için indir",
+    haveCode: "Davet kodum var",
     meta: (r: LatestRelease | null) =>
       ["Ücretsiz", "Windows 10 / 11", r && formatSize(r.size), r && `v${r.version}`].filter(Boolean).join(" · "),
     codeEyebrow: "6 karakter, hepsi bu",
     codeTitle: "Port açmak yok, IP ezberlemek yok",
     codeText:
-      "Arkadaşın kodu Cubby'de Katıl'a yazar ya da linke tıklar. Farklı şehirde, farklı internette olsa da doğrudan bağlanır.",
+      "Arkadaşın linke tıklar ya da kodu Katıl'a yazar: Cubby'de ya da bu sitede. Farklı şehirde, farklı internette olsa da doğrudan bağlanır.",
     rows: [
       {
         ui: "discover",
@@ -61,8 +62,8 @@ const TEXT = {
         ui: "players",
         eyebrow: "Oyuncular",
         title: "Kim girer, sen seçersin",
-        text: "Beyaz liste, yöneticiler ve atma tek ekranda. Premium olmayan (TLauncher) arkadaşlar da güvenle girer.",
-        points: ["Girmeye çalışana tek tıkla izin", "Yalnız eklediğin isimler girer", "Kimin oyunda olduğu her an belli"],
+        text: "Beyaz liste, yöneticiler, atma ve yasaklama tek ekranda. Premium olmayan (TLauncher) arkadaşlar da güvenle girer.",
+        points: ["Kimse senin adınla giremez", "Yasaklanan, adını değiştirse de giremez", "Kimin oyunda olduğu her an belli"],
       },
     ],
     faqTitle: "Sık sorulanlar",
@@ -94,7 +95,17 @@ const TEXT = {
       [
         "friends",
         "TLauncher ile oynayan arkadaşım girebilir mi?",
-        "Evet. Premium olmayanlar için beyaz liste açık tutulur, yalnız eklediğin isimler girer.",
+        "Evet. Cubby her adı o adla ilk giren arkadaşın bilgisayarına bağlar; başkası o adla giremez. İstersen beyaz listeyle yalnız eklediğin isimlere açarsın.",
+      ],
+      [
+        "friends",
+        "Kodu nereye yazacağım?",
+        "Cubby'de Katıl'a ya da bu sitedeki Katıl sayfasına. Link geldiyse tıklaman yeter; dünyanın sayfası açılır.",
+      ],
+      [
+        "friends",
+        "Arkadaşım Prism ya da TLauncher kullanıyor, sorun olur mu?",
+        "Olmaz. Cubby onun launcher'ını bulur: Prism'de oyun doğrudan dünyada açılır, TLauncher'da dünyanın sürümü seçili gelir.",
       ],
       ["start", "Mac ya da Linux'ta çalışır mı?", "Şimdilik yalnız Windows 10 ve 11."],
       [
@@ -116,12 +127,34 @@ const TEXT = {
     shotAlt: "Cubby'nin Oyna ekranı",
     langLabel: "Dil",
     footer: ["GitHub", "Sürüm notları", "Katıl"],
+    joinEyebrow: "Davet kodun mu var?",
+    joinTitle: "Arkadaşının dünyasına katıl",
+    joinLead: "Arkadaşının attığı 6 karakterlik kodu yaz; dünyayı, açık olup olmadığını ve seni kimin çağırdığını hemen gör.",
+    joinHint: "Linkin tamamını da yapıştırabilirsin.",
+    joinFind: "Bul",
+    ways: "Katılmanın üç yolu",
+    wayList: [
+      ["Linke tıkla", "Arkadaşının attığı link dünyanın sayfasını açar; oradan tek tıkla Cubby'de."],
+      ["Kodu buraya yaz", "Link elinde değilse 6 karakter yeter. Dünyayı burada görürsün."],
+      ["Cubby'de Katıl", "Uygulamada Katıl'a bas, kodu yaz. Kodu kopyaladıysan kendiliğinden dolar."],
+    ],
+    here: "Buradasın",
+    noCubby: "Cubby'n yok mu?",
+    join: {
+      badChar: "0, O, 1, I ve L kodlarda yok; birbirine karışmasınlar diye.",
+      checking: "Bakılıyor…",
+      notFound: "Bu kodla bir davet yok. Kod yenilenmiş olabilir; arkadaşından yenisini iste.",
+      offline: "Bağlanamadım. İnternetini kontrol edip tekrar dene.",
+      invitePage: "Davet sayfası",
+      another: "Başka kod",
+      found: "Davet bulundu",
+    },
     rights: "Mojang ya da Microsoft ile bağlantılı değildir.",
   },
   en: {
     title: "Cubby — Your own Minecraft world with your friends",
     desc: "Cubby sets up and runs your Minecraft server and connects your friends with a 6-character code. No port forwarding, no rented server.",
-    nav: ["Home", "Features", "FAQ", "Download"],
+    nav: ["Home", "Features", "FAQ", "Join", "Download"],
     caption: "Minecraft server manager · Windows",
     ready: "Ready to play with your friends",
     readyMore: "no port forwarding, no rented server",
@@ -132,12 +165,13 @@ const TEXT = {
     ],
     download: "Download",
     downloadLong: "Download for Windows",
+    haveCode: "I have a code",
     meta: (r: LatestRelease | null) =>
       ["Free", "Windows 10 / 11", r && formatSize(r.size), r && `v${r.version}`].filter(Boolean).join(" · "),
     codeEyebrow: "6 characters, that's it",
     codeTitle: "No port forwarding, no IPs to remember",
     codeText:
-      "Your friend types the code into Join in Cubby or clicks the link. Different city, different internet: they still connect directly.",
+      "Your friend clicks the link or types the code into Join, in Cubby or right here on the site. Different city, different internet: they still connect directly.",
     rows: [
       {
         ui: "discover",
@@ -164,8 +198,8 @@ const TEXT = {
         ui: "players",
         eyebrow: "Players",
         title: "You choose who gets in",
-        text: "Whitelist, operators and kicking on one screen. Non-premium (TLauncher) friends can join safely too.",
-        points: ["Allow someone who tried to join in one click", "Only names you add can join", "Always see who's online"],
+        text: "Whitelist, operators, kicking and banning on one screen. Non-premium (TLauncher) friends can join safely too.",
+        points: ["Nobody can join under your name", "Banned players stay out even with a new name", "Always see who's online"],
       },
     ],
     faqTitle: "Frequently asked",
@@ -194,7 +228,21 @@ const TEXT = {
         "What happens when my computer is off?",
         "The world lives on your computer; friends can join once you open it. While it's closed, the invite page says \"Closed right now\".",
       ],
-      ["friends", "Can a friend who plays with TLauncher join?", "Yes. The whitelist stays on for non-premium players, so only names you add can join."],
+      [
+        "friends",
+        "Can a friend who plays with TLauncher join?",
+        "Yes. Cubby ties each name to the computer of the friend who first joined with it; nobody else can use that name. If you like, the whitelist lets in only names you add.",
+      ],
+      [
+        "friends",
+        "Where do I type the code?",
+        "Into Join in Cubby, or on the Join page of this site. If you got a link, just click it; the world's page opens.",
+      ],
+      [
+        "friends",
+        "My friend uses Prism or TLauncher. Is that a problem?",
+        "No. Cubby finds their launcher: in Prism the game opens straight into the world, in TLauncher the world's version comes preselected.",
+      ],
       ["start", "Does it run on Mac or Linux?", "For now, only Windows 10 and 11."],
       [
         "start",
@@ -215,6 +263,28 @@ const TEXT = {
     shotAlt: "Cubby's Play screen",
     langLabel: "Language",
     footer: ["GitHub", "Release notes", "Join"],
+    joinEyebrow: "Got an invite code?",
+    joinTitle: "Join your friend's world",
+    joinLead: "Type the 6-character code your friend sent and see the world, whether it's open and who's inviting you.",
+    joinHint: "You can paste the whole link too.",
+    joinFind: "Find",
+    ways: "Three ways to join",
+    wayList: [
+      ["Click the link", "The link your friend sent opens the world's page; one click from there opens it in Cubby."],
+      ["Type the code here", "No link at hand? The 6 characters are enough. You'll see the world right here."],
+      ["Join in Cubby", "Press Join in the app and type the code. If you copied it, it fills itself in."],
+    ],
+    here: "You're here",
+    noCubby: "Don't have Cubby?",
+    join: {
+      badChar: "Codes never use 0, O, 1, I or L, so they can't be mixed up.",
+      checking: "Looking it up…",
+      notFound: "There's no invite with this code. It may have been renewed; ask your friend for a new one.",
+      offline: "Couldn't connect. Check your internet and try again.",
+      invitePage: "Invite page",
+      another: "Another code",
+      found: "Invite found",
+    },
     rights: "Not affiliated with Mojang or Microsoft.",
   },
 } as const;
@@ -264,7 +334,7 @@ h2{margin:10px 0 14px;font-size:clamp(30px,4vw,42px);font-weight:650;line-height
 
 /* Şerit: sayfalar yan yana; her biri kendi arka planı ve kendi kaydırmasıyla. */
 .viewport{position:fixed;inset:0;overflow:hidden}
-.strip{display:flex;width:400vw;height:100%;will-change:transform}
+.strip{display:flex;width:500vw;height:100%;will-change:transform}
 .pg{position:relative;flex:0 0 100vw;height:100%;overflow:hidden}
 .pg[data-hidden]{visibility:hidden}
 .pg:not(.on) .anim{animation-play-state:paused}
@@ -295,6 +365,9 @@ linear-gradient(to right,rgba(22,22,22,.75),rgba(22,22,22,0) 60%)}
 .item .cells{font-size:14px}
 .play{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
 .play .btn{height:66px;padding:0 44px;font-size:19px}
+.cta{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:12px}
+.cta .btn:not(.primary){padding:0 30px}
+.cta .btn svg{width:20px;height:20px}
 .meta{color:var(--text-2);font-size:13px}
 
 /* Özellikler ve SSS */
@@ -389,6 +462,92 @@ footer a:hover{color:var(--text)}
 .avatar{display:grid;flex:none;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--accent);color:#122;font-weight:700}
 .online{display:inline-block;margin-right:6px;vertical-align:1px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(108,192,74,.25)}
 @keyframes bob{to{transform:translateY(-10px)}}
+
+/* Katıl: solda kod hücreleri, sağda katılma yolları ya da bulunan dünyanın kartı. Kapak gelince arka plan olur. */
+.joinpg .bg{background:radial-gradient(55% 55% at 85% 5%,rgba(108,192,74,.17),transparent 70%),radial-gradient(45% 50% at 0% 100%,rgba(90,150,230,.11),transparent 70%),var(--bg)}
+.jcover{position:absolute;inset:0;opacity:0;background:center/cover no-repeat;transform:scale(1.06);transition:opacity .9s ease,transform 1.4s var(--ease)}
+.jcover.on{opacity:1;transform:scale(1.02)}
+.jcover::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(22,22,22,.96) 0%,rgba(22,22,22,.84) 42%,rgba(22,22,22,.5) 100%),linear-gradient(to top,rgba(22,22,22,.92),rgba(22,22,22,0) 55%)}
+.joingrid{min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,430px);align-items:center;gap:72px;width:min(1240px,100%);margin:0 auto;padding:110px 64px 64px}
+.joinpg h1{margin:14px 0 16px;font-size:clamp(44px,5vw,72px);font-weight:650;line-height:1.02;letter-spacing:-.045em}
+.joinpg .lead{max-width:520px}
+.in{transition:opacity .5s ease-out,transform .6s var(--ease);transition-delay:calc(var(--i,0) * 60ms + 100ms)}
+.joinpg[data-hidden] .in{opacity:0;transform:translateY(22px);transition:none}
+.codebox{position:relative;width:max-content;max-width:100%;margin-top:38px}
+.codebox label{display:block;margin-bottom:12px;color:var(--text-2);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.field{position:relative}
+.cellrow{display:none;align-items:center;gap:10px;font-family:var(--mono);font-size:34px;font-weight:700}
+.cellrow span{display:grid;place-items:center;width:62px;height:78px;border:1px solid var(--line-strong);border-radius:16px;background:rgba(255,255,255,.05);
+transition:border-color .25s,background .25s,box-shadow .25s,color .25s;transition-delay:calc(var(--i,0) * 45ms)}
+.cellrow span.f{animation:pop .3s var(--ease)}
+.cellrow i{width:14px;height:3px;border-radius:2px;background:var(--text-3)}
+@keyframes pop{from{transform:scale(.78)}}
+.focus .cellrow span.cur{border-color:rgba(108,192,74,.65);box-shadow:0 0 0 4px rgba(108,192,74,.14);transition-delay:0s}
+.focus .cellrow span.cur::after{content:"";width:2px;height:40%;border-radius:2px;background:var(--accent);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.busy .cellrow span{background:linear-gradient(100deg,rgba(255,255,255,.05) 35%,rgba(255,255,255,.17) 50%,rgba(255,255,255,.05) 65%) 0 0/300% 100%;animation:shim 1s linear infinite;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes shim{from{background-position:100% 0}to{background-position:-50% 0}}
+.ok .cellrow span{border-color:rgba(108,192,74,.7);background:rgba(108,192,74,.15);color:#e2f6d8}
+.bad .cellrow span{border-color:rgba(236,104,92,.65);background:rgba(236,104,92,.1)}
+.shake .cellrow{animation:shake .42s ease}
+@keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+/* Betiksiz: düz kutu ve Bul düğmesi (form /join?code= adresine gider). */
+.field input{width:100%;height:64px;padding:0 20px;border:1px solid var(--line-strong);border-radius:16px;background:rgba(255,255,255,.05);color:var(--text);
+font:700 26px var(--mono);letter-spacing:.2em;text-transform:uppercase}
+.field input:focus{outline:none;border-color:rgba(108,192,74,.65)}
+.codebox .btn{margin-top:14px}
+.js .cellrow{display:flex}
+.js .field input{position:absolute;inset:0;height:100%;padding:0;border:0;opacity:0;font-size:16px;cursor:text}
+.js .btn{display:none}
+.jmsg{min-height:24px;margin:16px 0 0;color:var(--text-2);font-size:15px;transition:color .2s}
+.jmsg.err{color:#f39184}
+.jside{display:grid}
+.jside>*{grid-area:1/1;transition:opacity .45s ease,transform .6s var(--ease),visibility 0s .6s}
+.jside>:not(.show){visibility:hidden;opacity:0;transform:translateY(16px) scale(.98)}
+.jside>.show{transition-delay:.08s,.08s,0s}
+.ways{align-self:center;padding:26px}
+.ways h3{margin:0 0 6px;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.ways ol{margin:0;padding:0;list-style:none}
+.ways li{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.ways li:last-child{border-bottom:0;padding-bottom:4px}
+.ways li .icon{width:40px;height:40px;border-radius:12px}
+.ways li .icon svg{width:19px;height:19px}
+.ways b{display:flex;align-items:center;gap:8px;font-size:16px}
+.ways p{margin:3px 0 0;color:var(--text-2);font-size:14px}
+.ways .here .icon{background:rgba(108,192,74,.16);color:var(--accent)}
+.tag{padding:2px 8px;border-radius:999px;background:rgba(108,192,74,.16);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.ways .foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:16px;border-top:1px solid var(--line);color:var(--text-2);font-size:14px}
+.ways .foot a{display:inline-flex;align-items:center;gap:6px;color:var(--text);font-weight:600}
+.ways .foot a svg{width:16px;height:16px;transition:transform .3s var(--ease)}
+.ways .foot a:hover svg{transform:translateX(3px)}
+.found{overflow:hidden;align-self:center}
+.fcover{position:relative;height:190px;background:radial-gradient(70% 90% at 70% 0%,rgba(108,192,74,.35),transparent 70%),linear-gradient(135deg,#25301f,#1b1b1b);background-size:cover;background-position:center}
+.fcover>svg{position:absolute;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-56%);opacity:.9;filter:drop-shadow(0 10px 24px rgba(0,0,0,.4))}
+.fcover.img>svg{display:none}
+.fcover::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(30,30,30,.92),rgba(30,30,30,0) 60%)}
+.fbadge{position:absolute;z-index:1;top:14px;left:14px;display:flex;align-items:center;gap:6px;padding:5px 11px 5px 9px;border-radius:999px;background:rgba(20,20,20,.6);color:var(--text);font-size:12px;font-weight:600;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.fbadge svg{width:13px;height:13px;color:var(--accent)}
+.fx{position:absolute;z-index:1;top:12px;right:12px;padding:6px 12px;border:0;border-radius:999px;background:rgba(20,20,20,.6);color:var(--text-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.fx:hover{color:var(--text)}
+.fx:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbody{position:relative;margin-top:-34px;padding:0 24px 24px}
+.fhost{margin:0;color:var(--text-2);font-size:14px;font-weight:500}
+.fname{margin:2px 0 4px;font-size:30px;font-weight:650;line-height:1.1;letter-spacing:-.03em;overflow-wrap:anywhere}
+.ftech{margin:0;color:var(--text-2);font-size:14px}
+.fstatus{display:flex;align-items:center;gap:9px;margin:12px 0 0;font-size:15px;font-weight:500}
+.fstatus[hidden],.fmods[hidden]{display:none}
+.fstatus .dot{width:8px;height:8px;border-radius:50%;background:var(--text-3)}
+.fstatus.open .dot{background:var(--accent);box-shadow:0 0 0 4px rgba(108,192,74,.2)}
+.fstatus.closed{color:var(--text-2)}
+.fmods{margin:10px 0 0;color:var(--text-2);font-size:13px}
+.factions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.factions .btn{flex:1 1 auto;height:50px;padding:0 22px;font-size:15px}
+.fnote{margin:14px 0 0;color:var(--text-2);font-size:13px}
+.fnote a{color:var(--text);font-weight:600;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.falert,.fmobile{display:none;margin:14px 0 0;padding:10px 12px;border-radius:12px;background:rgba(240,180,76,.14);color:#f0b44c;font-size:13px}
+.found.missing .falert{display:block}
+@media (pointer:coarse),(max-width:720px){.found .fmobile{display:block}}
+@media (prefers-reduced-motion:reduce){.in,.jside>*,.jcover,.cellrow span{transition:none!important}.cellrow,.cellrow span{animation:none!important}}
 @media (prefers-reduced-motion:reduce){.anim{animation:none!important}.rise,.qa,.ans,.ans p,.plus,.chipind{transition:none!important}}
 
 @media (max-width:960px){
@@ -409,8 +568,12 @@ footer a:hover{color:var(--text)}
 .frame{transform:rotateY(-8deg) rotateX(3deg)}
 .float{padding:10px 14px 10px 10px;border-radius:16px}.float b{font-size:14px}.avatar{width:34px;height:34px}
 .f-invite{left:-2%;bottom:-12%}.f-toast{right:-2%;top:-14%}
+.cta{justify-content:stretch}.cta .btn{flex:1 1 100%}
+.joingrid{grid-template-columns:1fr;gap:36px;padding:96px 20px 48px}.codebox{width:100%}
+.cellrow{gap:6px;font-size:24px}.cellrow span{flex:1;width:auto;max-width:56px;height:62px;border-radius:13px}.cellrow i{width:10px;flex:none}
 }
-@media (max-width:420px){.pills a,.ink span{padding:7px 9px}}
+@media (max-width:520px){.bar{justify-content:space-between}.brand{display:none}.end{position:static}.pills a,.ink span{padding:7px 9px;font-size:12.5px}}
+@media (max-width:360px){.pills a,.ink span{padding:7px 7px}}
 `;
 
 /**
@@ -448,7 +611,7 @@ function paint(){
   const on=Math.round(p);pills.forEach((el,j)=>j===on?el.setAttribute("aria-current","page"):el.removeAttribute("aria-current"));
 }
 function solid(){bar.classList.toggle("solid",scrolls[idx].scrollTop>8);}
-function settle(){pgs.forEach((p,j)=>{if(j===idx)p.removeAttribute("data-hidden");else p.setAttribute("data-hidden","");});solid();}
+function settle(){pgs.forEach((p,j)=>{if(j===idx)p.removeAttribute("data-hidden");else p.setAttribute("data-hidden","");});solid();dispatchEvent(new CustomEvent("cubby:page",{detail:ids[idx]}));}
 function step(t){
   const dt=Math.min(.032,(t-last)/1000||.016);last=t;
   v+=((-K*(x-target)-C*v)/M)*dt;x+=v*dt;
@@ -554,6 +717,93 @@ if(document.readyState==="complete")warm();else addEventListener("load",warm);
 document.fonts&&document.fonts.ready.then(()=>{measure();paint();});
 })();`;
 
+/**
+ * Katıl: tek gerçek kutu, üstünde altı hücre çizilir. Link ya da `K7M-2QX` yapıştırılabilir; kodda
+ * olmayan karakterler atılır. Altı karakter tamamlanınca dünya `/api/peek`'ten gelir ve kartta gösterilir;
+ * kapağı varsa sayfanın arka planı olur. "Cubby'de aç" açmazsa (kurulu değil) kart uyarır.
+ */
+const JOIN_SCRIPT = `(()=>{
+const root=document.querySelector(".joinpg");if(!root)return;
+const T=JSON.parse(document.getElementById("jtext").textContent);
+const A="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const q=(s)=>root.querySelector(s);
+const box=q(".codebox"),form=q("form"),input=q(".field input"),cells=[...root.querySelectorAll(".cellrow span")],msg=q(".jmsg");
+const ways=q(".ways"),found=q(".found"),bg=q(".jcover"),fcover=q(".fcover");
+box.classList.add("js");input.removeAttribute("maxlength");
+let code="",seq=0,shown="";
+const fmt=(c)=>c.slice(0,3)+"-"+c.slice(3);
+const say=(t,err)=>{msg.textContent=t||"";msg.classList.toggle("err",!!err);};
+const state=(s)=>{box.classList.remove("busy","ok","bad");if(s)box.classList.add(s);};
+const shake=()=>{box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake");};
+const show=(el)=>{for(const x of [ways,found]){const on=x===el;x.classList.toggle("show",on);x.inert=!on;}};
+const copy=(t)=>navigator.clipboard&&navigator.clipboard.writeText(t).catch(()=>{});
+function render(){
+  cells.forEach((c,i)=>{
+    const ch=code[i]||"";
+    if(c.textContent!==ch){c.textContent=ch;c.classList.remove("f");if(ch){void c.offsetWidth;c.classList.add("f");}}
+    c.classList.toggle("cur",i===code.length);
+  });
+}
+function hide(){if(shown){shown="";show(ways);bg.classList.remove("on");}}
+input.addEventListener("input",()=>{
+  const v=input.value,m=/(?:join\\/|[?&]c(?:ode)?=)([A-Za-z0-9-]{6,8})/i.exec(v);
+  const raw=(m?m[1]:v).toUpperCase().replace(/[\\s-]/g,"");
+  const clean=[...raw].filter((c)=>A.includes(c)).join("").slice(0,6);
+  const dropped=!m&&[...raw].some((c)=>!A.includes(c));
+  input.value=clean;
+  const same=clean===code;code=clean;render();
+  if(dropped){say(T.badChar,true);shake();}else if(!same)say(code.length?"":T.hint);
+  if(code.length===6){if(!same||!shown)look(code);}else{seq++;state(null);hide();}
+});
+input.addEventListener("focus",()=>{box.classList.add("focus");input.setSelectionRange(code.length,code.length);});
+input.addEventListener("blur",()=>box.classList.remove("focus"));
+input.addEventListener("keydown",(e)=>{if(e.key==="Escape"&&code){input.value="";input.dispatchEvent(new Event("input"));}});
+form.addEventListener("submit",(e)=>{e.preventDefault();if(code.length===6)look(code);else{shake();input.focus();}});
+async function look(c){
+  const my=++seq;state("busy");say(T.checking);
+  let r;
+  try{
+    const [res]=await Promise.all([fetch("/api/peek?code="+c,{headers:{accept:"application/json"}}),new Promise((ok)=>setTimeout(ok,480))]);
+    r=res.ok?await res.json():{err:res.status};
+  }catch(e){r={err:0};}
+  if(my!==seq)return;
+  if(r.err!==undefined){state("bad");shake();say(r.err===404?T.notFound:r.err===429?T.tooMany:T.offline,true);hide();return;}
+  state("ok");say(T.found);fill(c,r.invite);
+}
+function fill(c,v){
+  shown=c;
+  q(".fhost").textContent=v.host?T.hostInvites.replace("{host}",v.host):T.eyebrow;
+  q(".fname").textContent=v.world;
+  q(".ftech").textContent=v.tech;
+  const st=q(".fstatus");st.hidden=!v.status;
+  if(v.status){
+    const n=v.status.players;
+    st.className="fstatus "+v.status.state;
+    st.lastChild.textContent=v.status.state==="open"?(n>0?(n===1?T.open1:T.openN).replace("{n}",n):T.openEmpty):T.closed;
+  }
+  const mods=q(".fmods");mods.hidden=!(v.mods>0);mods.textContent=v.mods>0?T.mods.replace("{n}",v.mods):"";
+  q("#jopen").href="cubby://join?c="+c;
+  q("#jpage").href="/join/"+c;
+  found.classList.remove("missing");
+  fcover.classList.remove("img");fcover.style.backgroundImage="";bg.classList.remove("on");
+  if(v.cover){
+    const img=new Image();
+    img.onload=()=>{if(shown!==c)return;const u='url("'+v.cover+'")';fcover.style.backgroundImage=u;fcover.classList.add("img");bg.style.backgroundImage=u;bg.classList.add("on");};
+    img.src=v.cover;
+  }
+  show(found);
+  // Tek sütunda kart kodun altında kalır: görünür olsun.
+  if(matchMedia("(max-width:960px)").matches)setTimeout(()=>found.scrollIntoView({behavior:"smooth",block:"nearest",inline:"nearest"}),200);
+}
+q(".fx").addEventListener("click",()=>{input.value="";input.dispatchEvent(new Event("input"));input.focus();});
+let tm;const stop=()=>clearTimeout(tm);
+q("#jopen").addEventListener("click",()=>{copy(fmt(code));stop();tm=setTimeout(()=>{if(!document.hidden&&document.hasFocus())found.classList.add("missing");},1600);});
+q("#jdl").addEventListener("click",()=>copy(fmt(code)));
+addEventListener("blur",stop);document.addEventListener("visibilitychange",()=>document.hidden&&stop());
+addEventListener("cubby:page",(e)=>{if(e.detail==="join"&&matchMedia("(pointer:fine)").matches)input.focus({preventScroll:true});});
+say(T.hint);render();show(ways);
+})();`;
+
 const ICONS = {
   globe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>`,
   send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`,
@@ -562,6 +812,9 @@ const ICONS = {
   arrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
   chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>`,
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`,
+  keys: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M7 15h10"/></svg>`,
+  door: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
 };
 
@@ -582,7 +835,7 @@ export function sitePage(lang: Lang, origin: string, release: LatestRelease | nu
     return `href="${i ? `#${page}` : "./"}" data-go="${i}"`;
   };
   const toDownload = (label: string) => `<a class="btn primary" ${go("download")}>${ICONS.download}${e(label)}</a>`;
-  const footer = `<footer><span>© Cubby · ${e(t.rights)}</span><nav><a href="${REPO_URL}" rel="noopener">${e(t.footer[0])}</a><a href="${REPO_URL}/releases" rel="noopener">${e(t.footer[1])}</a><a href="/join">${e(t.footer[2])}</a></nav></footer>`;
+  const footer = `<footer><span>© Cubby · ${e(t.rights)}</span><nav><a href="${REPO_URL}" rel="noopener">${e(t.footer[0])}</a><a href="${REPO_URL}/releases" rel="noopener">${e(t.footer[1])}</a><a ${go("join")}>${e(t.footer[2])}</a></nav></footer>`;
   const rows = t.rows
     .map((r, i) => {
       const wide = r.ui === "discover";
@@ -620,7 +873,7 @@ ${ui}</section>`;
 <div class="item"><span class="icon">${ICONS.zap}</span><span><small>${e(t.dock[2][0])}</small><b>${e(t.dock[2][1])}</b></span></div>
 </div>
 </div>
-<div class="play">${toDownload(t.download)}<span class="meta">${e(t.meta(release))}</span></div>
+<div class="play"><div class="cta"><a class="btn blur" ${go("join")}>${ICONS.door}${e(t.haveCode)}</a>${toDownload(t.download)}</div><span class="meta">${e(t.meta(release))}</span></div>
 </div>`,
   );
 
@@ -666,8 +919,73 @@ ${footer}
 </main>`,
   );
 
-  const download = page(
+  const it = INVITE[lang];
+  // Betiğin metinleri: sayıyla kurulan cümleler yer tutucuyla (`{n}`, `{host}`).
+  const jtext = {
+    ...t.join,
+    hint: t.joinHint,
+    tooMany: it.tooMany,
+    eyebrow: it.eyebrow,
+    hostInvites: it.hostInvites("{host}"),
+    open1: it.statusOpenPlayers(1).replace("1", "{n}"),
+    openN: it.statusOpenPlayers(999).replace("999", "{n}"),
+    openEmpty: it.statusOpenEmpty,
+    closed: it.statusClosed,
+    mods: it.modsNote(999).replace("999", "{n}"),
+  };
+  const join = page(
     3,
+    "joinpg",
+    `<div class="jcover"></div>`,
+    `<div class="joingrid">
+<div>
+<p class="eyebrow in">${e(t.joinEyebrow)}</p>
+<h1 class="in" style="--i:1">${e(t.joinTitle)}</h1>
+<p class="lead in" style="--i:2">${e(t.joinLead)}</p>
+<div class="codebox in" style="--i:3">
+<form action="/join" method="get" autocomplete="off">
+<label for="jcode">${e(it.codeLabel)}</label>
+<div class="field">
+<div class="cellrow" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => (i === 3 ? "<i></i>" : "") + `<span style="--i:${i}"></span>`).join("")}</div>
+<input id="jcode" name="code" maxlength="7" inputmode="text" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="K7M-2QX" aria-describedby="jmsg">
+</div>
+<button class="btn primary" type="submit">${e(t.joinFind)}</button>
+</form>
+<p class="jmsg" id="jmsg" role="status" aria-live="polite"></p>
+</div>
+</div>
+<div class="jside in" style="--i:4">
+<div class="ways glass show">
+<h3>${e(t.ways)}</h3>
+<ol>${t.wayList
+      .map(
+        ([title, text], i) =>
+          `<li${i === 1 ? ` class="here"` : ""}><span class="icon">${[ICONS.link, ICONS.keys, ICONS.door][i]}</span><span><b>${e(title)}${i === 1 ? ` <span class="tag">${e(t.here)}</span>` : ""}</b><p>${e(text)}</p></span></li>`,
+      )
+      .join("")}</ol>
+<div class="foot"><span>${e(t.noCubby)}</span><a ${go("download")}>${e(t.download)}${ICONS.arrow}</a></div>
+</div>
+<div class="found glass" inert>
+<div class="fcover">${LOGO}<span class="fbadge">${ICONS.check}${e(t.join.found)}</span><button class="fx" type="button">${e(t.join.another)}</button></div>
+<div class="fbody">
+<p class="fhost"></p>
+<h2 class="fname"></h2>
+<p class="ftech"></p>
+<p class="fstatus" hidden><span class="dot"></span><span></span></p>
+<p class="fmods" hidden></p>
+<p class="fmobile">${e(it.desktopOnly)}</p>
+<div class="factions"><a class="btn primary" id="jopen" href="#">${e(it.open)}</a><a class="btn" id="jpage" href="#">${e(t.join.invitePage)}</a></div>
+<p class="falert">${e(it.notDetected)}</p>
+<p class="fnote">${e(t.noCubby)} <a id="jdl" href="${DOWNLOAD_PATH}">${e(it.download)}</a></p>
+</div>
+</div>
+</div>
+</div>
+<script type="application/json" id="jtext">${JSON.stringify(jtext).replace(/</g, "\\u003c")}</script>`,
+  );
+
+  const download = page(
+    4,
     "dl",
     `<img class="bgimg" src="/site/indir.webp" alt="" decoding="async">`,
     `<div class="dlgrid">
@@ -722,9 +1040,10 @@ ${footer}
 ${home}
 ${features}
 ${faq}
+${join}
 ${download}
 </div></div>
-<script nonce="${nonce}">${SCRIPT}${UI_SCRIPT}</script>
+<script nonce="${nonce}">${SCRIPT}${UI_SCRIPT}${JOIN_SCRIPT}</script>
 </body>
 </html>`;
 }
