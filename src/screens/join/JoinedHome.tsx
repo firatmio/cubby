@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Download, ListPlus, Network, Play, RefreshCw, Send, Trash2 } from "lucide-react";
-import { api, errorMessage, type JoinedView, type JoinStatus } from "../../lib/api";
+import { api, errorMessage, type JoinedView, type JoinStatus, type LaunchResult } from "../../lib/api";
 import { getT, useT } from "../../i18n";
 import { isModded, kindLabel } from "../../lib/format";
-import { launchHint } from "../../lib/launch";
+import { launchNotice } from "../../lib/launchNotice";
 import { rise, stagger } from "../../lib/motion";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
@@ -101,6 +101,7 @@ export function JoinedActions({ view }: { view: JoinedView }) {
   const upsertJoined = useAppStore((s) => s.upsertJoined);
   const removeJoinedLocal = useAppStore((s) => s.removeJoinedLocal);
   const [message, setMessage] = useState<{ tone: "info" | "error"; text: string } | null>(null);
+  const [launch, setLaunch] = useState<LaunchResult | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const id = view.world.id;
@@ -109,6 +110,7 @@ export function JoinedActions({ view }: { view: JoinedView }) {
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
     setMessage(null);
+    setLaunch(null);
     try {
       await fn();
     } catch (e) {
@@ -120,11 +122,14 @@ export function JoinedActions({ view }: { view: JoinedView }) {
 
   const play = () =>
     run("play", async () => {
-      setMessage(launchHint(await api.playJoined(id), view.world.name));
+      setLaunch(await api.playJoined(id));
     });
 
   const game = useGameNotice();
-  const shown: GameNotice | null = game ?? (message && { ...message, dismiss: () => setMessage(null) });
+  const shown: GameNotice | null =
+    game ??
+    (message && { ...message, dismiss: () => setMessage(null) }) ??
+    (launch && { ...launchNotice(launch, view.world.name, setLaunch), dismiss: () => setLaunch(null) });
 
   // Arkadaşın mod ekledi/güncelledi: oyuncunun profilindeki modlar eski kaldı.
   const modsChanged =

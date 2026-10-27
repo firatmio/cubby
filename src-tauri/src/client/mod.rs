@@ -572,8 +572,13 @@ pub struct SyncResult {
     pub blocked: Vec<String>,
 }
 
+/// Eşitlemeler sırayla: TLauncher'ın ortak `mods` klasöründe ikisi aynı anda çalışırsa biri
+/// ötekinin kaydını eski haliyle yazıp onun dosyalarını sahipsiz bırakır.
+static SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// `mods` klasörünü `wanted`'a getirir. Eksik dosyalar `fetch(wanted, hedef_yol)` ile yazılır
 /// (kopyalama, Modrinth ya da arkadaşın bilgisayarı); `fetch` dosyayı doğrulamaktan sorumludur.
+/// Kayıt her adımdan sonra yazılır: yarıda bir hata olsa da konan dosyalar sahipsiz kalmaz.
 pub async fn sync<F, Fut>(
     mods: &Path,
     world: &str,
@@ -585,6 +590,7 @@ where
     F: FnMut(Wanted, PathBuf) -> Fut,
     Fut: std::future::Future<Output = AppResult<()>>,
 {
+    let _guard = SYNC_LOCK.lock().await;
     std::fs::create_dir_all(mods)?;
     let disabled_dir = mods.join(DISABLED_DIR);
     let mut record = load_record(mods);
@@ -613,6 +619,7 @@ where
             }
         }
         record.files.retain(|m| !(m.world == world && &m.file == f));
+        save_record(mods, &record)?;
     }
     let staging = mods.join(".mcsm-downloads");
     for w in &ops.add {
@@ -641,6 +648,7 @@ where
             sha1: w.sha1.clone(),
             world: world.to_string(),
         });
+        save_record(mods, &record)?;
     }
     let _ = std::fs::remove_dir(&staging);
     save_record(mods, &record)?;
@@ -649,6 +657,98 @@ where
         removed: ops.remove.len(),
         blocked: ops.blocked,
     })
+}
+
+// ---- TLauncher: oyuncunun kendi modları ----
+
+/// Ortak `mods` klasöründe oyuncunun kendi modlarının kenara alındığı yer. Mod yükleyiciler alt
+/// klasörlere bakmaz; oyuncu isterse geri koyar.
+pub const OWN_DIR: &str = "_kendi-modlarim";
+
+/// `mods` klasöründe Cubby'nin koymadığı jar'lar (oyuncunun kendi modları).
+pub fn own_mods(mods: &Path) -> Vec<String> {
+    let record = load_record(mods);
+    let mut out: Vec<String> = std::fs::read_dir(mods)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| e.path().is_file())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.to_ascii_lowercase().ends_with(".jar"))
+        .filter(|n| !record.files.iter().any(|m| &m.file == n))
+        .collect();
+    out.sort();
+    out
+}
+
+/// Oyuncunun kendi modlarını `mods/_kendi-modlarim`'a taşır; dönen: kaç dosya.
+pub fn stash_own(mods: &Path) -> AppResult<usize> {
+    let names = own_mods(mods);
+    let dir = mods.join(OWN_DIR);
+    for n in &names {
+        std::fs::create_dir_all(&dir)?;
+        let mut dest = dir.join(n);
+        // Aynı adlı eski bir kopya varsa üzerine yazılmaz.
+        let mut i = 2;
+        while dest.exists() {
+            dest = dir.join(format!("{i}-{n}"));
+            i += 1;
+        }
+        std::fs::rename(mods.join(n), dest)?;
+    }
+    Ok(names.len())
+}
+
+/// Kenara alınanları geri koyar (aynı adlı bir dosya varsa o kalır); dönen: kaç dosya.
+pub fn restore_own(mods: &Path) -> AppResult<usize> {
+    let dir = mods.join(OWN_DIR);
+    let mut moved = 0;
+    for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+        let dest = mods.join(e.file_name());
+        if e.path().is_file() && !dest.exists() {
+            std::fs::rename(e.path(), dest)?;
+            moved += 1;
+        }
+    }
+    let _ = std::fs::remove_dir(&dir);
+    Ok(moved)
+}
+
+pub fn stashed_count(mods: &Path) -> usize {
+    std::fs::read_dir(mods.join(OWN_DIR))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| e.path().is_file())
+        .count()
+}
+
+/// Launcher'daki sürüm (ya da devraldığı) bir mod yükleyici mi (`version_id`'deki adlar).
+pub fn version_is_modded(mc_dir: &Path, id: &str) -> bool {
+    let mut id = id.to_string();
+    for _ in 0..4 {
+        let lower = id.to_ascii_lowercase();
+        if lower.starts_with("fabric-loader-")
+            || lower.starts_with("quilt-loader-")
+            || lower.starts_with("neoforge-")
+            || lower.contains("-forge-")
+        {
+            return true;
+        }
+        let parent = std::fs::read(version_file(mc_dir, &id))
+            .ok()
+            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            .and_then(|v| {
+                v.get("inheritsFrom")
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            });
+        match parent {
+            Some(p) => id = p,
+            None => return false,
+        }
+    }
+    false
 }
 
 /// Hedef oyun klasörü ve `mods`'u (Launcher türüne göre).
@@ -892,6 +992,106 @@ mod tests {
         .await;
         assert!(err.is_err());
         assert!(!mods.join("y.jar").exists());
+    }
+
+    /// Yarıda hata: o ana kadar konanlar kayıtta kalır (yoksa bir daha kenara alınamazlar), ve
+    /// aynı anda çalışan iki eşitleme birbirinin kaydını silmez.
+    #[tokio::test]
+    async fn sync_keeps_records_on_failure_and_concurrency() {
+        let mods = tmp("partial");
+        let a = hash_bytes(HashAlgo::Sha1, b"a");
+        let b = hash_bytes(HashAlgo::Sha1, b"b");
+        let wanted = vec![w("a.jar", &a), w("b.jar", &b)];
+        let err = sync(&mods, "W1", &wanted, true, |w, dest| async move {
+            if w.file == "b.jar" {
+                return Err(AppError::msg("ağ koptu"));
+            }
+            std::fs::write(dest, b"a")?;
+            Ok(())
+        })
+        .await;
+        assert!(err.is_err());
+        assert_eq!(load_record(&mods).files.len(), 1, "a.jar kayıtta");
+
+        // İki dünya aynı anda: ikisinin dosyaları da kayda girer.
+        let (m1, m2) = (mods.clone(), mods.clone());
+        let c = hash_bytes(HashAlgo::Sha1, b"c");
+        let d = hash_bytes(HashAlgo::Sha1, b"d");
+        let one = tokio::spawn(async move {
+            sync(&m1, "W2", &[w("c.jar", &c)], true, |_, dest| async move {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                std::fs::write(dest, b"c")?;
+                Ok(())
+            })
+            .await
+        });
+        let two = tokio::spawn(async move {
+            sync(&m2, "W3", &[w("d.jar", &d)], true, |_, dest| async move {
+                std::fs::write(dest, b"d")?;
+                Ok(())
+            })
+            .await
+        });
+        one.await.unwrap().unwrap();
+        two.await.unwrap().unwrap();
+        let worlds: HashSet<String> = load_record(&mods)
+            .files
+            .into_iter()
+            .map(|m| m.world)
+            .collect();
+        assert!(worlds.contains("W2") && worlds.contains("W3"), "{worlds:?}");
+    }
+
+    #[tokio::test]
+    async fn stashes_and_restores_own_mods() {
+        let mc = tmp("own");
+        let mods = mc.join("mods");
+        let sha = hash_bytes(HashAlgo::Sha1, b"cubby");
+        sync(
+            &mods,
+            "W",
+            &[w("cubby.jar", &sha)],
+            true,
+            |_, dest| async move {
+                std::fs::write(dest, b"cubby")?;
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+        std::fs::write(mods.join("sodium-benim.jar"), b"x").unwrap();
+        std::fs::write(mods.join("oku-beni.txt"), b"x").unwrap();
+        assert_eq!(own_mods(&mods), ["sodium-benim.jar"]);
+        assert_eq!(stash_own(&mods).unwrap(), 1);
+        assert!(own_mods(&mods).is_empty());
+        assert!(mods.join("cubby.jar").is_file(), "Cubby'ninkine dokunulmaz");
+        assert_eq!(stashed_count(&mods), 1);
+        // Kenarda varken aynı ad yeniden kenara alınırsa ikisi de korunur.
+        std::fs::write(mods.join("sodium-benim.jar"), b"y").unwrap();
+        stash_own(&mods).unwrap();
+        assert_eq!(stashed_count(&mods), 2);
+        assert_eq!(restore_own(&mods).unwrap(), 2);
+        assert!(
+            mods.join("sodium-benim.jar").is_file() && mods.join("2-sodium-benim.jar").is_file()
+        );
+        assert_eq!(stashed_count(&mods), 0);
+    }
+
+    #[test]
+    fn knows_modded_versions() {
+        let mc = tmp("ver");
+        let write = |id: &str, parent: &str| {
+            let f = version_file(&mc, id);
+            std::fs::create_dir_all(f.parent().unwrap()).unwrap();
+            std::fs::write(f, format!(r#"{{"id":"{id}","inheritsFrom":"{parent}"}}"#)).unwrap();
+        };
+        write("mcsm-modlu", "fabric-loader-0.19.5-26.3");
+        write("mcsm-saf", "26.3");
+        assert!(version_is_modded(&mc, "mcsm-modlu"));
+        assert!(!version_is_modded(&mc, "mcsm-saf"));
+        assert!(version_is_modded(&mc, "1.20.1-forge-47.3.0"));
+        assert!(version_is_modded(&mc, "neoforge-21.1.77"));
+        assert!(!version_is_modded(&mc, "yok"));
     }
 
     #[test]

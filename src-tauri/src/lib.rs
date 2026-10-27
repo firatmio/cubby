@@ -334,6 +334,8 @@ pub fn run() {
             world_cmds::set_whitelist_enabled,
             world_cmds::set_offline_mode,
             world_cmds::ban_player,
+            client_cmds::stash_own_mods,
+            client_cmds::restore_own_mods,
             world_cmds::unban_player,
             world_cmds::unbind_name,
             world_cmds::set_op,

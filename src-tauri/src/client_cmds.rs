@@ -66,6 +66,8 @@ pub struct LaunchResult {
     pub game: bool,
     /// Doğrudan açılamadı, Launcher'a düşüldü: nedeni.
     pub note: Option<String>,
+    /// TLauncher'ın ortak `mods` klasöründe oyuncunun kendi modları (modlu dünyayla çakışabilir).
+    pub own_mods: Vec<String>,
     pub error: Option<String>,
 }
 
@@ -435,7 +437,13 @@ fn launch_tlauncher(app: &AppHandle, pick: String, mc_version: &str) -> LaunchRe
     if !was_running && let Some(props) = tlauncher::props_path() {
         tlauncher::select_version(&props, &pick);
     }
+    let own_mods = minecraft_dir(app)
+        .ok()
+        .filter(|mc| client::version_is_modded(mc, &pick))
+        .map(|mc| client::own_mods(&mc.join("mods")))
+        .unwrap_or_default();
     LaunchResult {
+        own_mods,
         opened: tlauncher_path(app).is_some_and(|p| tlauncher::open(&p)),
         launcher: Some(Launcher::TLauncher),
         pick: Some(pick),
@@ -712,6 +720,30 @@ pub fn join_after_start(app: &AppHandle, id: &str) {
             },
         );
     });
+}
+
+/// TLauncher: oyuncunun ortak `mods`'taki kendi modlarını kenara alır (modlu dünyayla çakışmasın).
+#[tauri::command]
+pub fn stash_own_mods(app: AppHandle) -> AppResult<usize> {
+    if crate::join::client::minecraft_running() {
+        return Err(AppError::msg(tx!(
+            "Minecraft açık; önce oyunu kapat.",
+            "Minecraft is running; close the game first."
+        )));
+    }
+    client::stash_own(&minecraft_dir(&app)?.join("mods"))
+}
+
+/// Kenara alınan kendi modlarını geri koyar.
+#[tauri::command]
+pub fn restore_own_mods(app: AppHandle) -> AppResult<usize> {
+    if crate::join::client::minecraft_running() {
+        return Err(AppError::msg(tx!(
+            "Minecraft açık; önce oyunu kapat.",
+            "Minecraft is running; close the game first."
+        )));
+    }
+    client::restore_own(&minecraft_dir(&app)?.join("mods"))
 }
 
 /// Dünya silinince profili ve doğrudan bağlanan sürümü kaldırır (oyun klasörüne dokunulmaz).

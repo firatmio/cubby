@@ -63,6 +63,11 @@ function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSetting
     const exe = await pickExe(t.prismPick);
     if (exe) await save({ ...view.settings, prismExe: exe, launcher: "prism" });
   };
+  // Kenara alınan kendi modlar geri konunca ayar görünümü tazelenir (aynı ayarlarla kaydet).
+  const restoreOwn = async () => {
+    await api.restoreOwnMods().catch(() => 0);
+    await save(view.settings);
+  };
   const chooseTl = async () => {
     const exe = await pickExe(t.tlauncherPick);
     if (exe) await save({ ...view.settings, tlauncherExe: exe, launcher: "tLauncher" });
@@ -96,6 +101,14 @@ function LauncherCard({ view, save }: { view: SettingsView; save: (s: AppSetting
         onChoose={chooseTl}
         onReset={() => save({ ...view.settings, tlauncherExe: null })}
       />
+      {view.ownModsStashed > 0 && (
+        <div className={styles.row}>
+          <p className={styles.dim}>{t.ownModsStashed(view.ownModsStashed)}</p>
+          <Button size="sm" icon={RotateCcw} onClick={restoreOwn}>
+            {t.restoreOwn}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

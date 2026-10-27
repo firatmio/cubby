@@ -122,6 +122,9 @@ const access: Record<string, Access> = {
 const accessOf = (id: string) =>
   (access[id] ??= { offlineMode: false, whitelistEnabled: false, whitelist: [], ops: [], known: [], banned: [], bound: [] });
 
+/** TLauncher için kenara alınmış kendi mod sayısı (mock). */
+let stashedOwn = 0;
+
 // Minecraft 26.3'ün ürettiği tam liste.
 const BASE_PROPS: Record<string, string> = {
   "accepts-transfers": "false",
@@ -704,13 +707,13 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
           await gameBoot();
           emit("client://launch", {
             id: args.id,
-            result: { opened: false, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: true, note: null, error: null },
+            result: { opened: false, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: true, note: null, error: null, ownMods: [] },
           });
           return;
         }
         emit("client://launch", {
           id: args.id,
-          result: { opened: true, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: false, note: null, error: null },
+          result: { opened: true, launcher: "official", pick: `${inst.name} · Cubby`, wasRunning: false, direct: true, game: false, note: null, error: null, ownMods: [] },
         });
       });
       return null;
@@ -937,15 +940,18 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     case "play_joined": {
       const j = joined.find((x) => x.world.id === args.id)!;
       await sleep(400);
+      // localStorage.mockTL = "1": TLauncher'lı oyuncu, ortak mods'ta kendi modları var.
+      const tl = typeof localStorage !== "undefined" && localStorage.getItem("mockTL") === "1";
       return {
         opened: true,
-        launcher: "official",
-        pick: `${j.world.name} · Cubby`,
-        wasRunning: true,
+        launcher: tl ? "tLauncher" : "official",
+        pick: tl ? "mcsm-alinin-adasi-1a2b3c4d" : `${j.world.name} · Cubby`,
+        wasRunning: !tl,
         direct: true,
         game: false,
         note: null,
         error: null,
+        ownMods: tl ? ["sodium-0.8.12.jar", "iris-1.10.9.jar", "fabric-api-0.151.0.jar"] : [],
       };
     }
     case "account_status":
@@ -1223,6 +1229,14 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       emit("server://players", { id: args.id, players: players[args.id] });
       return accessView(args.id);
     }
+    case "stash_own_mods":
+      stashedOwn += 3;
+      return 3;
+    case "restore_own_mods": {
+      const n = stashedOwn;
+      stashedOwn = 0;
+      return n;
+    }
     case "unban_player": {
       const a = accessOf(args.id);
       a.banned = a.banned.filter((b) => b.name !== args.name);
@@ -1254,7 +1268,7 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
       byId(args.id).javaPath = args.path;
       return { ...byId(args.id) };
     case "get_settings":
-      return { settings, language: settings.language ?? (navigator.language.startsWith("tr") ? "tr" : "en"), minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true, detectedPlayerName: "firatmio", mcLauncher: "official", prismFound: settings.prismExe ?? "C:\\Users\\sen\\AppData\\Local\\Programs\\PrismLauncher\\prismlauncher.exe", tlauncherFound: settings.tlauncherExe ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft\\TLauncher.exe", activeLauncher: settings.launcher ?? "prism" };
+      return { settings, language: settings.language ?? (navigator.language.startsWith("tr") ? "tr" : "en"), minecraftDir: settings.minecraftDir ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft", screenshotsFound: true, detectedPlayerName: "firatmio", mcLauncher: "official", prismFound: settings.prismExe ?? "C:\\Users\\sen\\AppData\\Local\\Programs\\PrismLauncher\\prismlauncher.exe", tlauncherFound: settings.tlauncherExe ?? "C:\\Users\\sen\\AppData\\Roaming\\.minecraft\\TLauncher.exe", activeLauncher: settings.launcher ?? "prism", ownModsStashed: stashedOwn };
     case "update_settings":
       settings = args.settings;
       return mockInvoke("get_settings");

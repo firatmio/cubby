@@ -709,6 +709,8 @@ pub struct SettingsView {
     prism_found: Option<String>,
     /// Bulunan TLauncher: exe'si ya da kısayolu.
     tlauncher_found: Option<String>,
+    /// TLauncher için kenara alınmış kendi mod sayısı.
+    own_mods_stashed: usize,
     /// Oyunu şu an açacak launcher (ayar + algılama).
     active_launcher: Option<crate::client::Launcher>,
 }
@@ -723,6 +725,10 @@ pub fn get_settings(app: AppHandle, store: State<'_, SettingsStore>) -> Settings
             .as_deref()
             .and_then(crate::client::detect_launcher),
         prism_found: prism.map(|p| p.exe.unwrap_or(p.data_dir).to_string_lossy().into_owned()),
+        own_mods_stashed: store
+            .minecraft_dir()
+            .map(|d| crate::client::stashed_count(&d.join("mods")))
+            .unwrap_or(0),
         tlauncher_found: crate::client_cmds::tlauncher_path(&app)
             .map(|p| p.to_string_lossy().into_owned()),
         active_launcher: crate::client_cmds::target(&app).ok().map(|t| t.launcher()),

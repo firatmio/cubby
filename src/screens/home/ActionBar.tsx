@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ImageIcon, LogIn, Play, Settings2, Square, Users, Wrench } from "lucide-react";
 import type { Instance } from "../../lib/api";
 import { useT } from "../../i18n";
-import { launchHint } from "../../lib/launch";
+import { launchNotice } from "../../lib/launchNotice";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
@@ -47,12 +47,12 @@ export function ActionBar({ instance }: { instance: Instance }) {
   const { status, active } = control;
   const [mode, setMode] = useState<StartMode>(() => loadMode(instance.id));
   const game = useGameNotice();
-  const launchNotice = launch ? launchHint(launch, instance.name) : null;
+  const notice = launch ? launchNotice(launch, instance.name, (r) => setLaunchResult(instance.id, r)) : null;
   // Öncelik: başlatma hatası → oyun (ilerleme/çökme) → Launcher ipucu.
   const shown: GameNotice | null = control.error
     ? { tone: "error", text: control.error, dismiss: control.clearError }
     : (game ??
-      (launchNotice && { ...launchNotice, dismiss: () => setLaunchResult(instance.id, null) }));
+      (notice && { ...notice, dismiss: () => setLaunchResult(instance.id, null) }));
 
   return (
     <div className={styles.bar}>

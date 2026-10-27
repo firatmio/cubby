@@ -415,6 +415,8 @@ export interface SettingsView {
   tlauncherFound: string | null;
   /** Oyunu şu an açacak launcher */
   activeLauncher: Launcher | null;
+  /** TLauncher için kenara alınmış kendi mod sayısı */
+  ownModsStashed: number;
 }
 
 export interface PlayStats {
@@ -559,6 +561,10 @@ export interface LaunchResult {
   /** Doğrudan açılamadı, Launcher'a düşüldü: nedeni */
   note: string | null;
   error: string | null;
+  /** TLauncher'ın ortak mods klasöründe oyuncunun kendi modları (modlu dünyayla çakışabilir) */
+  ownMods: string[];
+  /** Arayüzde: kenara alınan kendi mod sayısı */
+  stashed?: number;
 }
 
 export interface Account {
@@ -635,6 +641,8 @@ export const api = {
   setOfflineMode: (id: string, offline: boolean) => invoke<AccessView>("set_offline_mode", { id, offline }),
   setOp: (id: string, name: string, op: boolean) => invoke<AccessView>("set_op", { id, name, op }),
   kickPlayer: (id: string, name: string) => invoke<void>("kick_player", { id, name }),
+  stashOwnMods: () => invoke<number>("stash_own_mods"),
+  restoreOwnMods: () => invoke<number>("restore_own_mods"),
   banPlayer: (id: string, name: string) => invoke<AccessView>("ban_player", { id, name }),
   unbanPlayer: (id: string, name: string) => invoke<AccessView>("unban_player", { id, name }),
   unbindName: (id: string, name: string) => invoke<AccessView>("unbind_name", { id, name }),
