@@ -17,6 +17,7 @@ const view = (over: Partial<Parameters<typeof invitePage>[0]> = {}): Parameters<
   host: null,
   cover: null,
   status: null,
+  shared: null,
   mods: 0,
   downloadSize: "",
   nonce: "n0nce",

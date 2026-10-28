@@ -9,6 +9,9 @@ export const TEXT = {
     statusOpenPlayers: (n: number) => `Açık · ${n} oyuncu oyunda`,
     statusOpenEmpty: "Açık · hemen girebilirsin",
     statusClosed: "Şu an kapalı · arkadaşın açınca girebilirsin",
+    sharedOpen: (host: string, n: number) => `Açık · ${host} açtı · ${n > 0 ? `${n} oyuncu oyunda` : "hemen girebilirsin"}`,
+    sharedCanOpen: (names: string[]) => `Şu an kapalı · ${nameList("tr", names)} açabilir`,
+    sharedWait: (name: string) => `Şu an kapalı · ${name} açınca girebilirsin`,
     modsNote: (n: number) => `Bu dünyada ${n} mod var; Cubby gerekenleri kendiliğinden kurar, sen bir şey yapmazsın.`,
     copyCode: "Kodu kopyala",
     copied: "Kopyalandı",
@@ -47,6 +50,10 @@ export const TEXT = {
     statusOpenPlayers: (n: number) => `Open · ${n} ${n === 1 ? "player" : "players"} online`,
     statusOpenEmpty: "Open · you can join right now",
     statusClosed: "Closed right now · you can join once your friend opens it",
+    sharedOpen: (host: string, n: number) =>
+      `Open · hosted by ${host} · ${n > 0 ? `${n} ${n === 1 ? "player" : "players"} online` : "you can join right now"}`,
+    sharedCanOpen: (names: string[]) => `Closed right now · ${nameList("en", names)} can open it`,
+    sharedWait: (name: string) => `Closed right now · you can join once ${name} opens it`,
     modsNote: (n: number) => `This world has ${n} mods; Cubby installs what you need by itself.`,
     copyCode: "Copy code",
     copied: "Copied",
@@ -80,6 +87,15 @@ export const TEXT = {
     backHome: "Back to home",
   },
 } satisfies Record<Lang, Record<string, unknown>>;
+
+/** "Ali", "Ali ya da Ayşe", "Ali, Ayşe ya da Can", 4+ adda "Ali, Ayşe ve 2 arkadaş daha". */
+export function nameList(lang: Lang, names: string[]): string {
+  const or = lang === "tr" ? "ya da" : "or";
+  if (names.length <= 1) return names.join("");
+  if (names.length <= 3) return `${names.slice(0, -1).join(", ")} ${or} ${names[names.length - 1]}`;
+  const rest = names.length - 2;
+  return lang === "tr" ? `${names[0]}, ${names[1]} ve ${rest} arkadaş daha` : `${names[0]}, ${names[1]} and ${rest} more`;
+}
 
 /** `Accept-Language`'ta Türkçe İngilizceden önce geliyorsa Türkçe; yoksa İngilizce. */
 export function pickLang(header: string | null): Lang {

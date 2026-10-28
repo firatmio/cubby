@@ -13,6 +13,18 @@
       "destination": "/api/invite-status?code=:code"
     },
     {
+      "source": "/api/invites/:code/shared/act",
+      "destination": "/api/shared-act?code=:code"
+    },
+    {
+      "source": "/api/invites/:code/shared/force",
+      "destination": "/api/shared?code=:code&op=force"
+    },
+    {
+      "source": "/api/invites/:code/shared",
+      "destination": "/api/shared?code=:code"
+    },
+    {
       "source": "/api/invites/:code",
       "destination": "/api/invite?code=:code"
     },

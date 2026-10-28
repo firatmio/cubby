@@ -7,6 +7,7 @@
 import { formatCode } from "./code.js";
 import { TEXT, type Lang } from "./i18n.js";
 import type { StatusView } from "./meta.js";
+import type { SharedView } from "./shared.js";
 
 export const DOWNLOAD_URL = "https://github.com/firatmio/cubby/releases/latest";
 /** En son kurulum dosyasına yönlendiren kendi adresimiz (`/api/download`). */
@@ -153,11 +154,33 @@ export interface InviteView {
   /** Kapağın adresi (göreli) ya da yok. */
   cover: string | null;
   status: StatusView | null;
+  /** Ortak dünyaysa: kim açık, kim açabilir. */
+  shared: SharedView | null;
   /** Oyuncuda gereken mod sayısı (0 ya da bilinmiyorsa gösterilmez). */
   mods: number;
   /** "12 MB"; bilinmiyorsa boş. */
   downloadSize: string;
   nonce: string;
+}
+
+/**
+ * Durum satırı ("Açık · 2 oyuncu oyunda"). Ortak dünyada kimin açtığı ya da kimlerin açabileceği de
+ * yazar; en güncel hâl birinde kaldıysa onu bekler. Bilinmiyorsa null.
+ */
+export function statusLine(
+  lang: Lang,
+  status: StatusView | null,
+  shared: SharedView | null,
+): { state: "open" | "closed"; text: string } | null {
+  const t = TEXT[lang];
+  if (status?.state === "open") {
+    if (shared?.host) return { state: "open", text: t.sharedOpen(shared.host, status.players) };
+    return { state: "open", text: status.players > 0 ? t.statusOpenPlayers(status.players) : t.statusOpenEmpty };
+  }
+  if (shared?.waitFor) return { state: "closed", text: t.sharedWait(shared.waitFor) };
+  if (shared && shared.names.length > 0) return { state: "closed", text: t.sharedCanOpen(shared.names) };
+  if (status?.state === "closed") return { state: "closed", text: t.statusClosed };
+  return null;
 }
 
 /** Kod hücreleri: K 7 M – 2 Q X. */
@@ -184,12 +207,8 @@ export function invitePage(v: InviteView): string {
   const e = escapeHtml;
   const deep = `${APP_SCHEME}://join?c=${v.code}`;
   const coverUrl = v.cover ? `${v.origin}${v.cover}` : null;
-  const status =
-    v.status?.state === "open"
-      ? `<p class="status open"><span class="dot"></span>${e(v.status.players > 0 ? t.statusOpenPlayers(v.status.players) : t.statusOpenEmpty)}</p>`
-      : v.status?.state === "closed"
-        ? `<p class="status closed"><span class="dot"></span>${e(t.statusClosed)}</p>`
-        : "";
+  const line = statusLine(v.lang, v.status, v.shared);
+  const status = line ? `<p class="status ${line.state}"><span class="dot"></span>${e(line.text)}</p>` : "";
   const size = v.downloadSize ? ` <small>${e(v.downloadSize)}</small>` : "";
   return layout(
     v.lang,

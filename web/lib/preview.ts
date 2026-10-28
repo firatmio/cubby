@@ -2,7 +2,8 @@
 
 import { LOADER_LABELS } from "./invite.js";
 import { statusKey, statusView, type StatusUpdate, type StatusView } from "./meta.js";
-import { inviteKey, redis, type InviteRecord } from "./store.js";
+import { sharedView, type SharedState, type SharedView } from "./shared.js";
+import { inviteKey, redis, sharedKey, type InviteRecord } from "./store.js";
 
 export interface InvitePreview {
   world: string;
@@ -12,6 +13,8 @@ export interface InvitePreview {
   /** Kapağın adresi (göreli) ya da yok. */
   cover: string | null;
   status: StatusView | null;
+  /** Ortak dünyaysa: kim açık, kimler açabilir. */
+  shared: SharedView | null;
   mods: number;
 }
 
@@ -24,9 +27,10 @@ export function techOf(record: InviteRecord): string {
 
 /** Kod geçerli biçimde olmalı (`normalizeCode`); davet yoksa null. */
 export async function loadPreview(code: string): Promise<InvitePreview | null> {
-  const [record, status] = await Promise.all([
+  const [record, status, shared] = await Promise.all([
     redis().get<InviteRecord>(inviteKey(code)),
     redis().get<StatusUpdate>(statusKey(code)),
+    redis().get<SharedState>(sharedKey(code)),
   ]);
   if (!record) return null;
   return {
@@ -35,6 +39,7 @@ export async function loadPreview(code: string): Promise<InvitePreview | null> {
     host: record.host ?? null,
     cover: record.coverVersion ? `/api/cover?code=${code}&v=${record.coverVersion}` : null,
     status: statusView(status),
+    shared: sharedView(shared, record.host ?? null, Math.floor(Date.now() / 1000)),
     mods: record.mods ?? 0,
   };
 }

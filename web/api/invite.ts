@@ -1,11 +1,13 @@
 /**
  * /api/invites/:code (vercel.json → /api/invite?code=:code)
- * GET → {invite} · PUT {owner, invite} içeriği ve süreyi tazeler · DELETE {owner} siler.
+ * GET → {invite, live} · PUT {owner, invite} içeriği ve süreyi tazeler · DELETE {owner} siler.
+ * `live`: ortak dünyada şu an açık olan cihaz (`{device}`); arkadaşın uygulaması oraya bağlanır.
  */
 
 import { error, json } from "../lib/http.js";
 import { coverKey, statusKey, type StatusUpdate } from "../lib/meta.js";
 import { codeOf, owned } from "../lib/owned.js";
+import type { SharedState } from "../lib/shared.js";
 import { parseInvite } from "../lib/invite.js";
 import {
   LOOKUP_RULES,
@@ -13,6 +15,7 @@ import {
   allowed,
   inviteKey,
   redis,
+  sharedKey,
   type InviteRecord,
 } from "../lib/store.js";
 
@@ -20,9 +23,13 @@ export async function GET(req: Request): Promise<Response> {
   if (!(await allowed(req, "lookup", LOOKUP_RULES))) return error("rate_limited", 429);
   const code = codeOf(req);
   if (!code) return error("not_found", 404);
-  const record = await redis().get<InviteRecord>(inviteKey(code));
+  const [record, shared] = await Promise.all([
+    redis().get<InviteRecord>(inviteKey(code)),
+    redis().get<SharedState>(sharedKey(code)),
+  ]);
   if (!record) return error("not_found", 404);
-  return json({ invite: record.invite });
+  const lease = shared?.lease && shared.lease.until > Date.now() / 1000 ? shared.lease : null;
+  return json({ invite: record.invite, live: lease ? { device: lease.device } : null });
 }
 
 export async function PUT(req: Request): Promise<Response> {
@@ -49,6 +56,6 @@ export async function PUT(req: Request): Promise<Response> {
 export async function DELETE(req: Request): Promise<Response> {
   const o = await owned(req);
   if (o instanceof Response) return o;
-  await redis().del(inviteKey(o.code), coverKey(o.code), statusKey(o.code));
+  await redis().del(inviteKey(o.code), coverKey(o.code), statusKey(o.code), sharedKey(o.code));
   return json({ ok: true });
 }

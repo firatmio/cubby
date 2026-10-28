@@ -854,12 +854,10 @@ function texts(v){
   q(".fhost").textContent=v.host?T.hostInvites.replace("{host}",v.host):T.eyebrow;
   q(".fname").textContent=v.world;
   q(".ftech").textContent=v.tech;
-  const st=q(".fstatus");st.hidden=!v.status;
-  if(v.status){
-    const n=v.status.players;
-    st.className="fstatus "+v.status.state;
-    st.lastChild.textContent=v.status.state==="open"?(n>0?(n===1?T.open1:T.openN).replace("{n}",n):T.openEmpty):T.closed;
-  }
+  // Durum satırı sunucudan iki dilde hazır gelir (ortak dünyada kimin açtığını da yazar).
+  const st=q(".fstatus"),line=v.line&&v.line[document.documentElement.lang==="en"?"en":"tr"];
+  st.hidden=!line;
+  if(line){st.className="fstatus "+line.state;st.lastChild.textContent=line.text;}
   const mods=q(".fmods");mods.hidden=!(v.mods>0);mods.textContent=v.mods>0?T.mods.replace("{n}",v.mods):"";
 }
 function fill(c,v){
@@ -1012,10 +1010,6 @@ ${footer}
     tooMany: it.tooMany,
     eyebrow: it.eyebrow,
     hostInvites: it.hostInvites("{host}"),
-    open1: it.statusOpenPlayers(1).replace("1", "{n}"),
-    openN: it.statusOpenPlayers(999).replace("999", "{n}"),
-    openEmpty: it.statusOpenEmpty,
-    closed: it.statusClosed,
     mods: it.modsNote(999).replace("999", "{n}"),
   };
   const join = page(

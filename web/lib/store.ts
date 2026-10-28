@@ -78,3 +78,28 @@ export const CREATE_RULES: [number, Window][] = [[20, "1 h"]];
 export const WRITE_RULES: [number, Window][] = [[60, "1 h"]];
 /** Canlı durum: açık her dünya birkaç dakikada bir tazeler; ayrı ve daha geniş kova. */
 export const STATUS_RULES: [number, Window][] = [[600, "1 h"]];
+/** Ortak dünyanın imzalı istekleri: açık olan cihaz kirayı dakikada bir tazeler. */
+export const SHARED_RULES: [number, Window][] = [[600, "1 h"]];
+
+export const sharedKey = (code: string) => `shared:${code}`;
+export const nonceKey = (code: string, nonce: string) => `nonce:${code}:${nonce}`;
+
+/**
+ * Kayıt başına kısa kilit: oku → değiştir → yaz arası başka istek araya girmesin (ör. iki arkadaş
+ * aynı anda "Sen aç"). Kilit alınamazsa null.
+ */
+export async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T | null> {
+  const lock = `lock:${key}`;
+  const id = crypto.randomUUID();
+  for (let i = 0; i < 5; i++) {
+    if (await redis().set(lock, id, { nx: true, px: 3000 })) {
+      try {
+        return await fn();
+      } finally {
+        if ((await redis().get<string>(lock)) === id) await redis().del(lock);
+      }
+    }
+    await new Promise((r) => setTimeout(r, 120 * (i + 1)));
+  }
+  return null;
+}
