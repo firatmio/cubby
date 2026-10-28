@@ -168,12 +168,6 @@ pub struct Diff {
     pub removed: Vec<String>,
 }
 
-impl Diff {
-    pub fn is_empty(&self) -> bool {
-        self.changed.is_empty() && self.removed.is_empty()
-    }
-}
-
 pub fn diff(old: &[FileEntry], new: &[FileEntry]) -> Diff {
     let old_map: HashMap<&str, &str> = old
         .iter()

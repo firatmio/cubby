@@ -11,7 +11,9 @@
 //! - `incoming/` + `journal.json`: yeni nesil önce buraya iner; yer değiştirme günlükle yapılır,
 //!   yarıda kalırsa `recover` tamamlar.
 
+pub mod host;
 pub mod manifest;
+pub mod member;
 pub mod snapshot;
 pub mod sync;
 pub mod web;
@@ -75,6 +77,15 @@ impl Store {
     /// Son nesil; hiç yoksa boş (nesil 0).
     pub fn manifest(&self) -> Manifest {
         read_json(&self.root.join("manifest.json")).unwrap_or_default()
+    }
+
+    /// Sunucu klasörüne en son hangi nesil yerleştirildi (ya da hangi neslin kopyası ondan alındı).
+    pub fn checked_out(&self) -> Option<u64> {
+        read_json(&self.root.join("checkout.json"))
+    }
+
+    pub fn mark_checked_out(&self, generation: u64) -> AppResult<()> {
+        write_json(&self.root.join("checkout.json"), &generation)
     }
 
     fn index(&self) -> Index {

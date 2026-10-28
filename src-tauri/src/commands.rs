@@ -74,7 +74,15 @@ pub async fn list_loader_versions(
 
 #[tauri::command]
 pub fn list_instances(app: AppHandle) -> Vec<Instance> {
+    // Arkadaşın ortak dünyasının buradaki kopyası ayrı bir dünya gibi görünmez; katılınan dünyadan yönetilir.
     instance::list(&app)
+        .into_iter()
+        .filter(|i| {
+            !i.shared
+                .as_ref()
+                .is_some_and(|s| s.role == instance::SharedRole::Member)
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -147,6 +155,63 @@ struct InstallProgress<'a> {
 
 /// Klasörü oluşturur, sunucu dosyalarını kurar; başarılı olursa `instance.json` yazar ve kayda ekler.
 /// Hata olursa yarım klasör silinir.
+/// Kurulum ilerlemesi: aşama, dosya, inen, toplam.
+pub(crate) type Emit<'a> =
+    &'a (dyn Fn(&'static str, Option<&'static str>, u64, Option<u64>) + Send + Sync);
+
+/// Altyapıyı sunucu klasörüne kurar; NeoForge/Forge/Quilt kurulumu Java ile çalıştığı için Java önce
+/// hazırlanır. Yeni dünya ve ortak dünyanın arkadaştaki kopyası kullanır.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn install_loader(
+    state: &AppState,
+    java: &JavaManager,
+    loader: LoaderKind,
+    mc_version: &str,
+    loader_version: Option<&str>,
+    server_dir: &std::path::Path,
+    emit: Emit<'_>,
+    emit_line: &(dyn Fn(String) + Send + Sync),
+) -> AppResult<crate::loaders::Installed> {
+    let java_stage = |stage: JavaStage| match stage {
+        JavaStage::Download { downloaded, total } => {
+            emit("download", Some("java"), downloaded, total)
+        }
+        JavaStage::Extract => emit("extract", Some("java"), 0, None),
+    };
+    let installer_java = if loader.uses_installer() {
+        emit("meta", None, 0, None);
+        let major = state.loaders.java_major(mc_version).await?;
+        let found = match java.resolve(None, major).await? {
+            Some(j) => j,
+            None => java.install(major, java_stage).await?,
+        };
+        Some(PathBuf::from(found.path))
+    } else {
+        None
+    };
+    state
+        .loaders
+        .install(
+            loader,
+            &InstallRequest {
+                mc_version,
+                loader_version,
+                java: installer_java.as_deref(),
+            },
+            server_dir,
+            &mut |stage| match stage {
+                InstallStage::Meta => emit("meta", None, 0, None),
+                InstallStage::Download {
+                    file,
+                    downloaded,
+                    total,
+                } => emit("download", Some(file), downloaded, total),
+                InstallStage::Installer { line } => emit_line(line),
+            },
+        )
+        .await
+}
+
 #[tauri::command]
 pub async fn create_instance(
     app: AppHandle,
@@ -227,41 +292,16 @@ pub async fn create_instance(
         JavaStage::Extract => emit("extract", Some("java"), 0, None),
     };
 
-    let installed = async {
-        // NeoForge/Forge/Quilt installer'ı Java ile çalışır: Java önce hazırlanır.
-        let installer_java = if loader.uses_installer() {
-            emit("meta", None, 0, None);
-            let major = state.loaders.java_major(&mc_version).await?;
-            let found = match java.resolve(None, major).await? {
-                Some(j) => j,
-                None => java.install(major, java_stage).await?,
-            };
-            Some(PathBuf::from(found.path))
-        } else {
-            None
-        };
-        state
-            .loaders
-            .install(
-                loader,
-                &InstallRequest {
-                    mc_version: &mc_version,
-                    loader_version: loader_version.as_deref(),
-                    java: installer_java.as_deref(),
-                },
-                &server_dir,
-                &mut |stage| match stage {
-                    InstallStage::Meta => emit("meta", None, 0, None),
-                    InstallStage::Download {
-                        file,
-                        downloaded,
-                        total,
-                    } => emit("download", Some(file), downloaded, total),
-                    InstallStage::Installer { line } => emit_line(line),
-                },
-            )
-            .await
-    }
+    let installed = install_loader(
+        &state,
+        &java,
+        loader,
+        &mc_version,
+        loader_version.as_deref(),
+        &server_dir,
+        &emit,
+        &emit_line,
+    )
     .await;
 
     let result: AppResult<Instance> = async {
@@ -305,6 +345,7 @@ pub async fn create_instance(
             internet: false,
             invite_token: None,
             short_invite: None,
+            shared: None,
         };
         let mut props = Properties::load(&server_dir)?;
         props.set("motd", inst.name.clone());
@@ -505,10 +546,13 @@ pub async fn start_server(
         "-Dstderr.encoding=UTF-8".into(),
     ];
     args.extend(crate::boost::jvm_flags(inst.ram_max_mb, java.major));
+    let shared = inst.shared.as_ref().map(|s| s.code.clone());
     let handle = app.clone();
-    state
+    let started = state
         .servers
         .start_with(&app, &id, |log| async move {
+            // Ortak dünya: kira alınır, son hâl gerekirse arkadaştan çekilip yerleştirilir.
+            crate::shared::host::prepare(&handle, &inst, &log).await?;
             // Hızlandırıcı: modlar (saf dünyada arka planda Fabric) burada hazırlanır.
             args.extend(crate::boost::prepare(&handle, &inst, &log).await?);
             Ok(LaunchSpec {
@@ -517,7 +561,13 @@ pub async fn start_server(
                 cwd: server_dir,
             })
         })
-        .await?;
+        .await;
+    // Ortak dünya: açıkken kira tazelenir, kapanınca (ya da açılamadıysa) son hâl yayınlanır ve
+    // kira bırakılır.
+    if let Some(code) = shared {
+        crate::shared::host::watch(&app, &id, &code);
+    }
+    started?;
     // "Başlat ve katıl": sunucu hazır olunca Launcher açılır.
     if join == Some(true) {
         crate::client_cmds::join_after_start(&app, &id);

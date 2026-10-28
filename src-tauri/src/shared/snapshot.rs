@@ -33,8 +33,9 @@ fn copy_hashing(from: &Path, to: &Path) -> AppResult<String> {
 }
 
 /// `source`'un (sunucu klasörü) değişen dosyalarını depoya alır. Hiçbir şey değişmediyse `None`
-/// (nesil artmaz), değiştiyse yeni neslin manifesti.
-pub fn snapshot(source: &Path, store: &Store) -> AppResult<Option<Manifest>> {
+/// (nesil artmaz), değiştiyse `next` neslinin manifesti. Nesil numarası davet sunucusununkidir
+/// (onun nesli + 1); depodaki son nesilden büyük olmalı.
+pub fn snapshot(source: &Path, store: &Store, next: u64) -> AppResult<Option<Manifest>> {
     store.recover()?;
     let prev = store.manifest();
     let prev_sha: std::collections::HashMap<&str, &str> = prev
@@ -88,7 +89,7 @@ pub fn snapshot(source: &Path, store: &Store) -> AppResult<Option<Manifest>> {
         return Ok(None);
     }
     let next = Manifest {
-        generation: prev.generation + 1,
+        generation: next.max(prev.generation + 1),
         files,
     };
     store.commit(&next, &Diff { changed, removed })?;
@@ -102,10 +103,11 @@ pub async fn snapshot_running(
     id: &str,
     source: std::path::PathBuf,
     store: Store,
+    next: u64,
 ) -> AppResult<Option<Manifest>> {
     servers
         .with_saves_paused(id, || async move {
-            tokio::task::spawn_blocking(move || snapshot(&source, &store))
+            tokio::task::spawn_blocking(move || snapshot(&source, &store, next))
                 .await
                 .map_err(|e| crate::error::AppError::msg(e.to_string()))?
         })
@@ -137,7 +139,9 @@ mod tests {
         put(&src, "fabric-server-launch.jar", b"jar");
         put(&src, "logs/latest.log", b"log");
 
-        let g1 = snapshot(&src, &store).unwrap().unwrap();
+        let g1 = snapshot(&src, &store, store.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
         assert_eq!(g1.generation, 1);
         let paths: Vec<&str> = g1.files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, ["server.properties", "world/region/r.0.0.mca"]);
@@ -147,13 +151,19 @@ mod tests {
         );
 
         // Değişiklik yoksa nesil artmaz.
-        assert!(snapshot(&src, &store).unwrap().is_none());
+        assert!(
+            snapshot(&src, &store, store.manifest().generation + 1)
+                .unwrap()
+                .is_none()
+        );
 
         // Bir dosya değişir, biri silinir, biri eklenir.
         put(&src, "world/region/r.0.0.mca", b"bolge-2");
         std::fs::remove_file(src.join("server.properties")).unwrap();
         put(&src, "world/level.dat", b"level");
-        let g2 = snapshot(&src, &store).unwrap().unwrap();
+        let g2 = snapshot(&src, &store, store.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
         assert_eq!(g2.generation, 2);
         assert_eq!(
             std::fs::read(store_dir.join("backups/2/world/region/r.0.0.mca")).unwrap(),
@@ -166,7 +176,9 @@ mod tests {
         // Son 3 neslin yedeği kalır.
         for i in 3..=6u8 {
             put(&src, "world/region/r.0.0.mca", &[i]);
-            snapshot(&src, &store).unwrap().unwrap();
+            snapshot(&src, &store, store.manifest().generation + 1)
+                .unwrap()
+                .unwrap();
         }
         let mut kept: Vec<String> = std::fs::read_dir(store_dir.join("backups"))
             .unwrap()
@@ -184,7 +196,9 @@ mod tests {
         let store = Store::at(store_dir.clone());
         put(&src, "a", b"1");
         put(&src, "b", b"1");
-        snapshot(&src, &store).unwrap().unwrap();
+        snapshot(&src, &store, store.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
 
         // Yer değiştirmenin ortasında kalmış gibi: günlük ve incoming var, a taşınmış, b taşınmamış.
         put(&store_dir, "incoming/b", b"2");
@@ -235,7 +249,9 @@ mod tests {
         let store = Store::at(store_dir.clone());
         put(&src, "world/level.dat", b"L");
         put(&src, "mods/a.jar", b"A");
-        snapshot(&src, &store).unwrap().unwrap();
+        snapshot(&src, &store, store.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
         put(&server, "world/level.dat", b"eski");
         put(&server, "world/fazla.dat", b"x");
         put(&server, "libraries/lib.jar", b"kalsin");

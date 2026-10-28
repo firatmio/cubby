@@ -92,6 +92,35 @@ pub struct JoinStatus {
     pub error: Option<String>,
     /// Host'un şu anki mod listesi özeti.
     pub mods_rev: Option<String>,
+    /// Ortak dünyaysa: kim açık, ben açabilir miyim, kopyam hazır mı.
+    pub shared: Option<JoinShared>,
+}
+
+/// Katılınan ortak dünyanın durumu (arayüzde davet bandı, "Sen aç", "Ayşe'de açık").
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JoinShared {
+    /// Sahip beni "açabilir" yaptı.
+    pub member: bool,
+    /// Dünyanın bu bilgisayardaki kopyası (kabul edildiyse).
+    pub local: Option<String>,
+    /// Kopya iniyor ya da güncelleniyor.
+    pub syncing: bool,
+    /// Şu an açık olanın adı; ben açıksam `open_by_me`.
+    pub open_by: Option<String>,
+    pub open_by_me: bool,
+    /// En güncel hâl bu arkadaşta kaldı; o dönene kadar kimse açamaz.
+    pub waiting_for: Option<String>,
+    pub generation: u64,
+    pub local_generation: u64,
+}
+
+/// Minecraft bağlantısının gideceği yer: ortak dünyayı kim açtıysa.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Target {
+    Remote(EndpointId),
+    /// Dünyayı bu bilgisayar açtı: yerel sunucunun portu.
+    Local(u16),
 }
 
 #[derive(Serialize, Clone)]
@@ -106,6 +135,8 @@ pub struct JoinManager {
     worlds: Mutex<Vec<JoinedWorld>>,
     listeners: Mutex<HashMap<String, CancellationToken>>,
     status: Mutex<HashMap<String, JoinStatus>>,
+    /// Ortak dünyada şu an açık olan (yoksa davetteki sahip).
+    live: std::sync::Mutex<HashMap<String, Target>>,
 }
 
 fn host_id(w: &JoinedWorld) -> AppResult<EndpointId> {
@@ -131,6 +162,7 @@ pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
             path: Some(path),
             error: None,
             mods_rev,
+            shared: None,
         },
         Ok((Reply::Offline, path)) => JoinStatus {
             reachable: Some(true),
@@ -138,6 +170,7 @@ pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
             path: Some(path),
             error: None,
             mods_rev: None,
+            shared: None,
         },
         Ok((Reply::Denied, _)) => JoinStatus {
             reachable: Some(true),
@@ -148,6 +181,7 @@ pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
                 "This invite is no longer valid. Ask your friend for a new one."
             )),
             mods_rev: None,
+            shared: None,
         },
         Err(_) => JoinStatus {
             reachable: Some(false),
@@ -155,6 +189,7 @@ pub fn status_from(result: AppResult<(Reply, PathKind)>) -> JoinStatus {
             path: None,
             error: None,
             mods_rev: None,
+            shared: None,
         },
     }
 }
@@ -185,6 +220,7 @@ impl JoinManager {
             worlds: Mutex::new(worlds),
             listeners: Mutex::new(HashMap::new()),
             status: Mutex::new(HashMap::new()),
+            live: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -257,6 +293,35 @@ impl JoinManager {
         });
     }
 
+    fn live(&self) -> std::sync::MutexGuard<'_, HashMap<String, Target>> {
+        self.live.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Ortak dünyada bağlantının gideceği yer; `None`: davetteki sahip.
+    pub fn set_live(&self, id: &str, target: Option<Target>) {
+        match target {
+            Some(t) => self.live().insert(id.to_string(), t),
+            None => self.live().remove(id),
+        };
+    }
+
+    pub fn target(&self, w: &JoinedWorld) -> AppResult<Target> {
+        match self.live().get(&w.id) {
+            Some(t) => Ok(*t),
+            None => host_id(w).map(Target::Remote),
+        }
+    }
+
+    /// Ortak dünya bilgisini duruma yazar (ping'in yazdıklarına dokunmadan).
+    pub async fn set_shared(&self, app: &AppHandle, id: &str, shared: Option<JoinShared>) {
+        let mut status = self.status(id).await;
+        if status.shared == shared {
+            return;
+        }
+        status.shared = shared;
+        self.set_status(app, id, status).await;
+    }
+
     async fn set_status(&self, app: &AppHandle, id: &str, status: JoinStatus) {
         self.status
             .lock()
@@ -272,10 +337,28 @@ impl JoinManager {
     }
 
     pub async fn poll(&self, app: &AppHandle, w: &JoinedWorld) {
-        let result = match host_id(w) {
-            Ok(host) => tokio::time::timeout(PING_TIMEOUT, self.p2p.ping(host, &w.world, &w.token))
-                .await
-                .unwrap_or_else(|_| Err(AppError::msg(tx!("zaman aşımı", "timed out")))),
+        let result = match self.target(w) {
+            Ok(Target::Remote(host)) => {
+                tokio::time::timeout(PING_TIMEOUT, self.p2p.ping(host, &w.world, &w.token))
+                    .await
+                    .unwrap_or_else(|_| Err(AppError::msg(tx!("zaman aşımı", "timed out"))))
+            }
+            // Dünyayı bu bilgisayar açtı: yerel sunucu ayakta mı?
+            Ok(Target::Local(port)) => {
+                let up = tokio::net::TcpStream::connect((Ipv4Addr::LOCALHOST, port))
+                    .await
+                    .is_ok();
+                Ok((
+                    Reply::Ok {
+                        running: up,
+                        name: w.name.clone(),
+                        mods_rev: w.mods_rev.clone(),
+                        cover: w.cover.as_ref().map(|c| c.version),
+                        code: w.code.clone(),
+                    },
+                    PathKind::Direct,
+                ))
+            }
             Err(e) => Err(e),
         };
         let extras = match &result {
@@ -283,6 +366,7 @@ impl JoinManager {
             _ => None,
         };
         let mut status = status_from(result);
+        status.shared = self.status(&w.id).await.shared;
         // Dinleyici hatası (ör. port dolu) varsa göster.
         if status.error.is_none()
             && let Some(old) = self.status.lock().await.get(&w.id)
@@ -405,20 +489,32 @@ impl JoinManager {
             .await
             .insert(w.id.clone(), token.clone());
 
-        let (p2p, w) = (self.p2p.clone(), w.clone());
+        let (me, w) = (self.clone(), w.clone());
         tauri::async_runtime::spawn(async move {
-            let Ok(host) = host_id(&w) else { return };
             loop {
                 let accepted = tokio::select! {
                     _ = token.cancelled() => return,
                     a = listener.accept() => a,
                 };
-                let Ok((tcp, _)) = accepted else { continue };
+                let Ok((mut tcp, _)) = accepted else { continue };
                 let _ = tcp.set_nodelay(true);
-                let (p2p, world, secret) = (p2p.clone(), w.world.clone(), w.token.clone());
+                // Ortak dünyada bağlantı o an kim açıksa ona gider.
+                let Ok(target) = me.target(&w) else { continue };
+                let (p2p, world, secret) = (me.p2p.clone(), w.world.clone(), w.token.clone());
                 tauri::async_runtime::spawn(async move {
                     // Hata olursa TCP kapanır; Minecraft "bağlantı kurulamadı" der, durum kartı nedenini gösterir.
-                    let _ = p2p.pipe_tcp(host, &world, &secret, tcp).await;
+                    match target {
+                        Target::Remote(host) => {
+                            let _ = p2p.pipe_tcp(host, &world, &secret, tcp).await;
+                        }
+                        Target::Local(port) => {
+                            if let Ok(mut server) =
+                                tokio::net::TcpStream::connect((Ipv4Addr::LOCALHOST, port)).await
+                            {
+                                let _ = tokio::io::copy_bidirectional(&mut tcp, &mut server).await;
+                            }
+                        }
+                    }
                 });
             }
         });
@@ -518,6 +614,39 @@ impl JoinManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn shared_target_follows_who_is_open() {
+        let dir = std::env::temp_dir().join(format!("cubby-join-{}", uuid::Uuid::new_v4()));
+        let p2p = P2p::bind(&dir).await.unwrap();
+        let host = p2p.id();
+        let m = JoinManager::load(&dir, p2p);
+        let w = JoinedWorld {
+            id: "j".into(),
+            name: "W".into(),
+            host: host.clone(),
+            world: "w".into(),
+            token: "t".into(),
+            loader: LoaderKind::Vanilla,
+            mc_version: "26.3".into(),
+            loader_version: None,
+            local_port: 25600,
+            added_at: 0,
+            profile: None,
+            game_dir: None,
+            mods_rev: None,
+            with_recommended: false,
+            cover: None,
+            code: None,
+        };
+        // Kimse açık değilse davetteki sahip.
+        assert_eq!(m.target(&w).unwrap(), Target::Remote(host.parse().unwrap()));
+        m.set_live("j", Some(Target::Local(25565)));
+        assert_eq!(m.target(&w).unwrap(), Target::Local(25565));
+        m.set_live("j", None);
+        assert_eq!(m.target(&w).unwrap(), Target::Remote(host.parse().unwrap()));
+        let _ = std::fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn status_mapping() {

@@ -221,6 +221,10 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 async fn publish_status(app: &AppHandle, id: &str) -> crate::error::AppResult<()> {
     let inst = instance::get(app, id)?;
+    // Ortak dünyada canlı durumu, dünyayı açık tutanın kirası yazar (sahip olmayabilir).
+    if inst.shared.is_some() {
+        return Ok(());
+    }
     let Some(short) = current_short(&inst) else {
         return Ok(());
     };

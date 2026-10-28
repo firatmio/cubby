@@ -87,20 +87,26 @@ fn login_guard(
 /// Host: gelen bir akışı kabul eder mi; neye (Minecraft portu, mod listesi, mod dosyası) yönlendirilir?
 pub fn host_decider(app: AppHandle) -> Decide {
     Arc::new(move |h: &StreamHeader, peer: &str| {
-        let Ok(inst) = instance::get(&app, &h.world) else {
+        // Ortak dünyayı bir üye açtıysa arkadaşlar sahibin davetiyle gelir: dünya kimliği sahibinki,
+        // burada karşılığı o dünyanın yerel kopyası.
+        let Some(inst) = instance::get(&app, &h.world).ok().or_else(|| {
+            instance::list(&app)
+                .into_iter()
+                .find(|i| i.shared.as_ref().is_some_and(|s| s.origin_world == h.world))
+        }) else {
             return Decision::Reply(Reply::Denied);
         };
         if inst.invite_token.as_deref() != Some(h.token.as_str()) {
             return Decision::Reply(Reply::Denied);
         }
         let (Ok(server_dir), Ok(inst_dir)) = (
-            paths::server_dir(&app, &h.world),
-            paths::instance_dir(&app, &h.world),
+            paths::server_dir(&app, &inst.id),
+            paths::instance_dir(&app, &inst.id),
         ) else {
             return Decision::Reply(Reply::Denied);
         };
         let running =
-            app.state::<AppState>().servers.snapshot(&h.world).status == ServerStatus::Running;
+            app.state::<AppState>().servers.snapshot(&inst.id).status == ServerStatus::Running;
         let modded = inst.loader.is_modded();
         let server_mods = server_dir.join("mods");
         let meta = inst_dir.join(META_DIR);
@@ -154,9 +160,16 @@ pub fn host_decider(app: AppHandle) -> Decide {
             ),
             StreamKind::Cover if cover.is_some() => Decision::File(ok(None), cover_file.clone()),
             StreamKind::Cover => Decision::Reply(Reply::Denied),
-            // Ortak dünya akışları: dünya paylaşılınca yalnız gruptaki cihazlara açılacak.
+            // Ortak dünyanın kendisi: yalnız gruptaki cihazlara, son neslin tutarlı kopyasından.
             StreamKind::WorldManifest | StreamKind::WorldBlocks | StreamKind::WorldRead => {
-                Decision::Reply(Reply::Denied)
+                let member = inst.shared.as_ref().is_some_and(|s| {
+                    app.state::<crate::shared::host::Groups>()
+                        .is_member(&s.code, peer)
+                });
+                match member {
+                    true => crate::shared::Store::for_instance(&inst_dir).serve(h, ok(None)),
+                    false => Decision::Reply(Reply::Denied),
+                }
             }
             StreamKind::File => {
                 // Yalnız oyuncuya giden listedeki, güvenli adlı bir dosya.
@@ -194,7 +207,7 @@ struct ShortPayload {
     links: InviteLinks,
 }
 
-fn invite_of(app: &AppHandle, inst: &instance::Instance) -> Invite {
+pub(crate) fn invite_of(app: &AppHandle, inst: &instance::Instance) -> Invite {
     Invite {
         v: INVITE_VERSION,
         name: inst.name.chars().take(64).collect(),
@@ -289,7 +302,7 @@ pub fn install_refresh(app: &AppHandle) {
     });
 }
 
-async fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteLinks> {
+pub(crate) async fn invite_for(app: &AppHandle, id: &str, reset: bool) -> AppResult<InviteLinks> {
     let dir = paths::instance_dir(app, id)?;
     let old = instance::get(app, id)?.short_invite;
     let inst = instance::modify(&dir, |i| {
@@ -338,6 +351,12 @@ pub async fn create_invite(app: AppHandle, id: String) -> AppResult<InviteLinks>
 /// Yeni anahtar üretir; eski linkler ve kodlar geçersiz olur.
 #[tauri::command]
 pub async fn reset_invite(app: AppHandle, id: String) -> AppResult<InviteLinks> {
+    if instance::get(&app, &id)?.shared.is_some() {
+        return Err(AppError::msg(tx!(
+            "Ortak dünyanın kodu yenilenemez: arkadaşların bu kodla dünyayı açıyor. Önce ortak dünyayı kapat.",
+            "A shared world's code can't be renewed: your friends open the world with it. Turn off sharing first."
+        )));
+    }
     invite_for(&app, &id, true).await
 }
 
@@ -808,9 +827,11 @@ pub async fn join_world(
 }
 
 #[tauri::command]
-pub async fn list_joined(joins: Joins<'_>) -> AppResult<Vec<JoinedView>> {
+pub async fn list_joined(app: AppHandle, joins: Joins<'_>) -> AppResult<Vec<JoinedView>> {
+    let me = app.state::<Arc<P2p>>().id();
     let mut out = Vec::new();
-    for w in joins.list().await {
+    // Sahibin kendi ortak dünyasına katılım kaydı (başkası açıkken) listede görünmez.
+    for w in joins.list().await.into_iter().filter(|w| w.host != me) {
         out.push(view(&joins, w).await);
     }
     Ok(out)

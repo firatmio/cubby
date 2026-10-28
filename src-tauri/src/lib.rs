@@ -42,9 +42,8 @@ mod registry;
 mod server;
 mod sessions;
 mod settings;
-// Ortak dünyanın motoru; uygulamanın akışına (Sen aç, kopya yayınlama) sonraki adımda bağlanacak.
-#[allow(dead_code)]
 mod shared;
+mod shared_cmds;
 mod short_invite;
 mod updates;
 mod util;
@@ -231,11 +230,14 @@ pub fn run() {
 
                 // Uygulamalar arası doğrudan bağlantı: host olarak dinle, katılınan dünyaları aç.
                 let p2p = tauri::async_runtime::block_on(P2p::bind(&data))?;
+                // Bağlantı kararı ortak dünya gruplarının önbelleğine bakar: dinlemeden önce hazır olsun.
+                app.manage(shared::host::Groups::default());
                 p2p.serve(join_cmds::host_decider(app.handle().clone()));
                 let joins = JoinManager::load(&data, p2p.clone());
                 joins.start(app.handle());
                 app.manage(p2p);
                 app.manage(joins);
+                shared::host::install(app.handle());
 
                 app.manage(PendingInvite::default());
                 app.manage(mods_cmds::ModIcons::default());
@@ -347,6 +349,13 @@ pub fn run() {
             net_cmds::set_internet,
             join_cmds::create_invite,
             join_cmds::reset_invite,
+            shared_cmds::shared_view,
+            shared_cmds::set_shared,
+            shared_cmds::disable_shared,
+            shared_cmds::force_shared,
+            shared_cmds::accept_shared,
+            shared_cmds::open_shared,
+            shared_cmds::join_own_shared,
             join_cmds::preview_invite,
             join_cmds::join_world,
             join_cmds::list_joined,

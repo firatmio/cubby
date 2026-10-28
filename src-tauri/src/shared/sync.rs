@@ -311,7 +311,9 @@ mod tests {
             token: "t",
         };
 
-        let g1 = snapshot(&src, &a).unwrap().unwrap();
+        let g1 = snapshot(&src, &a, a.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
         let total: u64 = g1.files.iter().map(|f| f.size).sum();
         let t = std::time::Instant::now();
         let (m1, s1) = pull(&source, &b, 1, |_, _| {}).await.unwrap();
@@ -338,7 +340,9 @@ mod tests {
         assert_eq!(b.manifest(), g1);
 
         let blocks = touch_blocks(&src);
-        let g2 = snapshot(&src, &a).unwrap().unwrap();
+        let g2 = snapshot(&src, &a, a.manifest().generation + 1)
+            .unwrap()
+            .unwrap();
         let t = std::time::Instant::now();
         let (m2, s2) = pull(&source, &b, 2, |_, _| {}).await.unwrap();
         println!(

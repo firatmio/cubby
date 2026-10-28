@@ -61,6 +61,31 @@ pub struct Instance {
     /// Davet sunucusundaki kısa kod (`K7M-2QX`); `token` hangi davet anahtarına ait olduğunu tutar.
     #[serde(default)]
     pub short_invite: Option<crate::short_invite::ShortInvite>,
+    /// Ortak dünya: grubun dünyası; en güncel hâline sahip üye açabilir.
+    #[serde(default)]
+    pub shared: Option<SharedLink>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SharedRole {
+    Owner,
+    /// Arkadaşın dünyasının bu bilgisayardaki kopyası (dünya listesinde görünmez).
+    Member,
+}
+
+/// Ortak dünyanın kaydı. Üyenin kopyasında `invite_token` sahibin tokenidir: arkadaşlar aynı davetle
+/// kim açıksa ona bağlanır.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedLink {
+    /// Davet sunucusundaki kısa kod (`K7M2QX`).
+    pub code: String,
+    pub role: SharedRole,
+    /// Sahibin dünya kimliği (davetteki `world`); sahipte kendi kimliği.
+    pub origin_world: String,
+    /// Sahibin cihazı.
+    pub owner_device: String,
 }
 
 impl Instance {

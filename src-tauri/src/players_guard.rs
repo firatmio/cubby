@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::AppResult;
 
 const FILE: &str = "identities.json";
+const DAY_MS: u64 = 24 * 60 * 60 * 1000;
 
 /// Aynı anda iki girişin kaydı birbirinin üstüne yazmasın.
 static LOCK: Mutex<()> = Mutex::new(());
@@ -43,6 +44,16 @@ pub struct Identities {
     pub names: BTreeMap<String, Bound>,
     #[serde(default)]
     pub banned: Vec<BannedDevice>,
+    /// Davetle girmiş her cihaz (premium dünyada da): son kullandığı ad ve zamanı. Zorlamaz; sahip
+    /// ortak dünyada "açabilir" yapacağı arkadaşları buradan seçer.
+    #[serde(default)]
+    pub seen: BTreeMap<String, Seen>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Seen {
+    pub name: String,
+    pub last: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,8 +65,35 @@ pub enum Check {
 }
 
 impl Identities {
-    /// Girişe izin verilir mi; premium olmayan dünyada bağsız ad bu cihaza bağlanır.
+    /// Girişe izin verilir mi; premium olmayan dünyada bağsız ad bu cihaza bağlanır. Geçen cihaz
+    /// `seen`'e yazılır.
     pub fn check(
+        &mut self,
+        name: &str,
+        device: &str,
+        offline: bool,
+        host_name: Option<&str>,
+        now: u64,
+    ) -> Check {
+        let check = self.decide(name, device, offline, host_name, now);
+        // Aynı adla gelen cihaz için kayıt en çok günde bir tazelenir (her girişte diske yazılmasın).
+        let fresh = self
+            .seen
+            .get(device)
+            .is_some_and(|s| s.name == name && now.saturating_sub(s.last) < DAY_MS);
+        if check == Check::Pass && !fresh {
+            self.seen.insert(
+                device.to_string(),
+                Seen {
+                    name: name.to_string(),
+                    last: now,
+                },
+            );
+        }
+        check
+    }
+
+    fn decide(
         &mut self,
         name: &str,
         device: &str,
@@ -156,6 +194,30 @@ pub fn update<T>(meta: &Path, f: impl FnOnce(&mut Identities) -> T) -> AppResult
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn remembers_devices_that_got_in() {
+        let mut ids = Identities::default();
+        // Premium dünyada ad bağlanmaz ama giren cihaz hatırlanır.
+        assert_eq!(ids.check("Ali", "cihaz-a", false, None, 1), Check::Pass);
+        assert!(ids.names.is_empty());
+        assert_eq!(
+            ids.seen["cihaz-a"],
+            Seen {
+                name: "Ali".into(),
+                last: 1
+            }
+        );
+        // Geri çevrilen cihaz kaydedilmez; aynı cihazın son adı güncellenir.
+        ids.check("Ayse", "cihaz-b", true, None, 2);
+        assert_eq!(
+            ids.check("ayse", "cihaz-c", true, None, 3),
+            Check::NameTaken
+        );
+        assert!(!ids.seen.contains_key("cihaz-c"));
+        ids.check("Ali2", "cihaz-a", false, None, 4);
+        assert_eq!(ids.seen["cihaz-a"].name, "Ali2");
+    }
 
     #[test]
     fn binds_names_to_the_first_device() {
