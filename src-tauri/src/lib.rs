@@ -43,6 +43,8 @@ mod server;
 mod sessions;
 mod settings;
 mod short_invite;
+#[cfg(test)]
+mod spike_shared;
 mod updates;
 mod util;
 mod world_cmds;
