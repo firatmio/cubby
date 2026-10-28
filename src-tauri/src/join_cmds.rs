@@ -154,6 +154,10 @@ pub fn host_decider(app: AppHandle) -> Decide {
             ),
             StreamKind::Cover if cover.is_some() => Decision::File(ok(None), cover_file.clone()),
             StreamKind::Cover => Decision::Reply(Reply::Denied),
+            // Ortak dünya akışları: dünya paylaşılınca yalnız gruptaki cihazlara açılacak.
+            StreamKind::WorldManifest | StreamKind::WorldBlocks | StreamKind::WorldRead => {
+                Decision::Reply(Reply::Denied)
+            }
             StreamKind::File => {
                 // Yalnız oyuncuya giden listedeki, güvenli adlı bir dosya.
                 let allowed = h

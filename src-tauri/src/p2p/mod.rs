@@ -49,6 +49,8 @@ pub enum Decision {
     Body(Reply, Vec<u8>),
     /// Yanıt, sonra dosyanın içeriği.
     File(Reply, std::path::PathBuf),
+    /// Yanıt, sonra dosyanın [başlangıç, uzunluk] aralığı.
+    FileRange(Reply, std::path::PathBuf, u64, u64),
 }
 
 /// Akışın başlığı ve bağlanan cihazın kimliği → karar.
@@ -106,6 +108,25 @@ impl P2p {
 
     pub fn id(&self) -> String {
         self.endpoint.id().to_string()
+    }
+
+    /// Bu cihazın kimliğiyle (Ed25519) imza: davet sunucusu ortak dünya isteklerini bununla doğrular.
+    /// Anahtar dışarı verilmez.
+    pub fn sign(&self, msg: &[u8]) -> [u8; 64] {
+        self.endpoint.secret_key().sign(msg).to_bytes()
+    }
+
+    /// Test: karşı tarafın tam adresiyle bağlanıp bağlantıyı önbelleğe alır (adres yayılmasını beklemeden).
+    #[cfg(test)]
+    pub async fn dial(&self, other: &P2p) -> AppResult<()> {
+        other.endpoint.online().await;
+        let conn = self
+            .endpoint
+            .connect(other.endpoint.addr(), ALPN)
+            .await
+            .map_err(|e| AppError::msg(e.to_string()))?;
+        self.conns.lock().await.insert(other.endpoint.id(), conn);
+        Ok(())
     }
 
     pub async fn close(&self) {
@@ -189,12 +210,7 @@ impl P2p {
         world: &str,
         token: &str,
     ) -> AppResult<(Reply, PathKind)> {
-        let header = StreamHeader {
-            world: world.into(),
-            token: token.into(),
-            kind: StreamKind::Ping,
-            file: None,
-        };
+        let header = StreamHeader::new(world, token, StreamKind::Ping);
         let (mut send, _recv, reply, path) = self.open(host, &header).await?;
         let _ = send.finish();
         Ok((reply, path))
@@ -207,12 +223,7 @@ impl P2p {
         world: &str,
         token: &str,
     ) -> AppResult<Vec<ClientMod>> {
-        let header = StreamHeader {
-            world: world.into(),
-            token: token.into(),
-            kind: StreamKind::Manifest,
-            file: None,
-        };
+        let header = StreamHeader::new(world, token, StreamKind::Manifest);
         let (mut send, mut recv, reply, _) = self.open(host, &header).await?;
         let _ = send.finish();
         if !matches!(reply, Reply::Ok { .. }) {
@@ -248,10 +259,8 @@ impl P2p {
         max: u64,
     ) -> AppResult<()> {
         let header = StreamHeader {
-            world: world.into(),
-            token: token.into(),
-            kind: StreamKind::File,
             file: Some(file.into()),
+            ..StreamHeader::new(world, token, StreamKind::File)
         };
         let (mut send, recv, reply, _) = self.open(host, &header).await?;
         let _ = send.finish();
@@ -273,12 +282,7 @@ impl P2p {
         dest: &std::path::Path,
         max: u64,
     ) -> AppResult<()> {
-        let header = StreamHeader {
-            world: world.into(),
-            token: token.into(),
-            kind: StreamKind::Cover,
-            file: None,
-        };
+        let header = StreamHeader::new(world, token, StreamKind::Cover);
         let (mut send, recv, reply, _) = self.open(host, &header).await?;
         let _ = send.finish();
         if !matches!(reply, Reply::Ok { .. }) {
@@ -290,6 +294,74 @@ impl P2p {
         save_limited(recv, dest, max, "cover").await
     }
 
+    // ---- Ortak dünya ----
+
+    /// Ortak dünya akışı: yanıt `Ok` değilse (nesil o cihazda yok, davet geçersiz) hata.
+    async fn open_world(&self, host: EndpointId, header: &StreamHeader) -> AppResult<RecvStream> {
+        let (mut send, recv, reply, _) = self.open(host, header).await?;
+        let _ = send.finish();
+        if !matches!(reply, Reply::Ok { .. }) {
+            return Err(AppError::msg(tx!(
+                "Dünyanın bu hâli arkadaşının bilgisayarında yok.",
+                "Your friend's computer doesn't have this version of the world."
+            )));
+        }
+        Ok(recv)
+    }
+
+    /// `gen` neslinin dosya listesi (JSON).
+    pub async fn world_manifest(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+        generation: u64,
+    ) -> AppResult<Vec<u8>> {
+        let header = StreamHeader {
+            generation: Some(generation),
+            ..StreamHeader::new(world, token, StreamKind::WorldManifest)
+        };
+        let mut recv = self.open_world(host, &header).await?;
+        Ok(read_body(&mut recv, crate::shared::MAX_MANIFEST).await?)
+    }
+
+    /// Bir dosyanın blok özetleri (8'er bayt).
+    pub async fn world_blocks(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+        generation: u64,
+        file: &str,
+    ) -> AppResult<Vec<u8>> {
+        let header = StreamHeader {
+            generation: Some(generation),
+            file: Some(file.into()),
+            ..StreamHeader::new(world, token, StreamKind::WorldBlocks)
+        };
+        let mut recv = self.open_world(host, &header).await?;
+        Ok(read_body(&mut recv, crate::shared::MAX_BLOCK_LIST).await?)
+    }
+
+    /// Bir dosyanın [başlangıç, uzunluk] aralığını okuyan akış.
+    pub async fn world_read(
+        &self,
+        host: EndpointId,
+        world: &str,
+        token: &str,
+        generation: u64,
+        file: &str,
+        range: [u64; 2],
+    ) -> AppResult<RecvStream> {
+        let header = StreamHeader {
+            generation: Some(generation),
+            file: Some(file.into()),
+            range: Some(range),
+            ..StreamHeader::new(world, token, StreamKind::WorldRead)
+        };
+        self.open_world(host, &header).await
+    }
+
     /// Minecraft'ın bir TCP bağlantısını host'a taşır; bağlantı kapanana kadar sürer.
     pub async fn pipe_tcp(
         &self,
@@ -298,12 +370,7 @@ impl P2p {
         token: &str,
         mut tcp: tokio::net::TcpStream,
     ) -> AppResult<()> {
-        let header = StreamHeader {
-            world: world.into(),
-            token: token.into(),
-            kind: StreamKind::Tcp,
-            file: None,
-        };
+        let header = StreamHeader::new(world, token, StreamKind::Tcp);
         let (send, recv, reply, _) = self.open(host, &header).await?;
         if !matches!(reply, Reply::Ok { .. }) {
             return Err(AppError::msg(tx!(
@@ -395,6 +462,14 @@ async fn handle_stream(
             tokio::io::copy(&mut file, &mut send).await?;
             let _ = send.finish();
         }
+        Decision::FileRange(reply, path, start, len) => {
+            use tokio::io::{AsyncReadExt, AsyncSeekExt};
+            write_line(&mut send, &reply).await?;
+            let mut file = tokio::fs::File::open(path).await?;
+            file.seek(std::io::SeekFrom::Start(start)).await?;
+            tokio::io::copy(&mut file.take(len), &mut send).await?;
+            let _ = send.finish();
+        }
     }
     Ok(())
 }
@@ -441,6 +516,7 @@ mod tests {
                 (true, StreamKind::Manifest) => Decision::Body(ok, br#"[{"file":"a.jar","title":"A","sha1":"x","sha512":"y","size":3,"projectId":null,"versionId":null,"need":"required"}]"#.to_vec()),
                 (true, StreamKind::File) => Decision::File(ok, file_path.clone()),
                 (true, StreamKind::Ping | StreamKind::Cover) => Decision::Reply(ok),
+                (true, _) => Decision::Reply(Reply::Denied),
             }
         }));
 

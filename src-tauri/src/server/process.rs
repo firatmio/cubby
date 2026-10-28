@@ -136,6 +136,9 @@ async fn read_lines(
             .then(|| parse(&line))
             .flatten();
         // Chunky saniyede bir ilerleme yazar; konsol bunlarla dolmasın (ilerleme kartta görünür).
+        if matches!(stream, LogStream::Stdout) {
+            let _ = h.lines.send(line.clone());
+        }
         if !matches!(event, Some(LogEvent::Chunky(ChunkyLine::Progress { .. }))) {
             h.push_log(&app, stream, line);
         }

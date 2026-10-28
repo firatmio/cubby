@@ -20,6 +20,17 @@ fn is_player_name(s: &str) -> bool {
     (1..=16).contains(&s.len()) && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
+/// `save-off` yanıtı (zaten kapalıysa da).
+pub fn is_saving_off(line: &str) -> bool {
+    let l = line.to_ascii_lowercase();
+    l.contains("automatic saving is now disabled") || l.contains("saving is already turned off")
+}
+
+/// `save-all flush` bitti.
+pub fn is_saved(line: &str) -> bool {
+    line.to_ascii_lowercase().contains("saved the game")
+}
+
 pub fn parse(line: &str) -> Option<LogEvent> {
     // Chunky mesajları altyapıya göre farklı önekle gelebilir: satırın tamamında aranır.
     if let Some(c) = perf::parse_chunky(line) {
@@ -70,6 +81,20 @@ pub fn parse(line: &str) -> Option<LogEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn save_replies() {
+        assert!(is_saving_off(
+            "[12:00:01] [Server thread/INFO]: Automatic saving is now disabled"
+        ));
+        assert!(is_saving_off(
+            "[12:00:01 INFO]: Saving is already turned off"
+        ));
+        assert!(is_saved("[12:00:02] [Server thread/INFO]: Saved the game"));
+        assert!(!is_saved(
+            "[12:00:02] [Server thread/INFO]: Saving the game (this may take a moment!)"
+        ));
+    }
 
     #[test]
     fn detects_done_line() {

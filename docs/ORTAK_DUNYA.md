@@ -6,13 +6,13 @@ hâli kimdeyse o açabilir) yapılabilir olup olmadığını ölçen deneme. Tar
 **Örnek dünya:** Fabric 0.20.1 · Minecraft 26.3, modlu, 70 bölge dosyası. Aktarılacak kısım 126 dosya,
 190 MB. Kütüphaneler ve sürümler her bilgisayarda yeniden kurulur, aktarılmaz.
 
-Testler `src-tauri/src/spike_shared.rs` içinde, ürüne girmez:
+Ölçüm testleri (`spike_shared.rs`) Aşama 2'de kaldırıldı; yerine motorun kendi canlı testi geldi:
 
 ```bash
-cargo test --release spike_ -- --ignored --nocapture
+cargo test --release shared::sync -- --ignored --nocapture
 ```
 
-`CUBBY_SPIKE_WORLD=<sunucu klasörü>` ile çalışır.
+`CUBBY_SPIKE_WORLD=<sunucu klasörü>` verilirse o dünyayla çalışır.
 
 ## Sonuçlar
 
@@ -40,3 +40,11 @@ Aşama 1 (web: grup, nesil, kira uçları) bu sonuçlarla değişmeden başlayab
 
 - İki ayrı evde gerçek doğrudan bağlantı hızı (bir arkadaşla deneme).
 - Daha büyük dünyalar (1 GB+): ilk kopya süresi doğrusal büyür.
+
+## Aşama 2: motorun ilk sonuçları (2026-10-28, aynı makinede iki iroh uç noktası)
+
+| Ölçüm | Sonuç |
+|---|---|
+| S2S ilk kopya (126 dosya, 190 MB) | 1,6 sn; özetlerle doğrulandı |
+| İki bölge dosyasında 6 blok değişti | ağdan **24 KB** (tam 6 × 4 KB), 0,04 sn |
+| İmzalı istekler üretimdeki davet sunucusunda | kira al, nesil yayınla, tekrar yayın reddi (`badGen`), bırak: geçti |

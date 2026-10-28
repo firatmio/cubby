@@ -12,7 +12,7 @@ use crate::error::{AppError, AppResult};
 /// Karışan karakterler (0/O, 1/I/L) yok; web tarafıyla aynı (`web/lib/code.ts`).
 pub const ALPHABET: &str = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const LEN: usize = 6;
-const TIMEOUT: Duration = Duration::from_secs(6);
+pub(crate) const TIMEOUT: Duration = Duration::from_secs(6);
 
 /// Host'ta dünya başına: kod, silme/tazeleme anahtarı ve hangi davet anahtarına ait olduğu.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -196,7 +196,7 @@ pub async fn delete(http: &reqwest::Client, s: &ShortInvite) -> AppResult<()> {
 }
 
 /// Davet sunucusunun adresi; testlerde `CUBBY_JOIN_WEB` ile (ör. önizleme dağıtımı) değiştirilebilir.
-fn web() -> String {
+pub(crate) fn web() -> String {
     if cfg!(test)
         && let Ok(v) = std::env::var("CUBBY_JOIN_WEB")
     {

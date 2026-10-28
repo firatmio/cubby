@@ -42,9 +42,10 @@ mod registry;
 mod server;
 mod sessions;
 mod settings;
+// Ortak dünyanın motoru; uygulamanın akışına (Sen aç, kopya yayınlama) sonraki adımda bağlanacak.
+#[allow(dead_code)]
+mod shared;
 mod short_invite;
-#[cfg(test)]
-mod spike_shared;
 mod updates;
 mod util;
 mod world_cmds;

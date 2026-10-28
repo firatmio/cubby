@@ -23,6 +23,12 @@ pub enum StreamKind {
     File,
     /// Dünyanın kapağı (JPEG, yanıttan sonra ham bayt): arkadaşta da aynı arka plan görünsün.
     Cover,
+    /// Ortak dünya: `gen` neslinin dosya listesi (yanıttan sonra JSON gövde).
+    WorldManifest,
+    /// Ortak dünya: `file`'ın 4 KB'lık blok özetleri (yanıttan sonra 8'er bayt).
+    WorldBlocks,
+    /// Ortak dünya: `file`'ın `range` aralığı (yanıttan sonra ham bayt).
+    WorldRead,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,6 +38,25 @@ pub struct StreamHeader {
     pub kind: StreamKind,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
+    /// Ortak dünya akışlarında istenen nesil.
+    #[serde(rename = "gen", default, skip_serializing_if = "Option::is_none")]
+    pub generation: Option<u64>,
+    /// `WorldRead`: [başlangıç, uzunluk].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<[u64; 2]>,
+}
+
+impl StreamHeader {
+    pub fn new(world: &str, token: &str, kind: StreamKind) -> Self {
+        Self {
+            world: world.into(),
+            token: token.into(),
+            kind,
+            file: None,
+            generation: None,
+            range: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,12 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn header_roundtrip_keeps_following_bytes() {
-        let h = StreamHeader {
-            world: "w1".into(),
-            token: "t".into(),
-            kind: StreamKind::Tcp,
-            file: None,
-        };
+        let h = StreamHeader::new("w1", "t", StreamKind::Tcp);
         let mut buf = Vec::new();
         write_line(&mut buf, &h).await.unwrap();
         buf.extend_from_slice(b"\x10\x00MINECRAFT");

@@ -128,6 +128,8 @@ pub struct ServerHandle {
     id: String,
     state: Mutex<State>,
     stdin: tokio::sync::Mutex<Option<ChildStdin>>,
+    /// Sunucunun çıktı satırları: bir komutun sonucunu bekleyenler için (ör. "Saved the game").
+    lines: tokio::sync::broadcast::Sender<String>,
 }
 
 impl ServerHandle {
@@ -144,6 +146,7 @@ impl ServerHandle {
                 exit_rx: None,
             }),
             stdin: tokio::sync::Mutex::new(None),
+            lines: tokio::sync::broadcast::channel(256).0,
         }
     }
 
@@ -332,6 +335,32 @@ impl ServerManager {
         }
     }
 
+    /// Kaydı kısa süre durdurup `f`'yi çalıştırır: `save-off` → `save-all flush` → "Saved the game"
+    /// beklenir → `f` → `save-on` (her durumda). Oyun sırasında tutarlı kopya için (ortak dünya).
+    pub async fn with_saves_paused<T, Fut>(&self, id: &str, f: impl FnOnce() -> Fut) -> AppResult<T>
+    where
+        Fut: std::future::Future<Output = AppResult<T>>,
+    {
+        let h = self
+            .get(id)
+            .filter(|h| h.status() == ServerStatus::Running)
+            .ok_or_else(|| AppError::msg(tx!("Sunucu çalışmıyor", "The server isn't running")))?;
+        let mut rx = h.lines.subscribe();
+        h.write_line("save-off").await?;
+        let paused = async {
+            wait_line(&mut rx, log::is_saving_off).await?;
+            h.write_line("save-all flush").await?;
+            wait_line(&mut rx, log::is_saved).await
+        }
+        .await;
+        let result = match paused {
+            Ok(()) => f().await,
+            Err(e) => Err(e),
+        };
+        let _ = h.write_line("save-on").await;
+        result
+    }
+
     pub fn any_active(&self) -> bool {
         self.map().values().any(|h| h.status().is_active())
     }
@@ -454,4 +483,30 @@ impl ServerManager {
             .collect();
         futures_util::future::join_all(ids.iter().map(|id| self.stop(app, id))).await;
     }
+}
+
+/// Kayıt komutlarının yanıtı en çok bu kadar beklenir.
+const SAVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
+async fn wait_line(
+    rx: &mut tokio::sync::broadcast::Receiver<String>,
+    matches: fn(&str) -> bool,
+) -> AppResult<()> {
+    let timeout = || {
+        AppError::msg(tx!(
+            "Sunucu kaydı zamanında bitirmedi.",
+            "The server didn't finish saving in time."
+        ))
+    };
+    tokio::time::timeout(SAVE_TIMEOUT, async {
+        loop {
+            match rx.recv().await {
+                Ok(line) if matches(&line) => return Ok(()),
+                Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => return Err(timeout()),
+            }
+        }
+    })
+    .await
+    .map_err(|_| timeout())?
 }
