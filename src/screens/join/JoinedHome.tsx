@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Download, ListPlus, Network, Play, RefreshCw, Send, Trash2 } from "lucide-react";
-import { api, errorMessage, type JoinedView, type JoinStatus, type LaunchResult } from "../../lib/api";
+import { Download, Hourglass, ListPlus, Network, Play, Power, RefreshCw, Send, Square, Trash2 } from "lucide-react";
+import { api, errorMessage, type JoinedView, type JoinStatus, type LaunchResult, type SharedProgress } from "../../lib/api";
+import { listen } from "../../lib/events";
+import { useServer } from "../../store/appStore";
 import { getT, useT } from "../../i18n";
 import { isModded, kindLabel } from "../../lib/format";
 import { launchNotice } from "../../lib/launchNotice";
@@ -20,6 +22,13 @@ type State = "running" | "stopped" | "starting" | "crashed";
 
 function describe(s: JoinStatus): { state: State; label: string; detail: string | null } {
   const t = getT().joined;
+  const sh = s.shared;
+  const st = getT().shared;
+  // Ortak dünya: kim açık, kimi bekliyoruz, ben açabilir miyim.
+  if (sh?.openByMe) return { state: "running", label: st.stateOpenMine, detail: null };
+  if (sh?.openBy && s.running) return { state: "running", label: st.stateOpenBy(sh.openBy), detail: s.path === "relay" ? t.viaRelay : t.direct };
+  if (sh?.waitingFor) return { state: "stopped", label: st.stateWaiting(sh.waitingFor), detail: st.waitingDetail };
+  if (sh?.member && sh.local && !sh.openBy) return { state: "stopped", label: st.stateCanOpen, detail: null };
   if (s.error) return { state: "crashed", label: t.cantConnect, detail: s.error };
   if (s.reachable === null) return { state: "starting", label: t.checking, detail: null };
   if (!s.reachable) return { state: "stopped", label: t.unreachable, detail: t.friendAppOff };
@@ -47,6 +56,11 @@ export function JoinedHero({ view }: { view: JoinedView }) {
         {d.label}
         {d.detail && <span className={hero.detail}>{d.detail}</span>}
       </motion.p>
+      {view.status.shared?.member && !view.status.shared.local && (
+        <motion.p className={hero.detail} variants={rise}>
+          <b>{getT().shared.invitedTitle}</b> · {getT().shared.invited}
+        </motion.p>
+      )}
     </motion.div>
   );
 }
@@ -125,6 +139,41 @@ export function JoinedActions({ view }: { view: JoinedView }) {
       setLaunch(await api.playJoined(id));
     });
 
+  // Ortak dünya: davet, kopyanın inişi, "Sen aç".
+  const sh = view.status.shared ?? null;
+  const st = t.shared;
+  const local = useServer(sh?.local ?? null);
+  const localActive = local.status === "starting" || local.status === "running" || local.status === "stopping";
+  const [progress, setProgress] = useState<number | null>(null);
+  const [askDownload, setAskDownload] = useState(false);
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    void listen<SharedProgress>("shared://progress", ({ payload }) => {
+      if (payload.id !== id) return;
+      setProgress(payload.stage === "done" ? null : payload.total > 0 ? Math.round((payload.done / payload.total) * 100) : 0);
+    }).then((u) => (off = u));
+    return () => off?.();
+  }, [id]);
+  const accept = () =>
+    run("accept", async () => {
+      setAskDownload(false);
+      setProgress(0);
+      try {
+        await api.acceptShared(id);
+        upsertJoined(await api.refreshJoined(id));
+      } finally {
+        setProgress(null);
+      }
+    });
+  const openMine = () =>
+    run("open", async () => {
+      await api.openShared(id);
+      setMessage({ tone: "info", text: st.opening });
+    });
+  const closeMine = () => sh?.local && run("close", () => api.stopServer(sh.local!));
+  const invited = !!sh?.member && !sh.local;
+  const canOpen = !!sh?.member && !!sh.local && !sh.openBy && !sh.waitingFor && !view.status.running;
+
   const game = useGameNotice();
   const shown: GameNotice | null =
     game ??
@@ -158,9 +207,42 @@ export function JoinedActions({ view }: { view: JoinedView }) {
           {t.joined.modsChanged}
         </Button>
       )}
-      <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
-        {t.joined.play}
-      </Button>
+      {invited ? (
+        <Button
+          variant="primary"
+          size="lg"
+          icon={Download}
+          loading={busy === "accept" || sh?.syncing}
+          onClick={() => setAskDownload(true)}
+          className={bar.power}
+        >
+          {progress !== null ? st.progress(progress) : st.download}
+        </Button>
+      ) : sh?.waitingFor && !view.status.running ? (
+        <Button variant="secondary" size="lg" icon={Hourglass} disabled className={bar.power}>
+          {st.waitShort(sh.waitingFor)}
+        </Button>
+      ) : canOpen && !localActive ? (
+        <Button
+          variant="primary"
+          size="lg"
+          icon={Power}
+          loading={busy === "open" || sh?.syncing}
+          onClick={openMine}
+          className={bar.power}
+        >
+          {progress !== null ? st.progress(progress) : st.youOpen}
+        </Button>
+      ) : (
+        <Button variant="primary" size="lg" icon={Play} loading={busy === "play"} onClick={play} className={bar.power}>
+          {t.joined.play}
+        </Button>
+      )}
+      {sh?.local && localActive && (
+        <Button variant="secondary" icon={Square} loading={local.status === "stopping" || busy === "close"} onClick={closeMine}>
+          {st.closeMine}
+        </Button>
+      )}
       <div className={bar.buttons}>
         <IconButton
           icon={RefreshCw}
@@ -181,6 +263,24 @@ export function JoinedActions({ view }: { view: JoinedView }) {
         />
         <IconButton icon={Trash2} label={t.joined.removeFromList} disabled={busy !== null} onClick={() => setConfirmRemove(true)} />
       </div>
+
+      {askDownload && (
+        <Dialog
+          title={st.downloadTitle}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setAskDownload(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button variant="primary" icon={Download} onClick={accept}>
+                {st.download}
+              </Button>
+            </>
+          }
+        >
+          <p>{st.downloadText}</p>
+        </Dialog>
+      )}
 
       {confirmRemove && (
         <Dialog

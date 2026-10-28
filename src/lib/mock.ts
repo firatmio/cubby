@@ -385,6 +385,45 @@ const joined: { world: Record<string, unknown> & { id: string; name: string; loc
 ];
 const entries = new Set(["join-1"]);
 
+// Ortak dünya. localStorage.mockShared:
+// "invited" (Ali seni ekledi, kopya yok) | "member" (kopya hazır, kimse açık değil) | "busy" (Ayşe açtı)
+// | "waiting" (son hâl Ayşe'de) | "owner-busy" (senin dünyan Ayşe'de açık).
+const mockShared = typeof localStorage !== "undefined" ? localStorage.getItem("mockShared") : null;
+const FRIENDS = [
+  { device: "b".repeat(64), name: "Ayşe", member: true },
+  { device: "c".repeat(64), name: "Can", member: false },
+  { device: "d".repeat(64), name: "Deniz", member: false },
+];
+let sharedOwner = {
+  enabled: mockShared === "owner-busy",
+  friends: FRIENDS.map((f) => ({ ...f })),
+  openBy: mockShared === "owner-busy" ? "Ayşe" : null,
+  openByMe: false,
+  waitingFor: null as string | null,
+  generation: 3,
+};
+let joinShared: Record<string, unknown> | null =
+  mockShared && mockShared !== "owner-busy"
+    ? {
+        member: true,
+        local: mockShared === "invited" ? null : "mock-copy",
+        syncing: false,
+        openBy: mockShared === "busy" ? "Ayşe" : null,
+        openByMe: false,
+        waitingFor: mockShared === "waiting" ? "Ayşe" : null,
+        generation: 3,
+        localGeneration: 3,
+      }
+    : null;
+if (joinShared) {
+  joined[0].status = { ...joined[0].status, running: mockShared === "busy", shared: joinShared };
+}
+function pushJoinShared(patch: Record<string, unknown>) {
+  joinShared = { ...(joinShared ?? {}), ...patch };
+  joined[0].status = { ...joined[0].status, shared: joinShared };
+  emit("join://status", { id: "join-1", status: joined[0].status });
+}
+
 type MockMod = {
   projectId: string;
   slug: string;
@@ -922,6 +961,39 @@ export async function mockInvoke(cmd: string, args: Record<string, any> = {}): P
     }
     case "list_joined":
       return structuredClone(joined);
+    case "shared_view":
+      return structuredClone(sharedOwner);
+    case "set_shared": {
+      const members = args.members as string[];
+      sharedOwner = {
+        ...sharedOwner,
+        enabled: true,
+        friends: sharedOwner.friends.map((f) => ({ ...f, member: members.includes(f.device) })),
+      };
+      return structuredClone(sharedOwner);
+    }
+    case "disable_shared":
+      sharedOwner = { ...sharedOwner, enabled: false, openBy: null, waitingFor: null };
+      return structuredClone(sharedOwner);
+    case "force_shared":
+      sharedOwner = { ...sharedOwner, waitingFor: null };
+      return structuredClone(sharedOwner);
+    case "join_own_shared":
+      return "join-1";
+    case "accept_shared": {
+      for (let i = 1; i <= 10; i++) {
+        await sleep(250);
+        emit("shared://progress", { id: args.joinedId, stage: "pull", done: i * 19, total: 190 });
+      }
+      emit("shared://progress", { id: args.joinedId, stage: "done", done: 1, total: 1 });
+      pushJoinShared({ local: "mock-copy" });
+      return "mock-copy";
+    }
+    case "open_shared":
+      pushJoinShared({ openByMe: true, openBy: "Sen" });
+      joined[0].status = { ...joined[0].status, running: true };
+      emit("join://status", { id: "join-1", status: joined[0].status });
+      return null;
     case "remove_joined": {
       const i = joined.findIndex((j) => j.world.id === args.id);
       if (i >= 0) joined.splice(i, 1);

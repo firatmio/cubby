@@ -12,6 +12,7 @@ import { Input } from "../../ui/Input";
 import { Sheet } from "../../ui/Sheet";
 import { Toggle } from "../../ui/Toggle";
 import { useScrollFade } from "../../ui/useScrollFade";
+import { SharedCard } from "./SharedCard";
 import styles from "./PlayersSheet.module.css";
 
 function Avatar({ name }: { name: string }) {
@@ -276,6 +277,8 @@ export function PlayersSheet() {
             ))}
           </section>
         )}
+
+        {instance && <SharedCard instance={instance} />}
 
         {view && view.offlineMode && view.bound.length > 0 && (
           <section className={styles.section}>

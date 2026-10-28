@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ImageIcon, LogIn, Play, Settings2, Square, Users, Wrench } from "lucide-react";
-import type { Instance } from "../../lib/api";
+import { Hourglass, ImageIcon, LogIn, Play, Settings2, Square, Users, Wrench } from "lucide-react";
+import { api, errorMessage, type Instance } from "../../lib/api";
 import { useT } from "../../i18n";
 import { launchNotice } from "../../lib/launchNotice";
 import { useAppStore } from "../../store/appStore";
@@ -10,6 +10,7 @@ import { SplitButton } from "../../ui/SplitButton";
 import { NoticeBar } from "./NoticeBar";
 import { useGameNotice, type GameNotice } from "./useGameNotice";
 import { useServerControl } from "./useServerControl";
+import { useSharedView } from "../players/SharedCard";
 import styles from "./ActionBar.module.css";
 
 type StartMode = "start" | "join";
@@ -47,10 +48,31 @@ export function ActionBar({ instance }: { instance: Instance }) {
   const { status, active } = control;
   const [mode, setMode] = useState<StartMode>(() => loadMode(instance.id));
   const game = useGameNotice();
+  // Ortak dünya başka bir arkadaşta açıksa burada açılmaz; ona katılınır.
+  const [shared] = useSharedView(instance);
+  const sharedT = useT().shared;
+  const elsewhere = !active && shared?.enabled && shared.openBy && !shared.openByMe ? shared.openBy : null;
+  const waiting = !active && shared?.enabled && !shared.openBy ? shared.waitingFor : null;
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const joinElsewhere = async () => {
+    setJoining(true);
+    setJoinError(null);
+    try {
+      const jid = await api.joinOwnShared(instance.id);
+      setLaunchResult(instance.id, await api.playJoined(jid));
+    } catch (e) {
+      setJoinError(errorMessage(e));
+    } finally {
+      setJoining(false);
+    }
+  };
   const notice = launch ? launchNotice(launch, instance.name, (r) => setLaunchResult(instance.id, r)) : null;
   // Öncelik: başlatma hatası → oyun (ilerleme/çökme) → Launcher ipucu.
   const shown: GameNotice | null = control.error
     ? { tone: "error", text: control.error, dismiss: control.clearError }
+    : joinError
+      ? { tone: "error", text: joinError, dismiss: () => setJoinError(null) }
     : (game ??
       (notice && { ...notice, dismiss: () => setLaunchResult(instance.id, null) }));
 
@@ -58,7 +80,15 @@ export function ActionBar({ instance }: { instance: Instance }) {
     <div className={styles.bar}>
       <NoticeBar notice={shown} />
 
-      {active ? (
+      {elsewhere ? (
+        <Button variant="primary" size="lg" icon={LogIn} loading={joining} onClick={joinElsewhere} className={styles.power}>
+          {sharedT.joinOpen(elsewhere)}
+        </Button>
+      ) : waiting ? (
+        <Button variant="secondary" size="lg" icon={Hourglass} disabled className={styles.power}>
+          {sharedT.waitShort(waiting)}
+        </Button>
+      ) : active ? (
         <Button
           variant="secondary"
           size="lg"

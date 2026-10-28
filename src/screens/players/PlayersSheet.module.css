@@ -21,6 +21,13 @@
   font-size: var(--fs-md);
 }
 
+.subhead {
+  margin-top: var(--sp-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
 .row {
   display: flex;
   align-items: center;

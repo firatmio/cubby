@@ -38,6 +38,49 @@ export interface Instance {
   inviteToken: string | null;
   /** Davet sunucusundaki kısa kod (tiresiz); davet paneli ilk açılınca alınır. */
   shortInvite?: { code: string } | null;
+  /** Ortak dünya: grubun dünyası, en güncel hâline sahip arkadaş açabilir. */
+  shared?: { code: string; role: "owner" | "member" } | null;
+}
+
+/** Ortak dünyada davetle girmiş bir arkadaş; `member`: dünyayı açabilir. */
+export interface SharedFriend {
+  device: string;
+  name: string;
+  member: boolean;
+}
+
+/** Sahibin ortak dünya görünümü. */
+export interface SharedView {
+  enabled: boolean;
+  friends: SharedFriend[];
+  /** Şu an açık olanın adı. */
+  openBy: string | null;
+  openByMe: boolean;
+  /** En güncel hâl bu arkadaşta kaldı; o dönene kadar kimse açamaz. */
+  waitingFor: string | null;
+  generation: number;
+}
+
+/** Katılınan ortak dünyanın durumu. */
+export interface JoinShared {
+  /** Sahip beni "açabilir" yaptı. */
+  member: boolean;
+  /** Dünyanın bu bilgisayardaki kopyası. */
+  local: string | null;
+  syncing: boolean;
+  openBy: string | null;
+  openByMe: boolean;
+  waitingFor: string | null;
+  generation: number;
+  localGeneration: number;
+}
+
+/** Ortak dünya kopyasının inişi (`shared://progress`). */
+export interface SharedProgress {
+  id: string;
+  stage: string;
+  done: number;
+  total: number;
 }
 
 export interface Cover {
@@ -323,6 +366,8 @@ export interface JoinStatus {
   error: string | null;
   /** Arkadaşının şu anki mod listesi özeti */
   modsRev: string | null;
+  /** Ortak dünyaysa: kim açık, açabilir miyim, kopyam hazır mı. */
+  shared?: JoinShared | null;
 }
 
 /** Arkadaşının, davetle katılınan dünyası. */
@@ -672,6 +717,13 @@ export const api = {
     invoke<JoinedView>("join_world", { code, force, installRecommended }),
   updateJoinedMods: (id: string) => invoke<JoinedView>("update_joined_mods", { id }),
   playJoined: (id: string) => invoke<LaunchResult>("play_joined", { id }),
+  sharedView: (id: string) => invoke<SharedView>("shared_view", { id }),
+  setShared: (id: string, members: string[]) => invoke<SharedView>("set_shared", { id, members }),
+  disableShared: (id: string) => invoke<SharedView>("disable_shared", { id }),
+  forceShared: (id: string) => invoke<SharedView>("force_shared", { id }),
+  acceptShared: (joinedId: string) => invoke<string>("accept_shared", { joinedId }),
+  openShared: (joinedId: string, join = false) => invoke<void>("open_shared", { joinedId, join }),
+  joinOwnShared: (id: string) => invoke<string>("join_own_shared", { id }),
   accountStatus: () => invoke<AccountStatus>("account_status"),
   accountLogin: () => invoke<Account>("account_login"),
   accountLogout: () => invoke<void>("account_logout"),
