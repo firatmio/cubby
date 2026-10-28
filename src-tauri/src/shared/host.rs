@@ -107,6 +107,18 @@ impl Groups {
     }
 }
 
+/// Davet sunucusu bu cihazı en güncel nesle sahip sayıyor ama depo eski numarada (sahip beklemeyi
+/// kaldırdı): depo yeni numaraya çekilir, arkadaşlar bu numarayla isteyebilsin.
+pub fn align(app: &AppHandle, id: &str, state: &SharedState) {
+    let me = app.state::<Arc<P2p>>().id();
+    if state.holders.get(&me) == Some(&state.generation)
+        && let Ok(store) = store_of(app, id)
+        && let Err(e) = store.relabel(state.generation)
+    {
+        eprintln!("Ortak dünya: depo yeni nesle çekilemedi: {e}");
+    }
+}
+
 /// İmzalı istek; gelen durum önbelleğe yazılır.
 pub async fn act(app: &AppHandle, code: &str, a: Act) -> AppResult<web::Outcome> {
     let http = app.state::<AppState>().http.clone();
@@ -136,6 +148,7 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, log: &StartLog) -> AppRes
     for _ in 0..3 {
         match act(app, &link.code, Act::Acquire).await? {
             Ok(state) => {
+                align(app, &inst.id, &state);
                 let server_dir = paths::server_dir(app, &inst.id)?;
                 // Depoda bu nesil var ama sunucu klasörü eski (başkası oynadı): son hâl yerleştirilir.
                 // Hiç nesil yoksa (ilk açılış) sunucu klasörü olduğu gibi kalır.
@@ -247,9 +260,14 @@ pub fn watch(app: &AppHandle, id: &str, code: &str) {
         let servers = app.state::<AppState>().servers.clone();
         let mut last_renew = tokio::time::Instant::now();
         let mut last_snapshot = tokio::time::Instant::now();
+        let mut announced = false;
         loop {
             tokio::time::sleep(POLL).await;
             let snap = servers.snapshot(&id);
+            if !announced && snap.status == ServerStatus::Running {
+                announced = true;
+                super::member::refresh_for(&app, &id).await;
+            }
             match snap.status {
                 ServerStatus::Stopped | ServerStatus::Crashed => break,
                 ServerStatus::Running if last_snapshot.elapsed() >= SNAPSHOT_EVERY => {
@@ -283,6 +301,7 @@ pub fn watch(app: &AppHandle, id: &str, code: &str) {
         if let Err(e) = act(&app, &code, Act::Release).await {
             eprintln!("Ortak dünya: kira bırakılamadı: {e}");
         }
+        super::member::refresh_for(&app, &id).await;
     });
 }
 
@@ -329,10 +348,12 @@ pub fn install(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
             for inst in instance::list(&app) {
-                if let Some(link) = &inst.shared
-                    && let Err(e) = act(&app, &link.code, Act::State).await
-                {
-                    eprintln!("Ortak dünya durumu alınamadı: {e}");
+                if let Some(link) = &inst.shared {
+                    match act(&app, &link.code, Act::State).await {
+                        Ok(Ok(state)) => align(&app, &inst.id, &state),
+                        Ok(Err(_)) => {}
+                        Err(e) => eprintln!("Ortak dünya durumu alınamadı: {e}"),
+                    }
                 }
             }
             // Katılınan dünyalar: ortak mı, kim açık, kopyam güncel mi.

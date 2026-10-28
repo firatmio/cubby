@@ -21,6 +21,21 @@
   font-size: var(--fs-md);
 }
 
+/* Uzun açıklamalı satır: metin kesilmez, alt satıra geçer. */
+.wrapRow {
+  align-items: center;
+  padding-top: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  border-radius: var(--radius-card);
+}
+
+.wrapText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
 .subhead {
   margin-top: var(--sp-2);
   color: var(--text-2);

@@ -48,3 +48,30 @@ Aşama 1 (web: grup, nesil, kira uçları) bu sonuçlarla değişmeden başlayab
 | S2S ilk kopya (126 dosya, 190 MB) | 1,6 sn; özetlerle doğrulandı |
 | İki bölge dosyasında 6 blok değişti | ağdan **24 KB** (tam 6 × 4 KB), 0,04 sn |
 | İmzalı istekler üretimdeki davet sunucusunda | kira al, nesil yayınla, tekrar yayın reddi (`badGen`), bırak: geçti |
+
+## Aşama 3: gerçek uygulamayla uçtan uca (2026-10-28, tek bilgisayar)
+
+Karşı taraf bir **test arkadaşı** (`src-tauri/src/shared/tf.rs`, kendi iroh kimliği ve deposu); uygulama
+`tauri dev` ile, tıklanarak. Küçük bir saf 26.3 test dünyası kullanıldı.
+
+| Adım | Sonuç |
+|---|---|
+| Arkadaş davetle girer → sahibin "açabilir" listesinde görünür | ✓ (`seen`) |
+| Dünya açıkken ortak yapılır → nesil 1 oyun sırasında kopyalanıp yayınlanır | ✓ (`save-off`/`save-all flush` uygulamanın içinden) |
+| Arkadaş nesil 1'i uygulamadan çeker (grup denetimi) | ✓ 37 dosya, 7,2 MB |
+| Sahip kapatır → nesil 2 yayınlanır, kira bırakılır | ✓ |
+| Arkadaş açar (eksik parçaları çeker, kira, dakikada bir tazeler) → sahipte "Ayse_Test'de açık · Katıl" | ✓ |
+| Sahibin Katıl'ı → bağlantı açık olana (arkadaşın sunucusuna) gider | ✓ |
+| Arkadaş kirayı bırakmadan kaybolur → sahipte "Son hâli Ayse_Test'de", açılamaz | ✓ |
+| Sahip "Bekleme, yine de aç" → elindeki en yeni kopya yeni nesil sayılır | ✓ (depo numarası da güncelleniyor: bu denemede bulunan hata düzeltildi) |
+| Uygulama üye: kodla katılır → davet bandı → Kopyayı indir → Sen aç | ✓ |
+| Sahibin davetiyle gelen biri uygulamadaki kopyaya bağlanır | ✓ (sunucu yanıt verdi) |
+| Üye kapatır → nesil yayınlanır; uygulama çökünce/yeniden açılınca kalan ilerleme yayınlanır | ✓ |
+| Sahip döner, üyenin son hâlini çeker | ✓ nesil 4 |
+| Katılınan dünyayı kaldırmak kopyayı, dünyayı silmek ortak kaydı da siler | ✓ |
+
+Bu denemede bulunan ve düzeltilenler: ekran ortak durumu yalnız bir kez okuyordu; durum satırı açma/kapamadan
+sonra bir dakika geride kalıyordu; beklemeyi kaldırınca depo eski nesil numarasında kalıyordu; bekleme
+satırı kesiliyordu; arkadaşın kopyası ve sahibin gizli katılım kaydı silinmeden kalıyordu.
+
+Henüz iki ayrı bilgisayarla ve gerçek bir Minecraft istemcisiyle oynanarak denenmedi.

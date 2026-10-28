@@ -123,6 +123,9 @@ async fn apply_state(
         None => None,
     };
     joins.set_live(&w.id, target);
+    if let Some(i) = &local {
+        host::align(app, &i.id, state);
+    }
     let local_generation = local
         .as_ref()
         .and_then(|i| paths::instance_dir(app, &i.id).ok())
@@ -207,6 +210,26 @@ async fn pull_into(
         .await?
         .map_err(|r| AppError::msg(format!("{r:?}")))?;
     Ok(())
+}
+
+/// Kopya açılınca ya da kapanınca: katılınan dünyanın ekranı dakikayı beklemeden güncellensin.
+pub async fn refresh_for(app: &AppHandle, id: &str) {
+    let Ok(inst) = instance::get(app, id) else {
+        return;
+    };
+    let Some(link) = inst.shared.filter(|s| s.role == SharedRole::Member) else {
+        return;
+    };
+    let joins = app.state::<Arc<JoinManager>>().inner().clone();
+    let w = joins
+        .list()
+        .await
+        .into_iter()
+        .find(|w| w.world == link.origin_world && w.host == link.owner_device);
+    if let Some(w) = w {
+        poll_one(app, &w).await;
+        joins.poll(app, &w).await;
+    }
 }
 
 async fn poll_one(app: &AppHandle, w: &JoinedWorld) {

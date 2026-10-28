@@ -840,6 +840,16 @@ pub async fn list_joined(app: AppHandle, joins: Joins<'_>) -> AppResult<Vec<Join
 /// Listeden ve Minecraft'ın sunucu listesinden kaldırır.
 #[tauri::command]
 pub async fn remove_joined(app: AppHandle, joins: Joins<'_>, id: String) -> AppResult<()> {
+    // Ortak dünyanın bu bilgisayardaki kopyası da gider (açıksa önce kapatılmalı).
+    if let Some(local) = crate::shared::member::local_copy(&app, &joins.get(&id).await?) {
+        crate::commands::delete_instance(
+            app.clone(),
+            app.state::<AppState>(),
+            app.state::<crate::registry::Registry>(),
+            local.id,
+        )
+        .await?;
+    }
     let removed = joins.remove(&id).await?;
     if let Some(dir) = entry_dir(&app, &removed) {
         let mut root = servers_dat::read(&dir)?;

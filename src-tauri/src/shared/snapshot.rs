@@ -244,6 +244,27 @@ mod tests {
     }
 
     #[test]
+    fn relabel_keeps_content_and_checkout_mark() {
+        let (src, store_dir) = (tmp("src"), tmp("store"));
+        let store = Store::at(store_dir.clone());
+        put(&src, "world/level.dat", b"L");
+        let g = snapshot(&src, &store, 2).unwrap().unwrap();
+        store.mark_checked_out(2).unwrap();
+        store.relabel(5).unwrap();
+        assert_eq!(store.manifest().generation, 5);
+        assert_eq!(store.manifest().files, g.files);
+        assert_eq!(store.checked_out(), Some(5));
+        // Geriye ya da boş depoda numara değişmez.
+        store.relabel(3).unwrap();
+        assert_eq!(store.manifest().generation, 5);
+        let empty = Store::at(tmp("empty"));
+        empty.relabel(4).unwrap();
+        assert_eq!(empty.manifest().generation, 0);
+        let _ = std::fs::remove_dir_all(src);
+        let _ = std::fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
     fn checkout_writes_and_cleans() {
         let (src, store_dir, server) = (tmp("src"), tmp("store"), tmp("server"));
         let store = Store::at(store_dir.clone());

@@ -441,6 +441,26 @@ pub async fn delete_instance(
     let dir = paths::instance_dir(&app, &id)?;
     if let Ok(inst) = instance::get(&app, &id) {
         crate::client_cmds::forget_world(&app, &inst);
+        // Sahibin ortak dünyası: grup davet sunucusundan da kalkar (arkadaşların kopyaları açılamaz).
+        if inst
+            .shared
+            .as_ref()
+            .is_some_and(|s| s.role == instance::SharedRole::Owner)
+            && let Some(short) = &inst.short_invite
+            && let Err(e) = crate::shared::web::disable(&state.http, short).await
+        {
+            eprintln!("Ortak dünya kapatılamadı: {e}");
+        }
+        // Başkası açıkken kendi dünyasına katılmak için tutulan gizli kayıt.
+        let joins = tauri::Manager::state::<Arc<crate::join::JoinManager>>(&app)
+            .inner()
+            .clone();
+        let me = tauri::Manager::state::<Arc<crate::p2p::P2p>>(&app).id();
+        for w in joins.list().await {
+            if w.host == me && w.world == id {
+                let _ = joins.remove(&w.id).await;
+            }
+        }
     }
     if dir.exists() {
         let target = dir.clone();

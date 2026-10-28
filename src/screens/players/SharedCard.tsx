@@ -6,11 +6,10 @@ import { Dialog } from "../../ui/Dialog";
 import { Toggle } from "../../ui/Toggle";
 import styles from "./PlayersSheet.module.css";
 
-/** Ortak dünyanın son durumu; dünya ortaksa 20 sn'de bir tazelenir. */
+/** Ortak dünyanın son durumu; 20 sn'de bir tazelenir (ortak değilse ağa gitmez, yalnız yerel kayıt). */
 export function useSharedView(instance: Instance | null | undefined) {
   const [view, setView] = useState<SharedView | null>(null);
   const id = instance?.id;
-  const shared = !!instance?.shared;
   useEffect(() => {
     if (!id) return;
     let alive = true;
@@ -20,13 +19,12 @@ export function useSharedView(instance: Instance | null | undefined) {
         .then((v) => alive && setView(v))
         .catch(() => {});
     load();
-    if (!shared) return () => void (alive = false);
     const timer = window.setInterval(load, 20_000);
     return () => {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [id, shared]);
+  }, [id]);
   return [view, setView] as const;
 }
 
@@ -82,8 +80,8 @@ export function SharedCard({ instance }: { instance: Instance }) {
         <>
           {status && <p className={styles.hint}>{status}</p>}
           {view.waitingFor && (
-            <div className={[styles.row, styles.attention].join(" ")}>
-              <span className={styles.name}>{t.waiting(view.waitingFor)}</span>
+            <div className={[styles.row, styles.attention, styles.wrapRow].join(" ")}>
+              <span className={styles.wrapText}>{t.waiting(view.waitingFor)}</span>
               <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setAskForce(true)}>
                 {t.force}
               </Button>

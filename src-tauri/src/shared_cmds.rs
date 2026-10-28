@@ -227,7 +227,10 @@ pub async fn force_shared(app: AppHandle, id: String) -> AppResult<SharedView> {
         return view(&app, &id);
     };
     match web::force(&http(&app), short).await? {
-        Ok(s) => app.state::<Groups>().remember(&link.code, &s),
+        Ok(s) => {
+            app.state::<Groups>().remember(&link.code, &s);
+            host::align(&app, &id, &s);
+        }
         Err(r) => {
             return Err(AppError::msg(match r {
                 web::Refusal::NoCopy => tx!(

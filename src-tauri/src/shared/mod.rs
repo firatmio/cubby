@@ -16,6 +16,7 @@ pub mod manifest;
 pub mod member;
 pub mod snapshot;
 pub mod sync;
+mod tf;
 pub mod web;
 
 use std::collections::HashMap;
@@ -86,6 +87,20 @@ impl Store {
 
     pub fn mark_checked_out(&self, generation: u64) -> AppResult<()> {
         write_json(&self.root.join("checkout.json"), &generation)
+    }
+
+    /// Sahip beklemeyi kaldırınca elde kalan en yeni kopya yeni nesil sayılır: içerik aynı, numarası
+    /// değişir (başkaları bu numarayla ister).
+    pub fn relabel(&self, generation: u64) -> AppResult<()> {
+        let mut m = self.manifest();
+        if m.generation == 0 || m.generation >= generation {
+            return Ok(());
+        }
+        if self.checked_out() == Some(m.generation) {
+            self.mark_checked_out(generation)?;
+        }
+        m.generation = generation;
+        write_json(&self.root.join("manifest.json"), &m)
     }
 
     fn index(&self) -> Index {
